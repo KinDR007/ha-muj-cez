@@ -14,7 +14,7 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
 
-from custom_components.muj_cez import api, grid, statistics
+from custom_components.muj_cez import api, grid, ote, statistics
 
 from .conftest import load
 from .test_grid import FakeClient
@@ -32,6 +32,33 @@ def _profile(start: date, days: int, value: float, skip_last_hours: int = 0) -> 
         rows.append({"profileReadingDatetimeFrom": t.isoformat(), "profileReadingValue": value})
         t += timedelta(minutes=15)
     return [{"data": rows}]
+
+
+class FakeOte:
+    """OTE stand-in: prices per day from `PRICES`, missing days raise OteError."""
+
+    PRICES: dict[date, float] = {}
+    calls: list[date] = []
+
+    def __init__(self, session: object) -> None:
+        pass
+
+    async def day_prices(self, day: date) -> dict[datetime, float]:
+        FakeOte.calls.append(day)
+        price = FakeOte.PRICES.get(day)
+        if price is None:
+            raise ote.OteError("unpublished")
+        start = grid.local_midnight(day).astimezone(UTC)
+        hours = statistics.expected_hours(day)
+        return {start + timedelta(hours=i): price for i in range(hours)}
+
+
+@pytest.fixture(autouse=True)
+def fake_ote(monkeypatch: pytest.MonkeyPatch) -> type[FakeOte]:
+    FakeOte.PRICES = {}
+    FakeOte.calls = []
+    monkeypatch.setattr(statistics.ote, "OteSource", FakeOte)
+    return FakeOte
 
 
 @pytest.fixture(autouse=True)
@@ -223,3 +250,42 @@ async def test_valuation_from_ha_spot_sensor(
         hass, FakeClient(handler), [pv_sp], {pv_sp.place_id: cache2}
     )
     assert cache2.get("valuation") in (None, {})
+
+
+async def test_spot_prices_from_ote_fill_missing_days(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    pv_sp: api.SupplyPoint,
+    freezer: FrozenDateTimeFactory,
+    fake_ote: type[FakeOte],
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Prague")
+    freezer.move_to(datetime(2026, 11, 13, 12, 0, tzinfo=grid.TZ))
+    fake_ote.PRICES = {date(2026, 11, d): float(d) for d in (10, 11, 12)}
+    client = FakeClient(lambda p, q: (_ for _ in ()).throw(api.CezConnectionError("HTTP 404")))
+    statistics.REQUEST_PAUSE = 0
+    prices = await statistics.async_import_spot_prices(
+        hass, client, date(2026, 11, 10), date(2026, 11, 13)
+    )
+    assert len(prices) == 72
+    await async_wait_recording_done(hass)
+    rows = await _stats(hass, statistics.SPOT_STATISTIC_ID, {"mean"})
+    assert len(rows) == 72
+    assert rows[-1]["mean"] == pytest.approx(12.0)
+    # Complete days are not requested again; nothing is missing.
+    fake_ote.calls.clear()
+    assert (
+        await statistics.async_import_spot_prices(
+            hass, client, date(2026, 11, 10), date(2026, 11, 13)
+        )
+        == {}
+    )
+    assert fake_ote.calls == []
+    # A day with missing hours is fetched again and completed.
+    fake_ote.PRICES[date(2026, 11, 13)] = 13.0
+    freezer.move_to(datetime(2026, 11, 14, 12, 0, tzinfo=grid.TZ))
+    prices = await statistics.async_import_spot_prices(
+        hass, client, date(2026, 11, 10), date(2026, 11, 14)
+    )
+    assert fake_ote.calls == [date(2026, 11, 13)]
+    assert len(prices) == 24

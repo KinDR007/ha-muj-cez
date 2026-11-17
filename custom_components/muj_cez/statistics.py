@@ -3,7 +3,8 @@
 External statistics (selectable in the Energy dashboard):
 - muj_cez:grid_import_<place>  hourly kWh imported from the grid (sum)
 - muj_cez:grid_export_<place>  hourly kWh exported to the grid (sum)
-- muj_cez:spot_price           hourly spot price in CZK/kWh (mean), portal history
+- muj_cez:spot_price           hourly spot price in CZK/kWh (mean): OTE day-ahead
+                               (ČNB rate), ČEZ portal as fallback
 
 Data are available with a delay of about one day; only complete local days are
 imported so a later run never leaves holes. Each run continues after the last
@@ -34,6 +35,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from . import grid as gridlib
+from . import ote
 from .api import CezClient, CezError, SupplyPoint
 from .const import DOMAIN
 
@@ -87,27 +89,54 @@ def _start_of(row: dict[str, Any]) -> datetime:
     return dt_util.utc_from_timestamp(start) if isinstance(start, int | float) else start
 
 
+def expected_hours(day: date) -> int:
+    start = gridlib.local_midnight(day)
+    return round((gridlib.local_midnight(day + timedelta(days=1)) - start).total_seconds() / 3600)
+
+
 async def async_import_spot_prices(
     hass: HomeAssistant, client: CezClient, first_day: date, today: date
 ) -> dict[datetime, float]:
-    """Import spot prices from the last imported hour (or first_day) up to yesterday."""
-    last = await _last(hass, SPOT_STATISTIC_ID, {"mean"})
-    start_day = first_day
-    if last:
-        start_day = max(
-            first_day, _start_of(last).astimezone(gridlib.TZ).date() + timedelta(days=1)
-        )
-    if start_day >= today:
+    """Fill spot prices for every day from first_day up to yesterday that lacks hours.
+
+    OTE (converted with ČNB rates) is the primary source; days OTE cannot provide are
+    tried on the ČEZ portal. Existing complete days are not requested again.
+    """
+    if first_day >= today:
+        return {}
+    start = gridlib.local_midnight(first_day).astimezone(UTC)
+    existing = await _spot_for(hass, start, gridlib.local_midnight(today).astimezone(UTC))
+    counts: dict[date, int] = defaultdict(int)
+    for hour in existing:
+        counts[hour.astimezone(gridlib.TZ).date()] += 1
+    missing = [
+        first_day + timedelta(days=i)
+        for i in range((today - first_day).days)
+        if counts[first_day + timedelta(days=i)] < expected_hours(first_day + timedelta(days=i))
+    ]
+    if not missing:
         return {}
     prices: dict[datetime, float] = {}
-    for a, b in gridlib.windows(start_day, today, gridlib.SPOT_WINDOW_DAYS):
-        prices.update(await client.get_spot_prices(a, b))
+    source = ote.OteSource(client.session)
+    failed: list[date] = []
+    for day in missing:
+        try:
+            day_prices = await source.day_prices(day)
+        except ote.OteError as err:
+            _LOGGER.debug("OTE prices for %s failed: %s", day, err)
+            day_prices = {}
+        if day_prices:
+            prices.update(day_prices)
+        else:
+            failed.append(day)
         await asyncio.sleep(REQUEST_PAUSE)
+    for day in failed:
+        prices.update(await client.get_spot_prices(day, day + timedelta(days=1)))
     if prices:
         metadata = StatisticMetaData(
             source=DOMAIN,
             statistic_id=SPOT_STATISTIC_ID,
-            name="ČEZ spotová cena",
+            name="Spotová cena elektřiny (OTE)",
             unit_of_measurement=SPOT_UNIT,
             unit_class=None,
             has_sum=False,

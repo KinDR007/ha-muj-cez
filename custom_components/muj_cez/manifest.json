@@ -10,5 +10,5 @@
   "issue_tracker": "https://github.com/KinDR007/ha-muj-cez/issues",
   "loggers": ["custom_components.muj_cez"],
   "requirements": [],
-  "version": "0.5.1"
+  "version": "0.5.2"
 }

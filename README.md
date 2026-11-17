@@ -60,9 +60,9 @@ integration additionally:
   new days) and creates the grid import/export sensors,
 - imports hourly long-term statistics `muj_cez:grid_import_<place>` and
   `muj_cez:grid_export_<place>`, selectable in the Energy dashboard (delayed by about a day),
-- imports hourly spot prices `muj_cez:spot_price` (CZK/kWh) as far as the portal has
-  them: in practice only until 30 September 2025 (the portal stopped filling them after
-  the market moved to 15 minute prices); never usable for planning,
+- imports hourly spot prices `muj_cez:spot_price` (CZK/kWh): day-ahead results from
+  [OTE](https://www.ote-cr.cz) converted with the ČNB EUR rate (identical to the prices the
+  ČEZ portal showed until September 2025), the portal is only a fallback; up to yesterday,
 - values the exported energy at spot prices per month (payout comparison); hours without
   portal prices use the optional spot price sensor (only as far back as its statistics go).
 
@@ -287,5 +287,7 @@ automatizace upozornění na nezaplacené doklady) jsou v [docs/dashboard.md](do
 ### Soukromí
 
 Přihlašovací údaje ukládá Home Assistant lokálně v konfiguraci integrace. Integrace
-komunikuje jen s portálem ČEZ a data načítá jednou za zvolenou periodu (a při startu).
+komunikuje s portálem ČEZ a data načítá jednou za zvolenou periodu (a při startu).
+Jen u účtů s průběhovým měřením stahuje navíc veřejné spotové ceny z OTE a kurz EUR
+z ČNB; posílá se jen datum, žádné osobní údaje.
 

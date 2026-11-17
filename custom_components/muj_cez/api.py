@@ -1122,6 +1122,10 @@ class CezClient:
                 raise CezConnectionError(f"GET {path} failed: {err}") from err
         raise CezAuthError("Unauthorized")
 
+    @property
+    def session(self) -> aiohttp.ClientSession:
+        return self._session
+
     async def get_supply_points(self) -> list[SupplyPoint]:
         return parse_supply_points(await self._get("/supply-points/RetrieveSupplyPoints"))
 

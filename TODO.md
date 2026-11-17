@@ -17,4 +17,4 @@
 - [x] Výrobní odběrné místo (výkup), dvoutarif v historii odečtů, data elektroměru (odběr/přetoky), statistiky, spotové ceny
 - [ ] Ověřit na vzdáleném HA: backfill statistik a výběr v panelu Energie
 - [x] Ocenění přetoků ze spotového senzoru v HA (portál má ceny jen do 30. 9. 2025)
-- [ ] Volitelně: historické spotové ceny z OTE pro období bez statistik senzoru
+- [x] Historické spotové ceny z OTE (kurz ČNB), portál ČEZ jako záloha
