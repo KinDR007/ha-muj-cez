@@ -94,6 +94,11 @@ Data is also loaded at Home Assistant start. A failed scheduled update is retrie
 6× every 30 minutes; entities keep their last values meanwhile. Invalid credentials
 trigger the re-authentication flow.
 
+## License
+
+MIT, see [LICENSE](LICENSE). The ČEZ logo in `brand/icon.png` is a trademark of ČEZ, a. s.
+and is not covered by the license.
+
 ## Development
 
 ```bash
