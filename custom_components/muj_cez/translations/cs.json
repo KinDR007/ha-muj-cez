@@ -25,7 +25,8 @@
           "reference_sensor": "Referenční senzor odběru v HA",
           "reference_export_sensor": "Referenční senzor exportu do sítě v HA",
           "spot_price_sensor": "Senzor spotové ceny v HA",
-          "dashboard": "Dashboard"
+          "dashboard": "Dashboard",
+          "install_cards": "Nainstalovat chybějící karty"
         },
         "data_description": {
           "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
@@ -33,7 +34,8 @@
           "reference_sensor": "Energetický senzor odběru ze sítě (kWh, s dlouhodobými statistikami). Slouží k porovnání měření HA s portálem.",
           "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ.",
           "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
-          "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní). Vyžaduje karty z HACS: button-card, stack-in-card, mini-graph-card."
+          "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní).",
+          "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu."
         }
       }
     },
@@ -58,7 +60,8 @@
           "reference_sensor": "Referenční senzor odběru v HA",
           "reference_export_sensor": "Referenční senzor exportu do sítě v HA",
           "spot_price_sensor": "Senzor spotové ceny v HA",
-          "dashboard": "Dashboard"
+          "dashboard": "Dashboard",
+          "install_cards": "Nainstalovat chybějící karty"
         },
         "data_description": {
           "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
@@ -66,7 +69,8 @@
           "reference_sensor": "Energetický senzor odběru ze sítě (kWh, s dlouhodobými statistikami). Slouží k porovnání měření HA s portálem.",
           "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ.",
           "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
-          "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní). Vyžaduje karty z HACS: button-card, stack-in-card, mini-graph-card."
+          "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní).",
+          "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu."
         }
       }
     }
@@ -262,8 +266,19 @@
   },
   "issues": {
     "dashboard_missing_cards": {
-      "title": "Dashboard Můj ČEZ potřebuje karty z HACS",
-      "description": "Záložka ČEZ byla vytvořena, ale chybí tyto karty: {cards}. Nainstalujte je přes HACS (Frontend) a obnovte stránku."
+      "title": "Dashboard Můj ČEZ potřebuje karty",
+      "description": "Záložce ČEZ chybí tyto karty: {cards}. Klikněte na Opravit a integrace je nainstaluje (přes Market / HACS, jinak z GitHubu).",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Nainstalovat karty",
+            "description": "Nainstalují se karty: {cards}. Po instalaci obnovte stránku prohlížeče."
+          }
+        },
+        "abort": {
+          "install_failed": "Instalace se nezdařila: {error}"
+        }
+      }
     },
     "dashboard_failed": {
       "title": "Dashboard Můj ČEZ se nepodařilo vytvořit",

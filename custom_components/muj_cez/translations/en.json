@@ -25,7 +25,8 @@
           "reference_sensor": "HA reference energy sensor",
           "reference_export_sensor": "HA grid export reference sensor",
           "spot_price_sensor": "HA spot price sensor",
-          "dashboard": "Dashboard"
+          "dashboard": "Dashboard",
+          "install_cards": "Install missing cards"
         },
         "data_description": {
           "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
@@ -33,7 +34,8 @@
           "reference_sensor": "Energy sensor measuring grid import (kWh, with long-term statistics). Used to compare HA measurement with the portal.",
           "reference_export_sensor": "Energy sensor of grid export (kWh, with long-term statistics). Compared with the export measured by the ČEZ smart meter.",
           "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025).",
-          "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV). Needs HACS cards: button-card, stack-in-card, mini-graph-card."
+          "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV).",
+          "install_cards": "Installs cards missing for the dashboard via Marketplace / HACS (when present), otherwise downloads the latest release from GitHub."
         }
       }
     },
@@ -58,7 +60,8 @@
           "reference_sensor": "HA reference energy sensor",
           "reference_export_sensor": "HA grid export reference sensor",
           "spot_price_sensor": "HA spot price sensor",
-          "dashboard": "Dashboard"
+          "dashboard": "Dashboard",
+          "install_cards": "Install missing cards"
         },
         "data_description": {
           "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
@@ -66,7 +69,8 @@
           "reference_sensor": "Energy sensor measuring grid import (kWh, with long-term statistics). Used to compare HA measurement with the portal.",
           "reference_export_sensor": "Energy sensor of grid export (kWh, with long-term statistics). Compared with the export measured by the ČEZ smart meter.",
           "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025).",
-          "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV). Needs HACS cards: button-card, stack-in-card, mini-graph-card."
+          "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV).",
+          "install_cards": "Installs cards missing for the dashboard via Marketplace / HACS (when present), otherwise downloads the latest release from GitHub."
         }
       }
     }
@@ -262,8 +266,19 @@
   },
   "issues": {
     "dashboard_missing_cards": {
-      "title": "Můj ČEZ dashboard needs HACS cards",
-      "description": "The ČEZ view was created but these cards are missing: {cards}. Install them with HACS (Frontend) and reload the page."
+      "title": "Můj ČEZ dashboard needs cards",
+      "description": "The ČEZ view needs these cards: {cards}. Click Fix and the integration installs them (via Marketplace / HACS, otherwise from GitHub).",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Install cards",
+            "description": "These cards will be installed: {cards}. Reload the browser page afterwards."
+          }
+        },
+        "abort": {
+          "install_failed": "Installation failed: {error}"
+        }
+      }
     },
     "dashboard_failed": {
       "title": "Můj ČEZ dashboard could not be written",

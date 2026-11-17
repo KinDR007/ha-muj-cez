@@ -8,8 +8,8 @@ entities and other languages work. Sections are kept only when their data exist
 
 The view (path "cez", further consumption points "cez-2", ...) is written into a storage
 dashboard chosen in the options; other views of that dashboard are kept. The view uses
-custom cards (button-card, stack-in-card, mini-graph-card) that must be installed, which
-is reported as a repair issue otherwise.
+custom cards (button-card, stack-in-card, mini-graph-card); missing ones are installed
+with the user's consent (option, or the repair issue's fix button), see cards.py.
 """
 
 from __future__ import annotations
@@ -27,8 +27,10 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 
 from .api import CezData
+from .cards import async_install_cards, async_missing_cards
 from .const import (
     CONF_DASHBOARD,
+    CONF_INSTALL_CARDS,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_SPOT_PRICE_SENSOR,
@@ -45,12 +47,6 @@ TEMPLATE_FILE = Path(__file__).parent / "dashboard_template.json"
 MARKER = re.compile(r"\b(sensor|select|calendar)\.mujcez_([cgvas])_([a-z0-9_]+)")
 MISSING = "muj_cez_unavailable"
 VIEW_PATH = "cez"
-# Lovelace resource name fragment -> card type (all required by the view).
-REQUIRED_CARDS = {
-    "button-card": "button-card",
-    "stack-in-card": "stack-in-card",
-    "mini-graph-card": "mini-graph-card",
-}
 ACCOUNT_UNIQUE = {
     "chart_unit": "{entry}_chart_unit",
     "documents": "{entry}_documents",
@@ -202,18 +198,6 @@ async def async_ensure_new_dashboard(hass: HomeAssistant) -> str:
     return DASHBOARD_NEW_URL
 
 
-def missing_cards(hass: HomeAssistant) -> list[str]:
-    """Required custom cards without a Lovelace resource."""
-    lovelace = _lovelace(hass)
-    if lovelace is None:
-        return list(REQUIRED_CARDS.values())
-    try:
-        urls = " ".join(str(item.get("url", "")) for item in lovelace.resources.async_items())
-    except Exception:  # resources not loaded / YAML mode
-        return []
-    return [card for name, card in REQUIRED_CARDS.items() if name not in urls]
-
-
 # --- View generation -----------------------------------------------------------------
 
 
@@ -341,17 +325,19 @@ async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
         )
         return None
     ir.async_delete_issue(hass, DOMAIN, ISSUE_FAILED)
-    missing = missing_cards(hass)
+    missing = await async_missing_cards(hass)
+    if missing and entry.options.get(CONF_INSTALL_CARDS, True):
+        await async_install_cards(hass, missing)
+        missing = await async_missing_cards(hass)
     if missing:
         ir.async_create_issue(
             hass,
             DOMAIN,
             ISSUE_CARDS,
-            is_fixable=False,
+            is_fixable=True,
             severity=ir.IssueSeverity.WARNING,
             translation_key=ISSUE_CARDS,
             translation_placeholders={"cards": ", ".join(missing)},
-            learn_more_url="https://hacs.xyz",
         )
     else:
         ir.async_delete_issue(hass, DOMAIN, ISSUE_CARDS)

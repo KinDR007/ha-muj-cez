@@ -77,8 +77,12 @@ dashboard "ČEZ" or any existing storage dashboard. The integration generates th
 from the entities of this Home Assistant (with or without PV, renamed entities and other
 languages work) and adds or replaces only its own view (`cez`). Charts have tooltips, rows
 open entity details and the kWh / CZK switch works on touch devices too. Action
-`muj_cez.update_dashboard` regenerates it. The view needs these HACS frontend cards:
-button-card, stack-in-card and mini-graph-card; a repair issue lists missing ones.
+`muj_cez.update_dashboard` regenerates it. The view needs the cards button-card,
+stack-in-card and mini-graph-card. With **Install missing cards** (default on) the
+integration installs missing ones through the HA Marketplace or HACS (their own download
+command, so they keep updating the cards), otherwise it downloads the latest GitHub release
+into `/config/www/muj_cez/cards/` and registers the Lovelace resource. When the option is off
+or installing fails, a repair issue offers a **Fix** button that installs them.
 
 The grid import/export reference sensors are prefilled from the Energy dashboard and the spot
 price sensor from cz_energy_spot_prices when installed.
@@ -245,10 +249,13 @@ Při instalaci (krok **Nastavení** po přihlášení) i později přes ozubené
 
 - **Dashboard**: kam přidat záložku ČEZ: nový dashboard „ČEZ“ nebo některý existující.
   Záložka se vygeneruje podle entit v tomto HA (s FVE i bez ní) a při každém načtení
-  integrace se aktualizuje; ostatní záložky dashboardu zůstanou beze změny. Potřebuje karty
-  z HACS (Frontend): **button-card**, **stack-in-card** a **mini-graph-card**. Když chybí,
-  integrace to ohlásí v **Nastavení → Opravy**. Ručně jde záložku znovu vytvořit akcí
-  `muj_cez.update_dashboard`.
+  integrace se aktualizuje; ostatní záložky dashboardu zůstanou beze změny. Ručně jde
+  záložku znovu vytvořit akcí `muj_cez.update_dashboard`.
+- **Nainstalovat chybějící karty** (výchozí zapnuto): záložka potřebuje karty
+  **button-card**, **stack-in-card** a **mini-graph-card**. Chybějící integrace nainstaluje
+  přes **Market** (HA od 2026.11) nebo **HACS**, které je pak samy aktualizují; bez nich
+  stáhne poslední vydání z GitHubu. Když je volba vypnutá nebo instalace selže, objeví se
+  v **Nastavení → Opravy** oznámení s tlačítkem **Opravit**. Po instalaci obnovte stránku.
 
 Senzory odběru a exportu se při instalaci předvyplní podle panelu Energie a senzor spotové
 ceny podle integrace cz_energy_spot_prices; vše lze změnit.
@@ -300,7 +307,7 @@ existující) a integrace záložku vygeneruje sama podle entit ve vašem HA. U 
 fotovoltaiky obsahuje vyúčtování, zálohy, smlouvu, spotřebu po měsících, meziroční
 porovnání, zúčtovací období a doklady. Pokud portál eviduje průběhová data elektroměru
 (typicky FVE), přibudou sekce elektroměru, výkupu přetoků a spotových cen. Potřebné karty
-z HACS: button-card, stack-in-card, mini-graph-card.
+(button-card, stack-in-card, mini-graph-card) integrace doinstaluje sama.
 
 Ukázka pohledu ČEZ bez FVE s predikcí, měsíčními a meziročními grafy (přepínání kWh / Kč)
 a porovnáním s měřením HA:

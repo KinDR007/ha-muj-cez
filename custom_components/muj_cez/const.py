@@ -12,6 +12,7 @@ CONF_REFERENCE_SENSOR = "reference_sensor"
 CONF_REFERENCE_EXPORT_SENSOR = "reference_export_sensor"
 CONF_SPOT_PRICE_SENSOR = "spot_price_sensor"
 CONF_DASHBOARD = "dashboard"
+CONF_INSTALL_CARDS = "install_cards"
 
 # Dashboard option values: "none" = off, default dashboard, new dedicated dashboard, or url.
 DASHBOARD_OFF = "none"

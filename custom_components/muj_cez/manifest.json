@@ -4,7 +4,8 @@
   "after_dependencies": [
     "energy",
     "lovelace",
-    "recorder"
+    "recorder",
+    "repairs"
   ],
   "codeowners": [
     "@KinDR007"
@@ -18,5 +19,5 @@
     "custom_components.muj_cez"
   ],
   "requirements": [],
-  "version": "0.6.0"
+  "version": "0.6.1"
 }

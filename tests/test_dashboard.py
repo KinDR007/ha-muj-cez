@@ -21,7 +21,12 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 import custom_components.muj_cez as integration
 from custom_components.muj_cez import dashboard
-from custom_components.muj_cez.const import CONF_DASHBOARD, DASHBOARD_NEW, DOMAIN
+from custom_components.muj_cez.const import (
+    CONF_DASHBOARD,
+    CONF_INSTALL_CARDS,
+    DASHBOARD_NEW,
+    DOMAIN,
+)
 
 from .conftest import PASSWORD, USERNAME
 from .test_grid import SV_UID
@@ -46,7 +51,7 @@ def no_settle(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 async def _setup(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, target: str
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, target: str, install: bool = False
 ) -> MockConfigEntry:
     await hass.config.async_set_time_zone("Europe/Prague")
     freezer.move_to(datetime(2026, 11, 16, 12, 0, tzinfo=TZ))
@@ -55,7 +60,7 @@ async def _setup(
         domain=DOMAIN,
         unique_id=USERNAME,
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
-        options={CONF_DASHBOARD: target},
+        options={CONF_DASHBOARD: target, CONF_INSTALL_CARDS: install},
     )
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)

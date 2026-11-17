@@ -12,6 +12,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     EntitySelector,
     EntitySelectorConfig,
     SelectSelector,
@@ -26,6 +27,7 @@ from homeassistant.helpers.selector import (
 from .api import CezAuthError, CezClient, CezError
 from .const import (
     CONF_DASHBOARD,
+    CONF_INSTALL_CARDS,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_SPOT_PRICE_SENSOR,
@@ -104,6 +106,7 @@ async def settings_form(
             vol.Optional(CONF_DASHBOARD, default=DASHBOARD_OFF): SelectSelector(
                 SelectSelectorConfig(options=dashboards, mode=SelectSelectorMode.DROPDOWN)
             ),
+            vol.Optional(CONF_INSTALL_CARDS, default=True): BooleanSelector(),
         }
     )
     if current is None:
