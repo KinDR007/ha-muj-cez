@@ -580,7 +580,7 @@ def grid_sections() -> list[dict]:
                     head(
                         GRID_DATE,
                         "mdi:scale-unbalanced",
-                        "Měsíční porovnání",
+                        "Elektroměr po měsících",
                         GJS + "return 'odběr · přetoky';",
                         GJS
                         + "const c=(GD.export_comparison||[]).filter(x=>x.diff_pct!=null).pop();"
@@ -588,13 +588,14 @@ def grid_sections() -> list[dict]:
                     ),
                     details(
                         GJS + "const ic=GD.import_comparison||[],ec=GD.export_comparison||[];"
-                        "const months=[...new Set([...ic,...ec].map(x=>x.month))].sort().reverse().slice(0,12);"
-                        "if(!months.length)return `<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0;white-space:normal'>"
-                        "Nastavte referenční senzory odběru a exportu v možnostech integrace.</div>`;"
-                        "const w=(c)=>c?`<span style='color:${Math.abs(c.diff_pct)>5?'var(--warning-color,#ffa600)':'inherit'}'>${pctg(c.diff_pct)}</span>`:'–';"
-                        f"return months.map(m=>row('{GRID_DATE}',mlabg(m),w(ic.find(x=>x.month===m))+' · '+w(ec.find(x=>x.month===m)))).join('')"
-                        "+`<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0;white-space:normal'>Odchylka HA od elektroměru "
-                        "ČEZ, jen dny s daty v obou zdrojích.</div>`;",
+                        "const ms=(GD.months||[]).slice().reverse();"
+                        "const w=(c)=>c&&c.diff_pct!=null?` <span style='font-size:11px;color:${Math.abs(c.diff_pct)>5?"
+                        "'var(--warning-color,#ffa600)':'var(--secondary-text-color)'}'>(HA ${pctg(c.diff_pct)})</span>`:'';"
+                        f"return ms.map(m=>row('{GRID_DATE}',mlabg(m.month)+(m.days<new Date(+m.month.slice(0,4),+m.month.slice(5),0).getDate()?' *':''),"
+                        "f(m.import_kwh)+w(ic.find(x=>x.month===m.month))+' · '+f(m.export_kwh,1)+w(ec.find(x=>x.month===m.month))+' kWh')).join('')"
+                        "+`<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0;white-space:normal'>Odběr · přetoky podle "
+                        "elektroměru ČEZ za všechny měsíce s daty; v závorce odchylka HA tam, kde má HA data (jen dny v obou zdrojích). "
+                        "* = neúplný měsíc.</div>`;",
                     ),
                 ),
             ],
