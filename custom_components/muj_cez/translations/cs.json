@@ -51,7 +51,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Plán aktualizace",
+        "title": "Nastavení",
         "data": {
           "update_period": "Perioda aktualizace",
           "update_time": "Čas aktualizace",

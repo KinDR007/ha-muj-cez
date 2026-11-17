@@ -139,6 +139,9 @@ async def test_strategy_dashboard_refused(
     await _setup(hass, freezer, "auto-map")
     assert await _config(hass, "auto-map") == {"strategy": {"type": "map"}}
     assert ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_FAILED)
+    # Not offered in the settings at all.
+    choices = await dashboard.async_dashboard_choices(hass)
+    assert "auto-map" not in {c["value"] for c in choices}
 
 
 async def test_update_dashboard_service(

@@ -227,7 +227,7 @@ Aktualizace se dělá stejně: nahraďte složku `muj_cez` novou verzí a restar
 
 ### 3. Nastavení
 
-Ozubené kolo u účtu otevře **Plán aktualizace**:
+Při instalaci (krok **Nastavení** po přihlášení) i později přes ozubené kolo u účtu:
 
 ![Nastavení integrace](docs/img/instalace/04-nastaveni.png)
 
@@ -295,15 +295,43 @@ platby, poplatky). Doklady lze vypsat i akcí `muj_cez.get_documents` s filtry
 
 ### 5. Dashboard
 
-Ukázka pohledu ČEZ s predikcí, měsíčními a meziročními grafy (přepínání kWh / Kč)
+Dashboard není potřeba skládat ručně: v nastavení zvolte **Dashboard** (nový „ČEZ“ nebo
+existující) a integrace záložku vygeneruje sama podle entit ve vašem HA. U účtu bez
+fotovoltaiky obsahuje vyúčtování, zálohy, smlouvu, spotřebu po měsících, meziroční
+porovnání, zúčtovací období a doklady. Pokud portál eviduje průběhová data elektroměru
+(typicky FVE), přibudou sekce elektroměru, výkupu přetoků a spotových cen. Potřebné karty
+z HACS: button-card, stack-in-card, mini-graph-card.
+
+Ukázka pohledu ČEZ bez FVE s predikcí, měsíčními a meziročními grafy (přepínání kWh / Kč)
 a porovnáním s měřením HA:
 
 ![Dashboard ČEZ, horní část](docs/img/instalace/06-dashboard-1.png)
 
 ![Dashboard ČEZ, zúčtovací období](docs/img/instalace/07-dashboard-2.png)
 
-Tento pohled používá vlastní karty z HACS (button-card, stack-in-card, mini-graph-card,
-card-mod) a generuje ho skript `tools/dashboard/build_cez_view.py` pro Dashboard Editor.
+#### Ukázka s fotovoltaikou
+
+Souhrny elektroměru, výkupu přetoků a porovnání HA s elektroměrem ČEZ po měsících:
+
+![Dashboard s FVE – přehled](docs/img/fve/01-prehled.png)
+
+Odběr ze sítě a přetoky po měsících, vyplacený výkup proti hodnotě přetoků za spotovou cenu:
+
+![Dashboard s FVE – odběr, přetoky a výkup](docs/img/fve/02-odber-pretoky-vykup.png)
+
+Spotová cena dnes a zítra (před zveřejněním zítřka odhad podle posledních 7 dní) a po
+měsících: průměr spotu, spot vážený přetoky a vyplacená výkupní cena:
+
+![Dashboard s FVE – spotové ceny](docs/img/fve/03-spot.png)
+
+Na mobilu (grafy mají tooltipy, řádky otevírají detail entity, přepínač kWh / Kč funguje i na dotyk):
+
+<img src="docs/img/fve/04-mobil-spot.png" width="360" alt="Dashboard s FVE na mobilu">
+
+Údaje na snímcích (EAN, čísla smluv a elektroměru, adresa) jsou anonymizované.
+
+Pohled používá vlastní karty z HACS (button-card, stack-in-card, mini-graph-card;
+card-mod je volitelný). Šablona pochází ze skriptu `tools/dashboard/build_cez_view.py`.
 Jednodušší karty bez dalších závislostí (tabulka zúčtovacích období, kalendář dokladů,
 automatizace upozornění na nezaplacené doklady) jsou v [docs/dashboard.md](docs/dashboard.md).
 

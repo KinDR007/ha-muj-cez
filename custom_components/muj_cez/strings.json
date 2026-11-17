@@ -51,7 +51,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Update schedule",
+        "title": "Settings",
         "data": {
           "update_period": "Update period",
           "update_time": "Update time",
