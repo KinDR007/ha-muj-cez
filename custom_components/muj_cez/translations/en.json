@@ -15,6 +15,26 @@
         "data": {
           "password": "Password"
         }
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Update schedule, reference sensors and dashboard. Grid import/export sensors are prefilled from the Energy dashboard, the spot price sensor from cz_energy_spot_prices (when installed); everything can be changed.",
+        "data": {
+          "update_period": "Update period",
+          "update_time": "Update time",
+          "reference_sensor": "HA reference energy sensor",
+          "reference_export_sensor": "HA grid export reference sensor",
+          "spot_price_sensor": "HA spot price sensor",
+          "dashboard": "Dashboard"
+        },
+        "data_description": {
+          "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
+          "update_time": "Local time of the update. Data is also loaded when Home Assistant starts.",
+          "reference_sensor": "Energy sensor measuring grid import (kWh, with long-term statistics). Used to compare HA measurement with the portal.",
+          "reference_export_sensor": "Energy sensor of grid export (kWh, with long-term statistics). Compared with the export measured by the ČEZ smart meter.",
+          "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025).",
+          "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV). Needs HACS cards: button-card, stack-in-card, mini-graph-card."
+        }
       }
     },
     "error": {
@@ -37,14 +57,16 @@
           "update_time": "Update time",
           "reference_sensor": "HA reference energy sensor",
           "reference_export_sensor": "HA grid export reference sensor",
-          "spot_price_sensor": "HA spot price sensor"
+          "spot_price_sensor": "HA spot price sensor",
+          "dashboard": "Dashboard"
         },
         "data_description": {
           "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
           "update_time": "Local time of the update. Data is also loaded when Home Assistant starts.",
           "reference_sensor": "Energy sensor measuring grid import (kWh, with long-term statistics). Used to compare HA measurement with the portal.",
           "reference_export_sensor": "Energy sensor of grid export (kWh, with long-term statistics). Compared with the export measured by the ČEZ smart meter.",
-          "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025)."
+          "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025).",
+          "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV). Needs HACS cards: button-card, stack-in-card, mini-graph-card."
         }
       }
     }
@@ -224,6 +246,10 @@
           "description": "Maximum number of returned documents."
         }
       }
+    },
+    "update_dashboard": {
+      "name": "Update dashboard",
+      "description": "Regenerates the ČEZ view in the selected dashboard from the current entities."
     }
   },
   "exceptions": {
@@ -232,6 +258,16 @@
     },
     "entry_required": {
       "message": "More accounts are configured, select one."
+    }
+  },
+  "issues": {
+    "dashboard_missing_cards": {
+      "title": "Můj ČEZ dashboard needs HACS cards",
+      "description": "The ČEZ view was created but these cards are missing: {cards}. Install them with HACS (Frontend) and reload the page."
+    },
+    "dashboard_failed": {
+      "title": "Můj ČEZ dashboard could not be written",
+      "description": "Error: {error}. Select another dashboard in the integration options."
     }
   }
 }

@@ -70,6 +70,19 @@ The first run backfills the history in the background (tens of requests, a few m
 Accounts without interval data are detected once a month and nothing else is requested;
 no entities or statistics are created for them.
 
+## Dashboard
+
+In the settings (during installation and in the options) choose a dashboard: a new
+dashboard "ČEZ" or any existing storage dashboard. The integration generates the ČEZ view
+from the entities of this Home Assistant (with or without PV, renamed entities and other
+languages work) and adds or replaces only its own view (`cez`). Charts have tooltips, rows
+open entity details and the kWh / CZK switch works on touch devices too. Action
+`muj_cez.update_dashboard` regenerates it. The view needs these HACS frontend cards:
+button-card, stack-in-card and mini-graph-card; a repair issue lists missing ones.
+
+The grid import/export reference sensors are prefilled from the Energy dashboard and the spot
+price sensor from cz_energy_spot_prices when installed.
+
 ## Comparison with a Home Assistant energy sensor
 
 Set **Reference energy sensor** in the integration options (an energy sensor measuring
@@ -229,6 +242,16 @@ Ozubené kolo u účtu otevře **Plán aktualizace**:
 - **Senzor spotové ceny v HA** (nepovinné): např. `sensor.current_spot_electricity_price`
   z integrace cz_energy_spot_prices. Portál ČEZ má spotové ceny jen do září 2025; senzor
   doplní ceny pro ocenění přetoků, ovšem jen za dobu, kterou pokrývají jeho statistiky.
+
+- **Dashboard**: kam přidat záložku ČEZ: nový dashboard „ČEZ“ nebo některý existující.
+  Záložka se vygeneruje podle entit v tomto HA (s FVE i bez ní) a při každém načtení
+  integrace se aktualizuje; ostatní záložky dashboardu zůstanou beze změny. Potřebuje karty
+  z HACS (Frontend): **button-card**, **stack-in-card** a **mini-graph-card**. Když chybí,
+  integrace to ohlásí v **Nastavení → Opravy**. Ručně jde záložku znovu vytvořit akcí
+  `muj_cez.update_dashboard`.
+
+Senzory odběru a exportu se při instalaci předvyplní podle panelu Energie a senzor spotové
+ceny podle integrace cz_energy_spot_prices; vše lze změnit.
 
 Uložením se integrace znovu načte. Data se načítají také při každém startu Home Assistantu.
 Když aktualizace selže, zkouší se znovu 6× po 30 minutách a entity mezitím drží poslední

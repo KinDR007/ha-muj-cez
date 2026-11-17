@@ -25,17 +25,21 @@ from homeassistant.helpers.selector import (
 
 from .api import CezAuthError, CezClient, CezError
 from .const import (
+    CONF_DASHBOARD,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_SPOT_PRICE_SENSOR,
     CONF_UPDATE_PERIOD,
     CONF_UPDATE_TIME,
+    DASHBOARD_NEW,
+    DASHBOARD_OFF,
     DEFAULT_UPDATE_PERIOD,
     DEFAULT_UPDATE_TIME,
     DOMAIN,
     UPDATE_PERIODS,
 )
 from .coordinator import MujCezConfigEntry
+from .dashboard import async_dashboard_choices, async_energy_grid_sensors, suggested_options
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,6 +62,61 @@ REAUTH_SCHEMA = vol.Schema(
 )
 
 
+_DASHBOARD_LABELS = {
+    "cs": {"off": "Nevytvářet", "new": "Nový dashboard „ČEZ“"},
+    "en": {"off": "Do not create", "new": 'New dashboard "ČEZ"'},
+}
+
+
+async def settings_form(
+    hass: HomeAssistant, current: Mapping[str, Any] | None
+) -> tuple[vol.Schema, dict[str, Any]]:
+    """Settings schema and suggested values (current options, else detected defaults).
+
+    Grid import/export reference sensors default to the Energy dashboard grid source,
+    the spot price sensor to cz_energy_spot_prices when installed.
+    """
+    labels = _DASHBOARD_LABELS.get(hass.config.language, _DASHBOARD_LABELS["en"])
+    dashboards = [
+        {"value": DASHBOARD_OFF, "label": labels["off"]},
+        {"value": DASHBOARD_NEW, "label": labels["new"]},
+        *await async_dashboard_choices(hass),
+    ]
+    schema = vol.Schema(
+        {
+            vol.Required(CONF_UPDATE_PERIOD, default=DEFAULT_UPDATE_PERIOD): SelectSelector(
+                SelectSelectorConfig(
+                    options=UPDATE_PERIODS,
+                    mode=SelectSelectorMode.DROPDOWN,
+                    translation_key=CONF_UPDATE_PERIOD,
+                )
+            ),
+            vol.Required(CONF_UPDATE_TIME, default=DEFAULT_UPDATE_TIME): TimeSelector(),
+            vol.Optional(CONF_REFERENCE_SENSOR): EntitySelector(
+                EntitySelectorConfig(domain="sensor", device_class="energy")
+            ),
+            vol.Optional(CONF_REFERENCE_EXPORT_SENSOR): EntitySelector(
+                EntitySelectorConfig(domain="sensor", device_class="energy")
+            ),
+            vol.Optional(CONF_SPOT_PRICE_SENSOR): EntitySelector(
+                EntitySelectorConfig(domain="sensor")
+            ),
+            vol.Optional(CONF_DASHBOARD, default=DASHBOARD_OFF): SelectSelector(
+                SelectSelectorConfig(options=dashboards, mode=SelectSelectorMode.DROPDOWN)
+            ),
+        }
+    )
+    if current is None:
+        suggested = suggested_options(hass, await async_energy_grid_sensors(hass))
+        suggested[CONF_DASHBOARD] = DASHBOARD_NEW
+    else:
+        suggested = dict(current)
+    valid = {d["value"] for d in dashboards}
+    if suggested.get(CONF_DASHBOARD) not in valid:
+        suggested[CONF_DASHBOARD] = DASHBOARD_OFF
+    return schema, suggested
+
+
 async def _validate(hass: HomeAssistant, username: str, password: str) -> dict[str, str]:
     client = CezClient(async_get_clientsession(hass), username, password)
     try:
@@ -76,6 +135,7 @@ async def _validate(hass: HomeAssistant, username: str, password: str) -> dict[s
 
 class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
+    _data: dict[str, Any]
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
@@ -85,16 +145,27 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
             errors = await _validate(self.hass, username, user_input[CONF_PASSWORD])
             if not errors:
-                return self.async_create_entry(
-                    title=username,
-                    data={CONF_USERNAME: username, CONF_PASSWORD: user_input[CONF_PASSWORD]},
-                )
+                self._data = {CONF_USERNAME: username, CONF_PASSWORD: user_input[CONF_PASSWORD]}
+                return await self.async_step_settings()
         return self.async_show_form(
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(
                 USER_SCHEMA, {CONF_USERNAME: (user_input or {}).get(CONF_USERNAME)}
             ),
             errors=errors,
+        )
+
+    async def async_step_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Update schedule, reference sensors and dashboard (prefilled from Energy)."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title=self._data[CONF_USERNAME], data=self._data, options=user_input
+            )
+        schema, suggested = await settings_form(self.hass, None)
+        return self.async_show_form(
+            step_id="settings", data_schema=self.add_suggested_values_to_schema(schema, suggested)
         )
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
@@ -130,28 +201,8 @@ class MujCezOptionsFlow(OptionsFlowWithReload):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
             return self.async_create_entry(data=user_input)
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_UPDATE_PERIOD, default=DEFAULT_UPDATE_PERIOD): SelectSelector(
-                    SelectSelectorConfig(
-                        options=UPDATE_PERIODS,
-                        mode=SelectSelectorMode.DROPDOWN,
-                        translation_key=CONF_UPDATE_PERIOD,
-                    )
-                ),
-                vol.Required(CONF_UPDATE_TIME, default=DEFAULT_UPDATE_TIME): TimeSelector(),
-                vol.Optional(CONF_REFERENCE_SENSOR): EntitySelector(
-                    EntitySelectorConfig(domain="sensor", device_class="energy")
-                ),
-                vol.Optional(CONF_REFERENCE_EXPORT_SENSOR): EntitySelector(
-                    EntitySelectorConfig(domain="sensor", device_class="energy")
-                ),
-                vol.Optional(CONF_SPOT_PRICE_SENSOR): EntitySelector(
-                    EntitySelectorConfig(domain="sensor")
-                ),
-            }
-        )
+        schema, suggested = await settings_form(self.hass, self.config_entry.options)
         return self.async_show_form(
             step_id="init",
-            data_schema=self.add_suggested_values_to_schema(schema, self.config_entry.options),
+            data_schema=self.add_suggested_values_to_schema(schema, suggested),
         )

@@ -118,3 +118,18 @@ CEZ_PREFIX=sensor.cez_<ean>_ CEZ_GRID_PREFIX=sensor.cez_<address>_ CEZ_PROD_PREF
 HA_URL=http://<ha>:8123 HA_TOKEN=... EDITOR_DIR=<dashboard_editor_app> \
   .venv/bin/python tools/dashboard/push_lovelace.py view.json --templates <editor model.yaml> --after spot
 ```
+
+## Dashboard template shipped with the integration
+
+The integration generates the view itself (option "Dashboard"). The template
+`custom_components/muj_cez/dashboard_template.json` is exported from this builder, so after a
+change of `build_cez_view.py` run:
+
+```bash
+EDITOR_DIR=<dashboard_editor_app> .venv/bin/python tools/dashboard/export_dashboard.py
+```
+
+It renders all sections with marker entity ids (`sensor.mujcez_c_*` consumption point,
+`_g_*` smart meter, `_v_*` production point, `_a_*` account, `_s_*` spot sensors) and stores the
+data each section needs; the integration replaces the markers with entity ids from the entity
+registry and drops sections without data.

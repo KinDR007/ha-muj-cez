@@ -16,6 +16,12 @@ import sys
 
 # Entity ID prefix of the supply point sensors, e.g. sensor.cez_domov_
 P = os.environ.get("CEZ_PREFIX", "sensor.cez_domov_")
+# Account level entities (chart unit select, documents calendar, unread messages).
+A_SELECT = os.environ.get("CEZ_SELECT", "select.muj_cez_jednotka_grafu")
+A_CALENDAR = os.environ.get("CEZ_CALENDAR", "calendar.muj_cez_doklady")
+A_MESSAGES = os.environ.get("CEZ_MESSAGES", "sensor.muj_cez_neprectene_zpravy")
+# Export mode: all sections tagged with the data they need (integration template).
+EXPORT = os.environ.get("CEZ_EXPORT") == "1"
 
 # Local JS helpers (names must not clash with viewlib helpers n, f, st, u, cz).
 JS = (
@@ -175,7 +181,7 @@ contract = {
                 "+row('stav_elektromeru','Stav elektroměru',num('stav_elektromeru')+' kWh · '+dt(at('stav_elektromeru','reading_date')))"
                 "+row('spotreba_za_minule_obdobi','Minulé období',num('spotreba_za_minule_obdobi')+' kWh · '+num('naklady_za_minule_obdobi')+' Kč')"
                 "+row('planovane_odstavky','Plánované odstávky',st('planovane_odstavky')?.state??'–')"
-                "+row('sensor.muj_cez_neprectene_zpravy','Nepřečtené zprávy',st('sensor.muj_cez_neprectene_zpravy')?.state??'–')"
+                f"+row('{A_MESSAGES}','Nepřečtené zprávy',st('{A_MESSAGES}')?.state??'–')"
                 "+row('ean','EAN',st('ean')?.state||'–')"
                 "+row('cislo_elektromeru','Číslo elektroměru',st('cislo_elektromeru')?.state||'–')"
                 "+row('cislo_smlouvy','Číslo smlouvy',st('cislo_smlouvy')?.state||'–')"
@@ -238,14 +244,14 @@ documents = {
         {
             "type": "calendar",
             "initial_view": "dayGridMonth",
-            "entities": ["calendar.muj_cez_doklady"],
+            "entities": [A_CALENDAR],
             "grid_options": {"columns": "full", "rows": 12},
         },
     ],
 }
 
 # --- Charts: HA reference sensor vs portal (data from the comparison sensor) ---------
-SELECT = "select.muj_cez_jednotka_grafu"
+SELECT = A_SELECT
 COMPARISON = P + "odchylka_od_cez"
 
 CH = (
@@ -480,6 +486,7 @@ def grid_sections() -> list[dict]:
             "type": "grid",
             "column_span": 1,
             "cards": [heading("Elektroměr", "mdi:meter-electric-outline"), overview],
+            "_requires": ["grid"],
         }
     ]
     if V:
@@ -507,6 +514,7 @@ def grid_sections() -> list[dict]:
                 "type": "grid",
                 "column_span": 1,
                 "cards": [heading("Výkup přetoků", "mdi:solar-power-variant"), payout],
+                "_requires": ["production"],
             }
         )
 
@@ -539,12 +547,14 @@ def grid_sections() -> list[dict]:
         ],
     }
     comparison_index = len(sections)
+    monthly_grid["_requires"] = ["grid"]
     sections.append(monthly_grid)
     if V:
         sections.append(
             {
                 "type": "grid",
                 "column_span": 3,
+                "_requires": ["production"],
                 "cards": [
                     heading("Výkup po měsících", "mdi:cash-multiple"),
                     stack(
@@ -574,6 +584,8 @@ def grid_sections() -> list[dict]:
         {
             "type": "grid",
             "column_span": 1 if V else 2,
+            "_requires": ["grid"],
+            "_span_without_production": 2,
             "cards": [
                 heading("HA vs elektroměr ČEZ", "mdi:scale-unbalanced"),
                 stack(
@@ -708,6 +720,8 @@ def spot_sections() -> list[dict]:
             ),
         ],
     }
+    today_tomorrow["_requires"] = ["grid"]
+    monthly_spot["_requires"] = ["grid"]
     return [today_tomorrow, monthly_spot]
 
 
@@ -752,25 +766,34 @@ GJS += (
     "const pctg=(x)=>x==null?'–':(x>0?'+':'')+f(x,1)+' %';"
 )
 
+
+def _tag(section: dict, *requires: str) -> dict:
+    return {**section, "_requires": list(requires)} if requires else section
+
+
+SECTIONS = [
+    billing,
+    advances,
+    contract,
+    *grid_sections(),
+    *spot_sections(),
+    monthly,
+    *([_tag(yoy_meter(), "grid"), _tag(yoy, "no_grid")] if EXPORT else [yoy_meter() if G else yoy]),
+    totals,
+    check,
+    periods,
+    documents,
+]
+if not EXPORT:
+    SECTIONS = [{k: v for k, v in sec.items() if not k.startswith("_")} for sec in SECTIONS]
+
 view = {
     "title": "ČEZ",
     "path": "cez",
     "icon": "mdi:lightning-bolt-circle",
     "type": "sections",
     "max_columns": 3,
-    "sections": [
-        billing,
-        advances,
-        contract,
-        *grid_sections(),
-        *spot_sections(),
-        monthly,
-        yoy_meter() if G else yoy,
-        totals,
-        check,
-        periods,
-        documents,
-    ],
+    "sections": SECTIONS,
 }
 
 with open(sys.argv[1], "w") as fh:

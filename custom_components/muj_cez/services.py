@@ -16,6 +16,7 @@ from .const import DOMAIN
 from .coordinator import MujCezConfigEntry
 
 SERVICE_GET_DOCUMENTS = "get_documents"
+SERVICE_UPDATE_DASHBOARD = "update_dashboard"
 
 ATTR_CONFIG_ENTRY_ID = "config_entry_id"
 ATTR_DATE_FROM = "date_from"
@@ -112,7 +113,25 @@ async def _async_get_documents(call: ServiceCall) -> ServiceResponse:
     return result
 
 
+async def _async_update_dashboard(call: ServiceCall) -> ServiceResponse:
+    """Regenerate the dashboard of every loaded account with a dashboard selected."""
+    from .dashboard import async_update_dashboard
+
+    written = []
+    for entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
+        url = await async_update_dashboard(call.hass, entry)
+        if url:
+            written.append(url)
+    return {"dashboards": written}
+
+
 def async_setup_services(hass: HomeAssistant) -> None:
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_UPDATE_DASHBOARD,
+        _async_update_dashboard,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
     hass.services.async_register(
         DOMAIN,
         SERVICE_GET_DOCUMENTS,

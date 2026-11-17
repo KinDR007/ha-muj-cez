@@ -1,6 +1,6 @@
 """Config and options flow tests."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.config_entries import SOURCE_USER
@@ -10,7 +10,17 @@ from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.muj_cez.api import CezAuthError, CezConnectionError
-from custom_components.muj_cez.const import CONF_UPDATE_PERIOD, CONF_UPDATE_TIME, DOMAIN
+from custom_components.muj_cez.const import (
+    CONF_DASHBOARD,
+    CONF_REFERENCE_EXPORT_SENSOR,
+    CONF_REFERENCE_SENSOR,
+    CONF_UPDATE_PERIOD,
+    CONF_UPDATE_TIME,
+    DASHBOARD_NEW,
+    DASHBOARD_OFF,
+    DOMAIN,
+)
+from custom_components.muj_cez.dashboard import grid_sensors_from_energy
 
 from .conftest import PASSWORD, USERNAME
 
@@ -18,11 +28,33 @@ from .conftest import PASSWORD, USERNAME
 async def test_user_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None:
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     assert result["type"] is FlowResultType.FORM
+    with patch(
+        "custom_components.muj_cez.config_flow.async_energy_grid_sensors",
+        AsyncMock(return_value=("sensor.import_energy", "sensor.export_energy")),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_USERNAME: f" {USERNAME} ", CONF_PASSWORD: PASSWORD}
+        )
+    # Settings prefilled from the Energy dashboard, new dashboard suggested.
+    assert result["step_id"] == "settings"
+    suggested = {
+        str(k): (k.description or {}).get("suggested_value") for k in result["data_schema"].schema
+    }
+    assert suggested[CONF_REFERENCE_SENSOR] == "sensor.import_energy"
+    assert suggested[CONF_REFERENCE_EXPORT_SENSOR] == "sensor.export_energy"
+    assert suggested[CONF_DASHBOARD] == DASHBOARD_NEW
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_USERNAME: f" {USERNAME} ", CONF_PASSWORD: PASSWORD}
+        result["flow_id"],
+        {
+            CONF_UPDATE_PERIOD: "daily",
+            CONF_UPDATE_TIME: "00:00:00",
+            CONF_REFERENCE_SENSOR: "sensor.import_energy",
+            CONF_DASHBOARD: DASHBOARD_OFF,
+        },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == USERNAME
+    assert result["options"][CONF_REFERENCE_SENSOR] == "sensor.import_energy"
     assert result["data"] == {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
     assert result["result"].unique_id == USERNAME
 
@@ -56,7 +88,7 @@ async def test_user_flow_errors(
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["step_id"] == "settings"
 
 
 async def test_already_configured(hass: HomeAssistant, mock_client: AsyncMock) -> None:
@@ -107,4 +139,31 @@ async def test_options_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None
         result["flow_id"], {CONF_UPDATE_PERIOD: "weekly", CONF_UPDATE_TIME: "03:15:00"}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert entry.options == {CONF_UPDATE_PERIOD: "weekly", CONF_UPDATE_TIME: "03:15:00"}
+    assert entry.options == {
+        CONF_UPDATE_PERIOD: "weekly",
+        CONF_UPDATE_TIME: "03:15:00",
+        CONF_DASHBOARD: DASHBOARD_OFF,
+    }
+
+
+def test_grid_sensors_from_energy() -> None:
+    new = {
+        "energy_sources": [
+            {"type": "grid", "stat_energy_from": "sensor.a", "stat_energy_to": "sensor.b"}
+        ]
+    }
+    legacy = {
+        "energy_sources": [
+            {"type": "solar", "stat_energy_from": "sensor.pv"},
+            {
+                "type": "grid",
+                "flow_from": [{"stat_energy_from": "sensor.a"}],
+                "flow_to": [{"stat_energy_to": "sensor.b"}],
+            },
+        ]
+    }
+    assert grid_sensors_from_energy(new) == ("sensor.a", "sensor.b")
+    assert grid_sensors_from_energy(legacy) == ("sensor.a", "sensor.b")
+    external = {"energy_sources": [{"type": "grid", "stat_energy_from": "muj_cez:grid_import_1"}]}
+    assert grid_sensors_from_energy(external) == (None, None)
+    assert grid_sensors_from_energy(None) == (None, None)

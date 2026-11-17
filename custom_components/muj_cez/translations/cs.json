@@ -15,6 +15,26 @@
         "data": {
           "password": "Heslo"
         }
+      },
+      "settings": {
+        "title": "Nastavení",
+        "description": "Plán aktualizace, referenční senzory a dashboard. Senzory odběru a exportu jsou předvyplněné z panelu Energie, senzor spotové ceny z integrace cz_energy_spot_prices (pokud je nainstalovaná); vše lze změnit.",
+        "data": {
+          "update_period": "Perioda aktualizace",
+          "update_time": "Čas aktualizace",
+          "reference_sensor": "Referenční senzor odběru v HA",
+          "reference_export_sensor": "Referenční senzor exportu do sítě v HA",
+          "spot_price_sensor": "Senzor spotové ceny v HA",
+          "dashboard": "Dashboard"
+        },
+        "data_description": {
+          "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
+          "update_time": "Místní čas aktualizace. Data se načtou i při startu Home Assistantu.",
+          "reference_sensor": "Energetický senzor odběru ze sítě (kWh, s dlouhodobými statistikami). Slouží k porovnání měření HA s portálem.",
+          "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ.",
+          "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
+          "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní). Vyžaduje karty z HACS: button-card, stack-in-card, mini-graph-card."
+        }
       }
     },
     "error": {
@@ -37,14 +57,16 @@
           "update_time": "Čas aktualizace",
           "reference_sensor": "Referenční senzor odběru v HA",
           "reference_export_sensor": "Referenční senzor exportu do sítě v HA",
-          "spot_price_sensor": "Senzor spotové ceny v HA"
+          "spot_price_sensor": "Senzor spotové ceny v HA",
+          "dashboard": "Dashboard"
         },
         "data_description": {
           "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
           "update_time": "Místní čas aktualizace. Data se načtou i při startu Home Assistantu.",
           "reference_sensor": "Energetický senzor odběru ze sítě (kWh, s dlouhodobými statistikami). Slouží k porovnání měření HA s portálem.",
           "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ.",
-          "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025)."
+          "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
+          "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní). Vyžaduje karty z HACS: button-card, stack-in-card, mini-graph-card."
         }
       }
     }
@@ -224,6 +246,10 @@
           "description": "Maximální počet vrácených dokladů."
         }
       }
+    },
+    "update_dashboard": {
+      "name": "Aktualizovat dashboard",
+      "description": "Znovu vygeneruje záložku ČEZ ve zvoleném dashboardu podle aktuálních entit."
     }
   },
   "exceptions": {
@@ -232,6 +258,16 @@
     },
     "entry_required": {
       "message": "Je nastaveno více účtů, vyberte jeden."
+    }
+  },
+  "issues": {
+    "dashboard_missing_cards": {
+      "title": "Dashboard Můj ČEZ potřebuje karty z HACS",
+      "description": "Záložka ČEZ byla vytvořena, ale chybí tyto karty: {cards}. Nainstalujte je přes HACS (Frontend) a obnovte stránku."
+    },
+    "dashboard_failed": {
+      "title": "Dashboard Můj ČEZ se nepodařilo vytvořit",
+      "description": "Chyba: {error}. Vyberte v nastavení integrace jiný dashboard."
     }
   }
 }

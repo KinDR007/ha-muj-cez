@@ -11,6 +11,13 @@ CONF_UPDATE_TIME = "update_time"
 CONF_REFERENCE_SENSOR = "reference_sensor"
 CONF_REFERENCE_EXPORT_SENSOR = "reference_export_sensor"
 CONF_SPOT_PRICE_SENSOR = "spot_price_sensor"
+CONF_DASHBOARD = "dashboard"
+
+# Dashboard option values: "none" = off, default dashboard, new dedicated dashboard, or url.
+DASHBOARD_OFF = "none"
+DASHBOARD_DEFAULT = "lovelace"
+DASHBOARD_NEW = "__new__"
+DASHBOARD_NEW_URL = "muj-cez"
 
 PERIOD_DAILY = "daily"
 PERIOD_WEEKLY = "weekly"
