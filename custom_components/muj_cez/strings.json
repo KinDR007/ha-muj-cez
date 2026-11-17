@@ -267,12 +267,11 @@
   "issues": {
     "dashboard_missing_cards": {
       "title": "Můj ČEZ dashboard needs cards",
-      "description": "The ČEZ view needs these cards: {cards}. Click Fix and the integration installs them (via Marketplace / HACS, otherwise from GitHub).",
       "fix_flow": {
         "step": {
           "confirm": {
             "title": "Install cards",
-            "description": "These cards will be installed: {cards}. Reload the browser page afterwards."
+            "description": "The ČEZ view needs these cards: {cards}. The integration installs them via Marketplace / HACS, otherwise from GitHub. Reload the browser page afterwards."
           }
         },
         "abort": {

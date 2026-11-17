@@ -267,12 +267,11 @@
   "issues": {
     "dashboard_missing_cards": {
       "title": "Dashboard Můj ČEZ potřebuje karty",
-      "description": "Záložce ČEZ chybí tyto karty: {cards}. Klikněte na Opravit a integrace je nainstaluje (přes Market / HACS, jinak z GitHubu).",
       "fix_flow": {
         "step": {
           "confirm": {
             "title": "Nainstalovat karty",
-            "description": "Nainstalují se karty: {cards}. Po instalaci obnovte stránku prohlížeče."
+            "description": "Záložce ČEZ chybí tyto karty: {cards}. Integrace je nainstaluje přes Market / HACS, jinak z GitHubu. Po instalaci obnovte stránku prohlížeče."
           }
         },
         "abort": {
