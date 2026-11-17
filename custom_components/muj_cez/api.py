@@ -100,6 +100,8 @@ class InvoiceSimulation:
     customer_number: str | None = None
     # Last day covered by real meter readings; later consumption is estimated.
     measured_until: date | None = None
+    # Variable price per kWh incl. VAT by register ("VT", "NT") from the latest item.
+    unit_prices: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -319,6 +321,8 @@ class CezData:
     comparison: dict[str, dict[str, Any]] = field(default_factory=dict)
     # Per consumption place id: smart meter grid import/export summary (filled by coordinator).
     grid: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Per EAN: HDO schedule from the ČEZ Distribuce portal (filled by coordinator).
+    hdo: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -459,7 +463,31 @@ def parse_simulation(data: dict[str, Any]) -> InvoiceSimulation | None:
             (d for d in (_date(r.get("consumptionPeriodTo")) for r in measured) if d),
             default=None,
         ),
+        unit_prices=parse_unit_prices(items),
     )
+
+
+def parse_unit_prices(items: list[dict[str, Any]]) -> dict[str, float]:
+    """Price per kWh with VAT of the latest energy item of each register (VT / NT).
+
+    Energy items cover energy, distribution and other per-kWh charges, so this is the
+    price of one more kWh in that tariff (fixed monthly fees excluded).
+    """
+    latest: dict[str, tuple[date, float]] = {}
+    for item in items:
+        kind = str(_val(item.get("invoiceItemType")) or "")
+        if not kind.startswith(ENERGY_ITEM_PREFIX):
+            continue
+        register = kind.removeprefix(ENERGY_ITEM_PREFIX).strip()
+        unit = _val(item.get("invoiceItemInvoiceQuantityUnit")) or "Megawatthodina"
+        kwh = (_float(item.get("invoiceItemConsumption")) or 0.0) * UNIT_FACTORS.get(unit, 1000.0)
+        amount = _float(item.get("invoiceItemAmountWithTax"))
+        end = _date(item.get("invoiceItemPeriodTo")) or date.min
+        if register not in ("VT", "NT") or kwh <= 0 or amount is None:
+            continue
+        if register not in latest or end >= latest[register][0]:
+            latest[register] = (end, round(amount / kwh, 4))
+    return {register: price for register, (_end, price) in latest.items()}
 
 
 ENERGY_ITEM_PREFIX = "Zúčtování spotřeby"

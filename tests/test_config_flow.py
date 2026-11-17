@@ -12,6 +12,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.muj_cez.api import CezAuthError, CezConnectionError
 from custom_components.muj_cez.const import (
     CONF_DASHBOARD,
+    CONF_HDO,
     CONF_INSTALL_CARDS,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
@@ -145,6 +146,7 @@ async def test_options_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None
         CONF_UPDATE_TIME: "03:15:00",
         CONF_DASHBOARD: DASHBOARD_OFF,
         CONF_INSTALL_CARDS: True,
+        CONF_HDO: True,
     }
 
 

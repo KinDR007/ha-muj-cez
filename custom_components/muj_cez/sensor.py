@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -14,10 +14,11 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfElectricCurrent, UnitOfEnergy
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.event import async_track_point_in_time
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
@@ -25,6 +26,7 @@ from homeassistant.util import dt as dt_util
 from .api import BillingDocument, CezData, SupplyPointData, strip_zeros
 from .const import DOMAIN, MANUFACTURER, PORTAL_URL
 from .coordinator import MujCezConfigEntry, MujCezCoordinator
+from .distribuce import HIGH, LOW, hdo_state
 from .entity import account_device_info
 
 PARALLEL_UPDATES = 0
@@ -45,6 +47,8 @@ class MujCezSensorDescription(SensorEntityDescription):
     # Which supply points get the entity, and whether its data exist at setup.
     kind: str = KIND_CONSUMPTION
     exists_fn: Callable[[MujCezCoordinator, SupplyPointData], bool] | None = None
+    # State depends on the time of day (HDO): re-evaluated at each switch and midnight.
+    timed: bool = False
 
 
 def grid_info(c: MujCezCoordinator, d: SupplyPointData) -> dict[str, Any] | None:
@@ -95,6 +99,40 @@ def _grid_energy(direction: str, period: str, prev: str) -> MujCezSensorDescript
         cattrs_fn=attrs,
         exists_fn=_grid_exists(direction),
     )
+
+
+def _hdo(c: MujCezCoordinator, d: SupplyPointData) -> dict[str, Any] | None:
+    schedule = c.data.hdo.get(d.supply_point.ean) if c.data else None
+    return hdo_state(schedule, dt_util.now())
+
+
+def _hdo_attrs(c: MujCezCoordinator, d: SupplyPointData) -> dict[str, Any]:
+    state = _hdo(c, d) or {}
+    return {
+        key: state.get(key)
+        for key in ("today", "tomorrow", "low_hours_today", "signal", "signals", "schedule_until")
+    }
+
+
+def _current_price(c: MujCezCoordinator, d: SupplyPointData) -> float | None:
+    prices = d.simulation.unit_prices if d.simulation else {}
+    if len(prices) == 1:
+        return next(iter(prices.values()))
+    state = _hdo(c, d)
+    if not state:
+        return None
+    return prices.get("NT" if state["tariff"] == LOW else "VT")
+
+
+def _price_attrs(c: MujCezCoordinator, d: SupplyPointData) -> dict[str, Any]:
+    prices = d.simulation.unit_prices if d.simulation else {}
+    state = _hdo(c, d) or {}
+    tariff = state.get("tariff")
+    return {
+        "price_vt": prices.get("VT"),
+        "price_nt": prices.get("NT"),
+        "tariff": ("NT" if tariff == LOW else "VT") if tariff else None,
+    }
 
 
 def _payouts(c: MujCezCoordinator, d: SupplyPointData) -> list[dict[str, Any]]:
@@ -464,6 +502,39 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
 )
 
 
+HDO_SENSORS: tuple[MujCezSensorDescription, ...] = (
+    MujCezSensorDescription(
+        key="hdo_tariff",
+        translation_key="hdo_tariff",
+        device_class=SensorDeviceClass.ENUM,
+        options=[LOW, HIGH],
+        value_fn=lambda c, d: (_hdo(c, d) or {}).get("tariff"),
+        cattrs_fn=_hdo_attrs,
+        exists_fn=lambda c, d: bool(c.data and d.supply_point.ean in c.data.hdo),
+        timed=True,
+    ),
+    MujCezSensorDescription(
+        key="hdo_next_switch",
+        translation_key="hdo_next_switch",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda c, d: (_hdo(c, d) or {}).get("next_switch"),
+        exists_fn=lambda c, d: bool(c.data and d.supply_point.ean in c.data.hdo),
+        timed=True,
+    ),
+    MujCezSensorDescription(
+        key="current_price",
+        translation_key="current_price",
+        native_unit_of_measurement=f"{CURRENCY}/{UnitOfEnergy.KILO_WATT_HOUR}",
+        suggested_display_precision=2,
+        value_fn=_current_price,
+        cattrs_fn=_price_attrs,
+        exists_fn=lambda _c, d: bool(d.simulation and d.simulation.unit_prices),
+        timed=True,
+    ),
+)
+SENSORS = SENSORS + HDO_SENSORS
+
+
 def _as_date(value: str | None) -> date | None:
     try:
         return date.fromisoformat(value) if value else None
@@ -486,7 +557,7 @@ async def async_setup_entry(
 ) -> None:
     coordinator = entry.runtime_data
     entities: list[SensorEntity] = [
-        MujCezSensor(coordinator, uid, description)
+        (MujCezTimedSensor if description.timed else MujCezSensor)(coordinator, uid, description)
         for uid, spd in coordinator.data.supply_points.items()
         for description in SENSORS
         if _wanted(coordinator, spd, description)
@@ -564,6 +635,45 @@ class MujCezSensor(CoordinatorEntity[MujCezCoordinator], SensorEntity):
         if desc.cattrs_fn:
             attrs.update(desc.cattrs_fn(self.coordinator, data))
         return attrs
+
+
+class MujCezTimedSensor(MujCezSensor):
+    """Re-evaluated at the next HDO switch and at local midnight without a refresh."""
+
+    _unsub_timer: CALLBACK_TYPE | None = None
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self._schedule()
+        self.async_on_remove(self._cancel)
+
+    @callback
+    def _cancel(self) -> None:
+        if self._unsub_timer:
+            self._unsub_timer()
+            self._unsub_timer = None
+
+    @callback
+    def _schedule(self) -> None:
+        self._cancel()
+        now = dt_util.now()
+        when = dt_util.start_of_local_day(now + timedelta(days=1))
+        data = self._data
+        state = _hdo(self.coordinator, data) if data else None
+        if state and state.get("next_switch") and state["next_switch"] < when:
+            when = state["next_switch"]
+        self._unsub_timer = async_track_point_in_time(self.hass, self._on_time, when)
+
+    @callback
+    def _on_time(self, _now: datetime) -> None:
+        self._unsub_timer = None
+        self.async_write_ha_state()
+        self._schedule()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        super()._handle_coordinator_update()
+        self._schedule()
 
 
 class MujCezUnreadMessagesSensor(CoordinatorEntity[MujCezCoordinator], SensorEntity):

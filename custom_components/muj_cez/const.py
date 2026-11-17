@@ -13,6 +13,8 @@ CONF_REFERENCE_EXPORT_SENSOR = "reference_export_sensor"
 CONF_SPOT_PRICE_SENSOR = "spot_price_sensor"
 CONF_DASHBOARD = "dashboard"
 CONF_INSTALL_CARDS = "install_cards"
+# HDO switching times from the ČEZ Distribuce portal (same credentials).
+CONF_HDO = "hdo"
 
 # Dashboard option values: "none" = off, default dashboard, new dedicated dashboard, or url.
 DASHBOARD_OFF = "none"
@@ -34,3 +36,8 @@ RETRY_DELAY = timedelta(minutes=30)
 
 # Storage of cached smart meter daily values (per config entry).
 STORAGE_VERSION = 1
+
+# HDO: refresh daily at this local time; regular updates refetch when older than this.
+HDO_REFRESH_TIME = (0, 20)
+HDO_MAX_AGE = timedelta(hours=6)
+HDO_TIMEOUT = 90  # seconds for login and all signal requests

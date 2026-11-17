@@ -6,11 +6,14 @@ import asyncio
 import logging
 from collections.abc import Callable
 from datetime import date, datetime
+from functools import partial
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.event import async_call_later, async_track_time_change
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -20,6 +23,7 @@ from . import grid as gridlib
 from .api import CezAuthError, CezClient, CezData, CezError
 from .compare import DailyEnergy, build_comparison
 from .const import (
+    CONF_HDO,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_SPOT_PRICE_SENSOR,
@@ -28,12 +32,16 @@ from .const import (
     DEFAULT_UPDATE_PERIOD,
     DEFAULT_UPDATE_TIME,
     DOMAIN,
+    HDO_MAX_AGE,
+    HDO_REFRESH_TIME,
+    HDO_TIMEOUT,
     PERIOD_MONTHLY,
     PERIOD_WEEKLY,
     RETRY_COUNT,
     RETRY_DELAY,
     STORAGE_VERSION,
 )
+from .distribuce import DipClient, DipError, merge, parse_signals, prune
 from .statistics import async_update_statistics, statistic_id
 
 _LOGGER = logging.getLogger(__name__)
@@ -101,6 +109,13 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         )
         self._grid_cache: dict[str, dict[str, Any]] | None = None
         self._statistics_task: asyncio.Task[None] | None = None
+        self._hdo_store: Store[dict[str, Any]] = Store(
+            hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.hdo"
+        )
+        self._hdo: dict[str, dict[str, Any]] | None = None
+        self._hdo_fetched: datetime | None = None
+        self._hdo_warned = False
+        self.dip_client = DipClient
 
     async def _async_update_data(self) -> CezData:
         if self._grid_cache is None:
@@ -114,6 +129,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         await self._grid_store.async_save(self._grid_cache)
         await self._async_add_comparison(data)
         await self._async_add_grid(data)
+        await self.async_update_hdo(data)
         self.last_success_time = dt_util.utcnow()
         if data.grid:
             self._schedule_statistics(data)
@@ -193,6 +209,64 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
                     )
             data.grid[place_id] = info
 
+    async def async_update_hdo(self, data: CezData, force: bool = False) -> None:
+        """HDO schedules of the consumption points from the ČEZ Distribuce portal.
+
+        Optional: any failure keeps the stored schedule (it covers about a week).
+        """
+        if not self.config_entry.options.get(CONF_HDO, True):
+            data.hdo = {}
+            return
+        if self._hdo is None:
+            self._hdo = await self._hdo_store.async_load() or {}
+        eans = [
+            spd.supply_point.ean
+            for spd in data.supply_points.values()
+            if not spd.supply_point.production and spd.supply_point.ean
+        ]
+        stale = self._hdo_fetched is None or dt_util.utcnow() - self._hdo_fetched > HDO_MAX_AGE
+        if eans and (force or stale):
+            await self._async_fetch_hdo(eans)
+        today = dt_util.now().date()
+        self._hdo = {ean: prune(s, today) for ean, s in self._hdo.items() if ean in eans}
+        await self._hdo_store.async_save(self._hdo)
+        data.hdo = dict(self._hdo)
+
+    async def _async_fetch_hdo(self, eans: list[str]) -> None:
+        assert self._hdo is not None
+        entry = self.config_entry
+        factory = partial(async_create_clientsession, self.hass, auto_cleanup=False)
+        try:
+            async with (
+                asyncio.timeout(HDO_TIMEOUT),
+                self.dip_client(
+                    entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD], factory
+                ) as dip,
+            ):
+                for ean in eans:
+                    try:
+                        schedule = parse_signals(await dip.signals(ean))
+                    except DipError as err:
+                        _LOGGER.debug("HDO of %s failed: %s", ean, err)
+                        continue
+                    if schedule:
+                        self._hdo[ean] = merge(self._hdo.get(ean), schedule)
+                    else:  # no HDO on this supply point (single tariff, smart meter)
+                        self._hdo.pop(ean, None)
+        except (DipError, TimeoutError) as err:
+            log = _LOGGER.debug if self._hdo_warned else _LOGGER.warning
+            log("ČEZ Distribuce portal (HDO) unavailable: %s", err)
+            self._hdo_warned = True
+            return
+        self._hdo_fetched = dt_util.utcnow()
+        self._hdo_warned = False
+
+    async def _async_refresh_hdo(self) -> None:
+        if self.data is None:
+            return
+        await self.async_update_hdo(self.data, force=True)
+        self.async_update_listeners()
+
     async def _async_add_comparison(self, data: CezData) -> None:
         """Compare portal values with the configured HA energy sensor (optional)."""
         sensor = self.config_entry.options.get(CONF_REFERENCE_SENSOR)
@@ -262,8 +336,19 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         )
 
         @callback
+        def _on_hdo_time(_now: datetime) -> None:
+            self.config_entry.async_create_background_task(
+                self.hass, self._async_refresh_hdo(), f"{DOMAIN}_hdo"
+            )
+
+        unsub_hdo = async_track_time_change(
+            self.hass, _on_hdo_time, hour=HDO_REFRESH_TIME[0], minute=HDO_REFRESH_TIME[1], second=0
+        )
+
+        @callback
         def _unsub() -> None:
             unsub_time()
+            unsub_hdo()
             self._cancel_retry()
 
         return _unsub

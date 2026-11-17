@@ -26,7 +26,8 @@
           "reference_export_sensor": "Referenční senzor exportu do sítě v HA",
           "spot_price_sensor": "Senzor spotové ceny v HA",
           "dashboard": "Dashboard",
-          "install_cards": "Nainstalovat chybějící karty"
+          "install_cards": "Nainstalovat chybějící karty",
+          "hdo": "HDO z ČEZ Distribuce"
         },
         "data_description": {
           "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
@@ -35,7 +36,8 @@
           "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ.",
           "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
           "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní).",
-          "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu."
+          "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu.",
+          "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá."
         }
       }
     },
@@ -61,7 +63,8 @@
           "reference_export_sensor": "Referenční senzor exportu do sítě v HA",
           "spot_price_sensor": "Senzor spotové ceny v HA",
           "dashboard": "Dashboard",
-          "install_cards": "Nainstalovat chybějící karty"
+          "install_cards": "Nainstalovat chybějící karty",
+          "hdo": "HDO z ČEZ Distribuce"
         },
         "data_description": {
           "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
@@ -70,7 +73,8 @@
           "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ.",
           "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
           "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní).",
-          "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu."
+          "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu.",
+          "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá."
         }
       }
     }
@@ -199,6 +203,19 @@
       },
       "spot_price_yesterday": {
         "name": "Spotová cena včera"
+      },
+      "hdo_tariff": {
+        "name": "Tarif (HDO)",
+        "state": {
+          "low": "Nízký (NT)",
+          "high": "Vysoký (VT)"
+        }
+      },
+      "hdo_next_switch": {
+        "name": "Příští přepnutí tarifu"
+      },
+      "current_price": {
+        "name": "Aktuální cena"
       }
     },
     "calendar": {

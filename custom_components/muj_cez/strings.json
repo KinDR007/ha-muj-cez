@@ -26,7 +26,8 @@
           "reference_export_sensor": "HA grid export reference sensor",
           "spot_price_sensor": "HA spot price sensor",
           "dashboard": "Dashboard",
-          "install_cards": "Install missing cards"
+          "install_cards": "Install missing cards",
+          "hdo": "HDO from ČEZ Distribuce"
         },
         "data_description": {
           "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
@@ -35,7 +36,8 @@
           "reference_export_sensor": "Energy sensor of grid export (kWh, with long-term statistics). Compared with the export measured by the ČEZ smart meter.",
           "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025).",
           "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV).",
-          "install_cards": "Installs cards missing for the dashboard via Marketplace / HACS (when present), otherwise downloads the latest release from GitHub."
+          "install_cards": "Installs cards missing for the dashboard via Marketplace / HACS (when present), otherwise downloads the latest release from GitHub.",
+          "hdo": "Loads the low/high tariff switching times (HDO) from the ČEZ Distribuce portal with the same credentials. Adds the current tariff, next switch and current price per kWh. Skipped silently when the portal has no HDO for the supply point."
         }
       }
     },
@@ -61,7 +63,8 @@
           "reference_export_sensor": "HA grid export reference sensor",
           "spot_price_sensor": "HA spot price sensor",
           "dashboard": "Dashboard",
-          "install_cards": "Install missing cards"
+          "install_cards": "Install missing cards",
+          "hdo": "HDO from ČEZ Distribuce"
         },
         "data_description": {
           "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
@@ -70,7 +73,8 @@
           "reference_export_sensor": "Energy sensor of grid export (kWh, with long-term statistics). Compared with the export measured by the ČEZ smart meter.",
           "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025).",
           "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV).",
-          "install_cards": "Installs cards missing for the dashboard via Marketplace / HACS (when present), otherwise downloads the latest release from GitHub."
+          "install_cards": "Installs cards missing for the dashboard via Marketplace / HACS (when present), otherwise downloads the latest release from GitHub.",
+          "hdo": "Loads the low/high tariff switching times (HDO) from the ČEZ Distribuce portal with the same credentials. Adds the current tariff, next switch and current price per kWh. Skipped silently when the portal has no HDO for the supply point."
         }
       }
     }
@@ -199,6 +203,19 @@
       },
       "spot_price_yesterday": {
         "name": "Spot price yesterday"
+      },
+      "hdo_tariff": {
+        "name": "Tariff (HDO)",
+        "state": {
+          "low": "Low (NT)",
+          "high": "High (VT)"
+        }
+      },
+      "hdo_next_switch": {
+        "name": "Next tariff switch"
+      },
+      "current_price": {
+        "name": "Current price"
       }
     },
     "calendar": {

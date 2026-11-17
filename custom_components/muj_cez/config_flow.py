@@ -27,6 +27,7 @@ from homeassistant.helpers.selector import (
 from .api import CezAuthError, CezClient, CezError
 from .const import (
     CONF_DASHBOARD,
+    CONF_HDO,
     CONF_INSTALL_CARDS,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
@@ -107,6 +108,7 @@ async def settings_form(
                 SelectSelectorConfig(options=dashboards, mode=SelectSelectorMode.DROPDOWN)
             ),
             vol.Optional(CONF_INSTALL_CARDS, default=True): BooleanSelector(),
+            vol.Optional(CONF_HDO, default=True): BooleanSelector(),
         }
     )
     if current is None:

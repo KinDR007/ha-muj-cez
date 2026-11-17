@@ -18,3 +18,6 @@
 - [ ] Ověřit na vzdáleném HA: backfill statistik a výběr v panelu Energie
 - [x] Ocenění přetoků ze spotového senzoru v HA (portál má ceny jen do 30. 9. 2025)
 - [x] Historické spotové ceny z OTE (kurz ČNB), portál ČEZ jako záloha
+- [x] HDO z portálu ČEZ Distribuce (tarif, příští přepnutí), aktuální cena VT/NT ze simulace (větev feature/distribuce)
+- [ ] HDO: ověřit v HA s účtem s HDO, případně sekce v dashboardu
+- [ ] HDO: volba signálu, pokud portál vrací víc signálů (zatím první)

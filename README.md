@@ -72,6 +72,26 @@ The first run backfills the history in the background (tens of requests, a few m
 Accounts without interval data are detected once a month and nothing else is requested;
 no entities or statistics are created for them.
 
+## HDO and current price (ČEZ Distribuce)
+
+The low/high tariff switching times (HDO) are not in muj.cez.cz, they come from the
+[ČEZ Distribuce](https://dip.cezdistribuce.cz) portal. It accepts the same ČEZ ID
+credentials, so no extra setup is needed (option **HDO from ČEZ Distribuce**, on by
+default). The login flow and endpoints follow
+[MattXcz/CEZ](https://github.com/MattXcz/CEZ) (MIT).
+
+- **Tariff (HDO)**: `low` / `high` now; attributes `today`, `tomorrow` (NT intervals),
+  `low_hours_today`, `signal`, `schedule_until`
+- **Next tariff switch**: timestamp
+- **Current price** (CZK/kWh with VAT): the per-kWh price of the current tariff from the
+  latest invoice simulation items (energy + distribution, fixed fees excluded);
+  attributes `price_vt`, `price_nt`. Single tariff points get it without HDO.
+
+The schedule (about 7 days ahead) is loaded at start, with regular updates and daily at
+00:20, and stored, so the tariff switches on time without the portal and survives
+outages of a few days. Supply points without HDO (single tariff, other distributors)
+get no HDO entities; a failing portal only logs a warning.
+
 ## Dashboard
 
 In the settings (during installation and in the options) choose a dashboard: a new
@@ -141,6 +161,7 @@ muj.cez.cz e-mail and password.
 - **Spot price sensor** (optional): HA spot price sensor with statistics (CZK/kWh or
   CZK/MWh, e.g. `sensor.current_spot_electricity_price` of cz_energy_spot_prices); fills
   spot prices for the export valuation where the portal has none
+- **HDO from ČEZ Distribuce** (default on): tariff switching times, see above
 
 Data is also loaded at Home Assistant start. A failed scheduled update is retried
 6× every 30 minutes; entities keep their last values meanwhile. Invalid credentials
@@ -306,6 +327,14 @@ statistiky odběru a přetoků, které jdou vybrat v panelu Energie, a spotové 
 Výrobní místo (výkup přetoků) má vlastní zařízení se senzory **Výkup za poslední měsíc**,
 **Výkup letos** a **Výkupní cena**. Bez průběhových dat se nic z toho nevytvoří.
 
+**HDO a aktuální cena:** časy nízkého a vysokého tarifu se načítají z portálu
+[ČEZ Distribuce](https://dip.cezdistribuce.cz) se stejnými přihlašovacími údaji (volba
+**HDO z ČEZ Distribuce**, výchozí zapnuto). Přibudou senzory **Tarif (HDO)** (NT/VT,
+v atributech dnešní a zítřejší časy NT), **Příští přepnutí tarifu** a **Aktuální cena**
+(Kč/kWh s DPH za aktuální tarif podle poslední simulace vyúčtování, bez stálých plateb).
+Rozpis se ukládá asi na týden dopředu, tarif se tedy přepíná včas i bez spojení s portálem.
+Odběrná místa bez HDO (jednotarif, jiný distributor) tyto senzory nedostanou, cenu ano.
+
 Kalendář **Doklady** obsahuje všechny doklady všech smluv na účtu (faktury, zálohy,
 platby, poplatky). Doklady lze vypsat i akcí `muj_cez.get_documents` s filtry
 (**Vývojářské nástroje → Akce**).
@@ -357,7 +386,8 @@ automatizace upozornění na nezaplacené doklady) jsou v [docs/dashboard.md](do
 Přihlašovací údaje ukládá Home Assistant lokálně v konfiguraci integrace. Integrace
 komunikuje s portálem ČEZ a data načítá jednou za zvolenou periodu (a při startu).
 Jen u účtů s průběhovým měřením stahuje navíc veřejné spotové ceny z OTE a kurz EUR
-z ČNB; posílá se jen datum, žádné osobní údaje.
+z ČNB; posílá se jen datum, žádné osobní údaje. Se zapnutým HDO se stejné přihlašovací
+údaje používají i pro portál ČEZ Distribuce (dip.cezdistribuce.cz, přihlášení mepas.cez.cz).
 
 ### Podpora projektu
 

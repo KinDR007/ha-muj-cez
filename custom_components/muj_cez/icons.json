@@ -114,6 +114,19 @@
       },
       "spot_price_yesterday": {
         "default": "mdi:chart-bell-curve-cumulative"
+      },
+      "hdo_tariff": {
+        "default": "mdi:transmission-tower",
+        "state": {
+          "low": "mdi:transmission-tower-export",
+          "high": "mdi:transmission-tower-import"
+        }
+      },
+      "hdo_next_switch": {
+        "default": "mdi:clock-start"
+      },
+      "current_price": {
+        "default": "mdi:cash"
       }
     },
     "calendar": {

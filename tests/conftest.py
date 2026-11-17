@@ -77,3 +77,34 @@ def mock_client() -> Generator[AsyncMock]:
         patch("custom_components.muj_cez.config_flow.CezClient", return_value=client),
     ):
         yield client
+
+
+class FakeDip:
+    """ČEZ Distribuce client stub: `signals` per EAN (default: no HDO), or `error`."""
+
+    signals_data: dict[str, Any] = {}
+    error: Exception | None = None
+    calls = 0
+
+    def __init__(self, username: str, password: str, factory: Any = None) -> None:
+        self.username = username
+
+    async def __aenter__(self) -> FakeDip:
+        type(self).calls += 1
+        if self.error:
+            raise self.error
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        return None
+
+    async def signals(self, ean: str) -> Any:
+        return self.signals_data.get(ean, self.signals_data.get("*"))
+
+
+@pytest.fixture(autouse=True)
+def fake_dip() -> Generator[type[FakeDip]]:
+    """Never contact the distribution portal in tests."""
+    FakeDip.signals_data, FakeDip.error, FakeDip.calls = {}, None, 0
+    with patch("custom_components.muj_cez.coordinator.DipClient", FakeDip):
+        yield FakeDip
