@@ -370,6 +370,11 @@ měsících: průměr spotu, spot vážený přetoky a vyplacená výkupní cena
 
 ![Dashboard s FVE – spotové ceny](docs/img/fve/03-spot.png)
 
+Tarif HDO z portálu ČEZ Distribuce: aktuální tarif a cena, časová osa NT/VT pro dnešek
+a zítřek s vyznačeným aktuálním časem (sekce se zobrazí jen u odběrných míst s HDO):
+
+![Dashboard – tarif HDO a cena](docs/img/fve/05-hdo.png)
+
 Na mobilu (grafy mají tooltipy, řádky otevírají detail entity, přepínač kWh / Kč funguje i na dotyk):
 
 <img src="docs/img/fve/04-mobil-spot.png" width="360" alt="Dashboard s FVE na mobilu">

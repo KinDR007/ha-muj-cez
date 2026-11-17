@@ -99,6 +99,10 @@ period): monthly ČEZ vs HA for the current period with estimate to the end, yea
 billing-period month, period totals and the meter reading check. The kWh/Kč pills switch
 `select.muj_cez_jednotka_grafu`; hovering (or tapping on mobile) a column shows its values.
 
+Set `CEZ_HDO=1` when the HA has the HDO sensors (adds the "Tarif HDO a cena" section; without
+it the current price is a row of the contract block). The editor check rejects references to
+entities that do not exist, so the builder only references what the HA has.
+
 `tools/dashboard/ha_ws.py` sends raw websocket messages with a long-lived token in `HA_TOKEN`.
 
 ## HA without the Dashboard Editor
@@ -132,4 +136,5 @@ EDITOR_DIR=<dashboard_editor_app> .venv/bin/python tools/dashboard/export_dashbo
 It renders all sections with marker entity ids (`sensor.mujcez_c_*` consumption point,
 `_g_*` smart meter, `_v_*` production point, `_a_*` account, `_s_*` spot sensors) and stores the
 data each section needs; the integration replaces the markers with entity ids from the entity
-registry and drops sections without data.
+registry and drops sections without data (flags `grid` / `no_grid`, `production`, `hdo` /
+`no_hdo`).

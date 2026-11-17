@@ -160,6 +160,18 @@ advances = {
     ],
 }
 
+# Explicit build: CEZ_HDO=1 when the HA has the HDO sensors (the editor check rejects
+# references to missing entities). Export: decided at runtime by the integration.
+HDO_ON = os.environ.get("CEZ_HDO") == "1"
+# Single tariff / no HDO: the price per kWh lives in the contract block (else in HDO).
+PRICE_ROW = (
+    "(st('aktualni_cena')&&!st('tarif_hdo')?row('aktualni_cena','Aktuální cena',num('aktualni_cena',2)+' Kč/kWh'):'')"
+    if EXPORT
+    else "''"
+    if HDO_ON
+    else "(st('aktualni_cena')?row('aktualni_cena','Aktuální cena',num('aktualni_cena',2)+' Kč/kWh'):'')"
+)
+
 contract = {
     "type": "grid",
     "cards": [
@@ -181,8 +193,9 @@ contract = {
                 "+row('stav_elektromeru','Stav elektroměru',num('stav_elektromeru')+' kWh · '+dt(at('stav_elektromeru','reading_date')))"
                 "+row('spotreba_za_minule_obdobi','Minulé období',num('spotreba_za_minule_obdobi')+' kWh · '+num('naklady_za_minule_obdobi')+' Kč')"
                 "+row('planovane_odstavky','Plánované odstávky',st('planovane_odstavky')?.state??'–')"
-                # Single tariff / no HDO: the price per kWh lives here (else in the HDO section).
-                "+(st('aktualni_cena')&&!st('tarif_hdo')?row('aktualni_cena','Aktuální cena',num('aktualni_cena',2)+' Kč/kWh'):'')"
+                "+"
+                + PRICE_ROW
+                + ""
                 f"+row('{A_MESSAGES}','Nepřečtené zprávy',st('{A_MESSAGES}')?.state??'–')"
                 "+row('ean','EAN',st('ean')?.state||'–')"
                 "+row('cislo_elektromeru','Číslo elektroměru',st('cislo_elektromeru')?.state||'–')"
@@ -241,8 +254,8 @@ hdo = {
             details(
                 HDO_JS
                 + hdo_bar_js()
-                + "const n=new Date();const nowm=n.getHours()*60+n.getMinutes();"
-                "const list=(a)=>(a&&a.length?a.join(', '):'celý den VT');"
+                + "const nw=new Date();const nowm=nw.getHours()*60+nw.getMinutes();"
+                "const list=(a)=>(a&&a.length?a.map(x=>x.replace(/:00/g,'').replace('-','–')).join(', '):'celý den VT');"
                 "return bar('Dnes',HA2.today,nowm)+bar('Zítra',HA2.tomorrow,null)+axis"
                 "+`<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0 4px'>${sw0(NTC,'nízký tarif (NT)')}"
                 "${sw0('rgba(142,142,147,.35)','vysoký tarif (VT)')}</div>`"
@@ -701,9 +714,12 @@ def price_unit() -> str:
 
 SJS = (
     f"const SY=states['{SPOT_INFO}'];const SA=SY?SY.attributes:{{}};"
-    "const pts=(e)=>{const s=states[e];return s?Object.entries(s.attributes)"
+    # Hourly points of one local day (off: 0 today, 1 tomorrow); spot sensors often carry
+    # today and tomorrow together in their attributes.
+    "const pts=(e,off=0)=>{const s=states[e];const d=new Date();d.setDate(d.getDate()+off);const ds=d.toDateString();"
+    "return s?Object.entries(s.attributes)"
     ".filter(([k])=>/^\\d{4}-\\d\\d-\\d\\dT/.test(k)).map(([k,v])=>[new Date(k),Array.isArray(v)?v[1]:v])"
-    ".sort((a,b)=>a[0]-b[0]):[]};"
+    ".filter(x=>x[0].toDateString()===ds).sort((a,b)=>a[0]-b[0]):[]};"
 )
 
 
@@ -729,7 +745,7 @@ def spot_sections() -> list[dict]:
                     price_unit()
                     + GJS
                     + SJS
-                    + f"const today=pts('{S_TODAY}'),tom=pts('{S_TOMORROW}');const now=new Date();"
+                    + f"const today=pts('{S_TODAY}',0),tom=pts('{S_TOMORROW}',1);const now=new Date();"
                     "const prof=SA.profile||[];const est=!tom.length;"
                     "const lab=(d,h)=>h%6===0?String(h):'';const g=[];"
                     "today.forEach(([t,v])=>{const h=t.getHours();const cur=h===now.getHours()&&t.toDateString()===now.toDateString();"
@@ -840,7 +856,7 @@ SECTIONS = [
     billing,
     advances,
     contract,
-    *([_tag(hdo, "hdo")] if EXPORT else ([hdo] if os.environ.get("CEZ_HDO") == "1" else [])),
+    *([_tag(hdo, "hdo")] if EXPORT else ([hdo] if HDO_ON else [])),
     *grid_sections(),
     *spot_sections(),
     monthly,
