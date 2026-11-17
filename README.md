@@ -1,5 +1,7 @@
 # Můj ČEZ for Home Assistant
 
+[![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal)](https://paypal.me/KinDR007)
+
 Custom integration that loads invoice prediction, advance payments, consumption history
 and meter readings from the [muj.cez.cz](https://muj.cez.cz) customer portal (ČEZ Prodej).
 
@@ -143,6 +145,14 @@ muj.cez.cz e-mail and password.
 Data is also loaded at Home Assistant start. A failed scheduled update is retried
 6× every 30 minutes; entities keep their last values meanwhile. Invalid credentials
 trigger the re-authentication flow.
+
+## Support
+
+The integration is developed in my free time and is free to use. If it saves you time
+or money, you can support further development (new features, keeping up with portal
+changes, testing on new Home Assistant releases) with a donation via
+[PayPal](https://paypal.me/KinDR007). Bug reports and ideas in
+[Issues](https://github.com/KinDR007/ha-muj-cez/issues) help just as much. Thank you.
 
 ## License
 
@@ -349,3 +359,10 @@ komunikuje s portálem ČEZ a data načítá jednou za zvolenou periodu (a při 
 Jen u účtů s průběhovým měřením stahuje navíc veřejné spotové ceny z OTE a kurz EUR
 z ČNB; posílá se jen datum, žádné osobní údaje.
 
+### Podpora projektu
+
+Integraci vyvíjím ve volném čase a je zdarma. Pokud vám šetří čas nebo peníze, můžete
+podpořit další vývoj (nové funkce, úpravy po změnách portálu ČEZ, testování na nových
+verzích Home Assistantu) příspěvkem přes [PayPal](https://paypal.me/KinDR007).
+Stejně tak pomůže nahlášení chyby nebo nápad v
+[Issues](https://github.com/KinDR007/ha-muj-cez/issues). Děkuji.
