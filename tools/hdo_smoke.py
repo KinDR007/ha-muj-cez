@@ -12,8 +12,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from custom_components.muj_cez import distribuce  # noqa: E402
 from homeassistant.util import dt as dt_util  # noqa: E402
+
+from custom_components.muj_cez import distribuce  # noqa: E402
 
 
 async def main(eans: list[str]) -> int:
@@ -31,7 +32,9 @@ async def main(eans: list[str]) -> int:
                     continue
                 state = distribuce.hdo_state(schedule, dt_util.now(distribuce.TZ))
                 print(f"...{ean[-4:]}: signals {schedule['signals']}, days {len(schedule['days'])}")
-                print(f"  now {state and state['tariff']}, next switch {state and state['next_switch']}")
+                print(
+                    f"  now {state and state['tariff']}, next switch {state and state['next_switch']}"
+                )
                 print(f"  today {state and state['today']}")
     except distribuce.DipError as err:
         print(f"FAILED: {type(err).__name__}: {err}")

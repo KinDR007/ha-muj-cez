@@ -249,7 +249,14 @@ def build_views(
 
         grid = has("g", "grid_data_date")
         production = has("v", "last_payout")
-        flags = {"grid": grid, "production": production, "no_grid": not grid}
+        hdo = has("c", "hdo_tariff")
+        flags = {
+            "grid": grid,
+            "production": production,
+            "no_grid": not grid,
+            "hdo": hdo,
+            "no_hdo": not hdo,
+        }
         sections = []
         for item in template["sections"]:
             if not all(flags.get(r, False) for r in item["requires"]):

@@ -181,6 +181,8 @@ contract = {
                 "+row('stav_elektromeru','Stav elektroměru',num('stav_elektromeru')+' kWh · '+dt(at('stav_elektromeru','reading_date')))"
                 "+row('spotreba_za_minule_obdobi','Minulé období',num('spotreba_za_minule_obdobi')+' kWh · '+num('naklady_za_minule_obdobi')+' Kč')"
                 "+row('planovane_odstavky','Plánované odstávky',st('planovane_odstavky')?.state??'–')"
+                # Single tariff / no HDO: the price per kWh lives here (else in the HDO section).
+                "+(st('aktualni_cena')&&!st('tarif_hdo')?row('aktualni_cena','Aktuální cena',num('aktualni_cena',2)+' Kč/kWh'):'')"
                 f"+row('{A_MESSAGES}','Nepřečtené zprávy',st('{A_MESSAGES}')?.state??'–')"
                 "+row('ean','EAN',st('ean')?.state||'–')"
                 "+row('cislo_elektromeru','Číslo elektroměru',st('cislo_elektromeru')?.state||'–')"
@@ -188,6 +190,69 @@ contract = {
                 "+row('zakaznicke_cislo','Zákaznické číslo',st('zakaznicke_cislo')?.state||'–')"
                 "+row('posledni_aktualizace','Aktualizováno',(()=>{const v=st('posledni_aktualizace')?.state;"
                 "if(!v||v==='unknown')return '–';const d=new Date(v);return d.toLocaleString('cs-CZ',{dateStyle:'short',timeStyle:'short'})})());"
+            ),
+        ),
+    ],
+}
+
+HDO_JS = (
+    "const H=st('tarif_hdo');const HA2=H?H.attributes:{};const LOWT=H?.state==='low';"
+    "const NTC='var(--success-color,#43a047)';const VTC='#8e8e93';"
+    "const mins=(x)=>{const p=String(x).split(':');return +p[0]*60+ +p[1]};"
+    "const hm=(x)=>String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');"
+    "const sw=()=>{const v=st('pristi_prepnuti_tarifu')?.state;if(!v||v==='unknown'||v==='unavailable')return null;return new Date(v)};"
+    "const swt=(d)=>d?d.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'})"
+    "+(d.toDateString()===new Date().toDateString()?'':' ('+d.toLocaleDateString('cs-CZ',{weekday:'short'})+')'):'–';"
+)
+
+
+def hdo_bar_js() -> str:
+    """24 h bar per day: NT green, VT grey, marker at the current time; tooltip per segment."""
+    return (
+        "const bar=(lab,ivs,now)=>{const sg=[];let pos=0;"
+        "(ivs||[]).forEach(iv=>{const [a,b]=iv.split('-').map(mins);if(a>pos)sg.push([pos,a,0]);sg.push([a,b,1]);pos=b});"
+        "if(pos<1440)sg.push([pos,1440,0]);"
+        "const cells=sg.map(([a,b,l])=>`<div title='${l?'NT':'VT'} ${hm(a)}–${hm(b)}' "
+        "style='width:${(b-a)/14.4}%;background:${l?NTC:VTC};opacity:${l?1:.35}'></div>`).join('');"
+        "const mk=now==null?'':`<div style='position:absolute;left:calc(${now/14.4}% - 1px);top:-4px;bottom:-4px;width:2px;"
+        "border-radius:1px;background:var(--primary-text-color)'></div>`;"
+        "return `<div style='display:flex;align-items:center;gap:10px;padding:7px 0'>"
+        "<span style='width:40px;font-size:12px;color:var(--secondary-text-color)'>${lab}</span>"
+        "<div style='position:relative;flex:1'><div style='display:flex;height:16px;border-radius:5px;overflow:hidden'>${cells}</div>${mk}</div></div>`};"
+        "const axis=`<div style='display:flex;gap:10px;font-size:11px;color:var(--secondary-text-color)'><span style='width:40px'></span>"
+        "<div style='flex:1;display:flex;justify-content:space-between'>${[0,6,12,18,24].map(h=>`<span>${h}</span>`).join('')}</div></div>`;"
+        "const sw0=(c,t)=>`<span style='display:inline-block;width:10px;height:10px;border-radius:2px;background:${c};margin:0 5px 0 12px'></span>${t}`;"
+    )
+
+
+hdo = {
+    "type": "grid",
+    "column_span": 3,
+    "cards": [
+        heading("Tarif HDO a cena", "mdi:transmission-tower"),
+        stack(
+            head(
+                P + "tarif_hdo",
+                "mdi:transmission-tower",
+                "Aktuální tarif",
+                HDO_JS + "const d=sw();return d?(LOWT?'NT':'VT')+' do '+swt(d):'';",
+                HDO_JS + "return H?u(LOWT?'NT':'VT',num('aktualni_cena',2)+' Kč/kWh'):'–';",
+            ),
+            details(
+                HDO_JS
+                + hdo_bar_js()
+                + "const n=new Date();const nowm=n.getHours()*60+n.getMinutes();"
+                "const list=(a)=>(a&&a.length?a.join(', '):'celý den VT');"
+                "return bar('Dnes',HA2.today,nowm)+bar('Zítra',HA2.tomorrow,null)+axis"
+                "+`<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0 4px'>${sw0(NTC,'nízký tarif (NT)')}"
+                "${sw0('rgba(142,142,147,.35)','vysoký tarif (VT)')}</div>`"
+                "+row('aktualni_cena','Aktuální cena',num('aktualni_cena',2)+' Kč/kWh')"
+                "+row('aktualni_cena','Cena VT / NT',f(at('aktualni_cena','price_vt'),2)+' / '+f(at('aktualni_cena','price_nt'),2)+' Kč/kWh')"
+                "+row('pristi_prepnuti_tarifu','Příští přepnutí',(()=>{const d=sw();return d?swt(d)+' na '+(LOWT?'VT':'NT'):'–'})())"
+                "+row('tarif_hdo','NT dnes',f(HA2.low_hours_today,1)+' h')"
+                "+row('tarif_hdo','Dnes NT',list(HA2.today))"
+                "+row('tarif_hdo','Zítra NT',HA2.tomorrow?list(HA2.tomorrow):'–')"
+                "+row('tarif_hdo','Signál HDO',(HA2.signal||'–')+' · rozpis do '+dt(HA2.schedule_until));"
             ),
         ),
     ],
@@ -775,6 +840,7 @@ SECTIONS = [
     billing,
     advances,
     contract,
+    *([_tag(hdo, "hdo")] if EXPORT else ([hdo] if os.environ.get("CEZ_HDO") == "1" else [])),
     *grid_sections(),
     *spot_sections(),
     monthly,

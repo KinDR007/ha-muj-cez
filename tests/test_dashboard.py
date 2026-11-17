@@ -28,7 +28,7 @@ from custom_components.muj_cez.const import (
     DOMAIN,
 )
 
-from .conftest import PASSWORD, USERNAME
+from .conftest import PASSWORD, USERNAME, FakeDip, load
 from .test_grid import SV_UID
 from .test_grid_ha import fake_fetch_all
 
@@ -51,10 +51,14 @@ def no_settle(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 async def _setup(
-    hass: HomeAssistant, freezer: FrozenDateTimeFactory, target: str, install: bool = False
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    target: str,
+    install: bool = False,
+    now: datetime = datetime(2026, 11, 16, 12, 0, tzinfo=TZ),
 ) -> MockConfigEntry:
     await hass.config.async_set_time_zone("Europe/Prague")
-    freezer.move_to(datetime(2026, 11, 16, 12, 0, tzinfo=TZ))
+    freezer.move_to(now)
     assert await async_setup_component(hass, "lovelace", {})
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -157,3 +161,34 @@ async def test_update_dashboard_service(
         DOMAIN, "update_dashboard", {}, blocking=True, return_response=True
     )
     assert response == {"dashboards": ["muj-cez"]}
+
+
+async def test_hdo_section(
+    hass: HomeAssistant,
+    mock_client: AsyncMock,
+    fake_dip: type[FakeDip],
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    fake_dip.signals_data = {"*": load("dip_signals.json")}
+    freezer.move_to(datetime(2026, 11, 17, 9, 30, tzinfo=TZ))
+    await _setup(hass, freezer, DASHBOARD_NEW, now=datetime(2026, 11, 17, 9, 30, tzinfo=TZ))
+    [view] = (await _config(hass, "muj-cez"))["views"]
+    text = json.dumps(view, ensure_ascii=False)
+    assert "Tarif HDO a cena" in text
+    ids = _assert_entities_exist(hass, text)
+    registry = er.async_get(hass)
+    uid = next(iter(mock_client.fetch_all.return_value.supply_points))
+    for key in ("hdo_tariff", "hdo_next_switch", "current_price"):
+        assert registry.async_get_entity_id("sensor", DOMAIN, f"{uid}_{key}") in ids
+
+
+async def test_no_hdo_section_price_in_contract(
+    hass: HomeAssistant, mock_client: AsyncMock, freezer: FrozenDateTimeFactory
+) -> None:
+    await _setup(hass, freezer, DASHBOARD_NEW)
+    [view] = (await _config(hass, "muj-cez"))["views"]
+    text = json.dumps(view, ensure_ascii=False)
+    assert "Tarif HDO a cena" not in text
+    uid = next(iter(mock_client.fetch_all.return_value.supply_points))
+    price = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{uid}_current_price")
+    assert price and price in text  # single tariff price row in the contract block
