@@ -1,0 +1,228 @@
+{
+ "pricelistSpotConfigurationPriceCurrency": {
+  "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+  "entrySystemSpecificId": "CZK",
+  "systemId": "INT",
+  "entryId": "CZK",
+  "longValue": "N/A",
+  "entryOrder": 44,
+  "language": "CZ",
+  "validTo": "2999-12-30T23:00:00Z",
+  "validFrom": "0999-12-31T23:02:16Z",
+  "codebookId": "TP_CCY",
+  "value": "Česká koruna",
+  "otherValues": []
+ },
+ "pricelistConfigurationUnit": {
+  "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+  "entrySystemSpecificId": "MWH",
+  "systemId": "INT",
+  "entryId": "MWH",
+  "longValue": "N/A",
+  "entryOrder": 4,
+  "language": "CZ",
+  "validTo": "2999-12-30T23:00:00Z",
+  "validFrom": "0999-12-31T23:02:16Z",
+  "codebookId": "TP_UNIT",
+  "value": "MWh",
+  "otherValues": [
+   {
+    "key": "ApppOrder",
+    "value": "2"
+   },
+   {
+    "key": "ApppUnitActiveFlag",
+    "value": "1"
+   }
+  ]
+ },
+ "pricelistSpotConfigurationInterval": {
+  "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+  "entrySystemSpecificId": "HODINA",
+  "systemId": "INT",
+  "entryId": "HODINA",
+  "longValue": "N/A",
+  "entryOrder": 3,
+  "language": "CZ",
+  "validTo": "2999-12-30T23:00:00Z",
+  "validFrom": "0999-12-31T23:02:16Z",
+  "codebookId": "TP_INTRV",
+  "value": "Hodina",
+  "otherValues": []
+ },
+ "pricelistSpotConfigurationDatetimeTo": "2025-01-01T22:59:59Z",
+ "pricelistSpotConfigurationPriceMaximumTotal": 3399.98,
+ "pricelistSpotConfigurationPriceAverageTotal": 1571.51,
+ "pricelistSpotConfigurationPriceMinimumTotal": 327.41,
+ "pricelistSpotConfigurationDatetimeFrom": "2024-12-31T23:00:00Z",
+ "spotConfigurations": [
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2024-12-31T23:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 528.89,
+   "pricelistSpotConfigurationPriceMinimum": 528.89,
+   "pricelistSpotConfigurationPriceMaximum": 528.89,
+   "pricelistSpotConfigurationDatetimeFrom": "2024-12-31T23:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T00:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 1775.54,
+   "pricelistSpotConfigurationPriceMinimum": 1775.54,
+   "pricelistSpotConfigurationPriceMaximum": 1775.54,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T00:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T01:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 1789.9,
+   "pricelistSpotConfigurationPriceMinimum": 1789.9,
+   "pricelistSpotConfigurationPriceMaximum": 1789.9,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T01:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T02:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 1522.43,
+   "pricelistSpotConfigurationPriceMinimum": 1522.43,
+   "pricelistSpotConfigurationPriceMaximum": 1522.43,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T02:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T03:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 1511.35,
+   "pricelistSpotConfigurationPriceMinimum": 1511.35,
+   "pricelistSpotConfigurationPriceMaximum": 1511.35,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T03:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T04:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 1511.35,
+   "pricelistSpotConfigurationPriceMinimum": 1511.35,
+   "pricelistSpotConfigurationPriceMaximum": 1511.35,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T04:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T05:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 1109.65,
+   "pricelistSpotConfigurationPriceMinimum": 1109.65,
+   "pricelistSpotConfigurationPriceMaximum": 1109.65,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T05:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T06:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 428.15,
+   "pricelistSpotConfigurationPriceMinimum": 428.15,
+   "pricelistSpotConfigurationPriceMaximum": 428.15,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T06:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T07:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 477.0,
+   "pricelistSpotConfigurationPriceMinimum": 477.0,
+   "pricelistSpotConfigurationPriceMaximum": 477.0,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T07:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T08:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 661.61,
+   "pricelistSpotConfigurationPriceMinimum": 661.61,
+   "pricelistSpotConfigurationPriceMaximum": 661.61,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T08:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T09:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 327.41,
+   "pricelistSpotConfigurationPriceMinimum": 327.41,
+   "pricelistSpotConfigurationPriceMaximum": 327.41,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T09:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T10:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 428.15,
+   "pricelistSpotConfigurationPriceMinimum": 428.15,
+   "pricelistSpotConfigurationPriceMaximum": 428.15,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T10:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T11:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 343.02,
+   "pricelistSpotConfigurationPriceMinimum": 343.02,
+   "pricelistSpotConfigurationPriceMaximum": 343.02,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T11:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T12:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 579.26,
+   "pricelistSpotConfigurationPriceMinimum": 579.26,
+   "pricelistSpotConfigurationPriceMaximum": 579.26,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T12:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T13:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 693.85,
+   "pricelistSpotConfigurationPriceMinimum": 693.85,
+   "pricelistSpotConfigurationPriceMaximum": 693.85,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T13:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T14:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 1829.44,
+   "pricelistSpotConfigurationPriceMinimum": 1829.44,
+   "pricelistSpotConfigurationPriceMaximum": 1829.44,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T14:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T15:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 2770.35,
+   "pricelistSpotConfigurationPriceMinimum": 2770.35,
+   "pricelistSpotConfigurationPriceMaximum": 2770.35,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T15:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T16:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 2933.05,
+   "pricelistSpotConfigurationPriceMinimum": 2933.05,
+   "pricelistSpotConfigurationPriceMaximum": 2933.05,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T16:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T17:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 3172.81,
+   "pricelistSpotConfigurationPriceMinimum": 3172.81,
+   "pricelistSpotConfigurationPriceMaximum": 3172.81,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T17:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T18:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 3399.98,
+   "pricelistSpotConfigurationPriceMinimum": 3399.98,
+   "pricelistSpotConfigurationPriceMaximum": 3399.98,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T18:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T19:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 3292.94,
+   "pricelistSpotConfigurationPriceMinimum": 3292.94,
+   "pricelistSpotConfigurationPriceMaximum": 3292.94,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T19:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T20:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 2140.98,
+   "pricelistSpotConfigurationPriceMinimum": 2140.98,
+   "pricelistSpotConfigurationPriceMaximum": 2140.98,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T20:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T21:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 2348.25,
+   "pricelistSpotConfigurationPriceMinimum": 2348.25,
+   "pricelistSpotConfigurationPriceMaximum": 2348.25,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T21:00:00Z"
+  },
+  {
+   "pricelistSpotConfigurationDatetimeTo": "2025-01-01T22:59:59Z",
+   "pricelistSpotConfigurationPriceAverage": 2140.98,
+   "pricelistSpotConfigurationPriceMinimum": 2140.98,
+   "pricelistSpotConfigurationPriceMaximum": 2140.98,
+   "pricelistSpotConfigurationDatetimeFrom": "2025-01-01T22:00:00Z"
+  }
+ ]
+}

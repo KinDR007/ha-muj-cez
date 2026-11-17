@@ -1,0 +1,189 @@
+[
+ {
+  "consumptionPlaceIdIsu": "0004444444",
+  "data": [
+   {
+    "profileReadingRole": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "M11",
+     "systemId": "INT",
+     "entryId": "M11",
+     "longValue": "N/A",
+     "entryOrder": 33,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_PRFL_ROLE",
+     "value": "Naměřené průběhové hodnoty - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeFrom": "2025-03-12T23:00:00Z",
+    "profileReadingTariff": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "DOD",
+     "systemId": "INT",
+     "entryId": "DOD",
+     "longValue": "N/A",
+     "entryOrder": 3,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_MET_READ_TARIFF",
+     "value": "Profil - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeTo": "2025-03-31T21:59:59Z"
+   }
+  ],
+  "supplyPointIdIsu": "9000000009",
+  "partnerIdCrm": "0099999999",
+  "profileReadingDatetimeMin": "2025-03-12T23:00:00Z",
+  "profileReadingDatetimeMax": "2025-03-31T21:59:59Z"
+ },
+ {
+  "consumptionPlaceIdIsu": "0004444444",
+  "data": [
+   {
+    "profileReadingRole": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "M11",
+     "systemId": "INT",
+     "entryId": "M11",
+     "longValue": "N/A",
+     "entryOrder": 33,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_PRFL_ROLE",
+     "value": "Naměřené průběhové hodnoty - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeFrom": "2025-03-31T22:00:00Z",
+    "profileReadingTariff": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "DOD",
+     "systemId": "INT",
+     "entryId": "DOD",
+     "longValue": "N/A",
+     "entryOrder": 3,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_MET_READ_TARIFF",
+     "value": "Profil - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeTo": "2025-12-31T22:59:59Z"
+   },
+   {
+    "profileReadingRole": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "M11",
+     "systemId": "INT",
+     "entryId": "M11",
+     "longValue": "N/A",
+     "entryOrder": 33,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_PRFL_ROLE",
+     "value": "Naměřené průběhové hodnoty - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeFrom": "2025-12-31T23:00:00Z",
+    "profileReadingTariff": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "DOD",
+     "systemId": "INT",
+     "entryId": "DOD",
+     "longValue": "N/A",
+     "entryOrder": 3,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_MET_READ_TARIFF",
+     "value": "Profil - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeTo": "2026-11-16T22:59:59Z"
+   }
+  ],
+  "supplyPointIdIsu": "9000000001",
+  "partnerIdCrm": "0099999999",
+  "profileReadingDatetimeMin": "2025-03-31T22:00:00Z",
+  "profileReadingDatetimeMax": "2026-11-16T22:59:59Z"
+ },
+ {
+  "consumptionPlaceIdIsu": "0004444444",
+  "data": [
+   {
+    "profileReadingRole": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "M11",
+     "systemId": "INT",
+     "entryId": "M11",
+     "longValue": "N/A",
+     "entryOrder": 33,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_PRFL_ROLE",
+     "value": "Naměřené průběhové hodnoty - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeFrom": "2023-11-12T23:00:00Z",
+    "profileReadingTariff": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "DOD",
+     "systemId": "INT",
+     "entryId": "DOD",
+     "longValue": "N/A",
+     "entryOrder": 3,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_MET_READ_TARIFF",
+     "value": "Profil - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeTo": "2024-06-30T21:59:59Z"
+   },
+   {
+    "profileReadingRole": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "M11",
+     "systemId": "INT",
+     "entryId": "M11",
+     "longValue": "N/A",
+     "entryOrder": 33,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_PRFL_ROLE",
+     "value": "Naměřené průběhové hodnoty - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeFrom": "2024-06-30T22:00:00Z",
+    "profileReadingTariff": {
+     "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+     "entrySystemSpecificId": "DOD",
+     "systemId": "INT",
+     "entryId": "DOD",
+     "longValue": "N/A",
+     "entryOrder": 3,
+     "language": "CZ",
+     "validTo": "2999-12-30T23:00:00Z",
+     "validFrom": "0999-12-31T23:02:16Z",
+     "codebookId": "TP_MET_READ_TARIFF",
+     "value": "Profil - dodávka",
+     "otherValues": []
+    },
+    "profileReadingDatetimeTo": "2025-02-28T22:59:59Z"
+   }
+  ],
+  "supplyPointIdIsu": "0000000002",
+  "partnerIdCrm": "0099999999",
+  "profileReadingDatetimeMin": "2023-11-12T23:00:00Z",
+  "profileReadingDatetimeMax": "2025-02-28T22:59:59Z"
+ }
+]

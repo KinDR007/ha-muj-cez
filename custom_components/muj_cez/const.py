@@ -9,6 +9,7 @@ PORTAL_URL = "https://muj.cez.cz"
 CONF_UPDATE_PERIOD = "update_period"
 CONF_UPDATE_TIME = "update_time"
 CONF_REFERENCE_SENSOR = "reference_sensor"
+CONF_REFERENCE_EXPORT_SENSOR = "reference_export_sensor"
 
 PERIOD_DAILY = "daily"
 PERIOD_WEEKLY = "weekly"
@@ -21,3 +22,6 @@ DEFAULT_UPDATE_TIME = "00:00:00"
 # Retry a failed scheduled update this many times with this delay.
 RETRY_COUNT = 6
 RETRY_DELAY = timedelta(minutes=30)
+
+# Storage of cached smart meter daily values (per config entry).
+STORAGE_VERSION = 1

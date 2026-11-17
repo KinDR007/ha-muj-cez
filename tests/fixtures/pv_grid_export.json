@@ -1,0 +1,253 @@
+{
+ "gridDataAggregate": [
+  {
+   "partnerIdCrm": "0099999999",
+   "profileReadingInterval": {
+    "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+    "entrySystemSpecificId": "DEN",
+    "systemId": "INT",
+    "entryId": "DEN",
+    "longValue": "N/A",
+    "entryOrder": 2,
+    "language": "CZ",
+    "validTo": "2999-12-30T23:00:00Z",
+    "validFrom": "0999-12-31T23:02:16Z",
+    "codebookId": "TP_INTRV",
+    "value": "Den",
+    "otherValues": []
+   },
+   "supplyPointIdIsu": "9000000001",
+   "consumptionPlaceIdIsu": "0004444444",
+   "meterReadingUnit": {
+    "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+    "entrySystemSpecificId": "KWH",
+    "systemId": "INT",
+    "entryId": "KWH",
+    "longValue": "N/A",
+    "entryOrder": 1,
+    "language": "CZ",
+    "validTo": "2999-12-30T23:00:00Z",
+    "validFrom": "0999-12-31T23:02:16Z",
+    "codebookId": "TP_UNIT",
+    "value": "kWh",
+    "otherValues": [
+     {
+      "key": "ApppOrder",
+      "value": "1"
+     },
+     {
+      "key": "ApppUnitActiveFlag",
+      "value": "1"
+     }
+    ]
+   },
+   "gridData": [
+    {
+     "profileReadingDatetimeTo": "2026-10-29T22:59:59Z",
+     "profileReadingValue": 0.03,
+     "profileReadingDatetimeFrom": "2026-10-28T23:00:00Z",
+     "profileReadingTariff": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DOD",
+      "systemId": "INT",
+      "entryId": "DOD",
+      "longValue": "N/A",
+      "entryOrder": 3,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_MET_READ_TARIFF",
+      "value": "Profil - dodávka",
+      "otherValues": []
+     },
+     "profileReadingRole": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DODAVKA-OBCHOD",
+      "systemId": "INT",
+      "entryId": "DODAVKA-OBCHOD",
+      "longValue": "N/A",
+      "entryOrder": 40,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_PRFL_ROLE",
+      "value": "Celkové předané množství elektřiny (dodané zákazníkem do sítě)",
+      "otherValues": []
+     }
+    },
+    {
+     "profileReadingDatetimeTo": "2026-10-30T22:59:59Z",
+     "profileReadingValue": 0.06,
+     "profileReadingDatetimeFrom": "2026-10-29T23:00:00Z",
+     "profileReadingTariff": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DOD",
+      "systemId": "INT",
+      "entryId": "DOD",
+      "longValue": "N/A",
+      "entryOrder": 3,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_MET_READ_TARIFF",
+      "value": "Profil - dodávka",
+      "otherValues": []
+     },
+     "profileReadingRole": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DODAVKA-OBCHOD",
+      "systemId": "INT",
+      "entryId": "DODAVKA-OBCHOD",
+      "longValue": "N/A",
+      "entryOrder": 40,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_PRFL_ROLE",
+      "value": "Celkové předané množství elektřiny (dodané zákazníkem do sítě)",
+      "otherValues": []
+     }
+    },
+    {
+     "profileReadingDatetimeTo": "2026-10-31T22:59:59Z",
+     "profileReadingValue": 0.12,
+     "profileReadingDatetimeFrom": "2026-10-30T23:00:00Z",
+     "profileReadingTariff": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DOD",
+      "systemId": "INT",
+      "entryId": "DOD",
+      "longValue": "N/A",
+      "entryOrder": 3,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_MET_READ_TARIFF",
+      "value": "Profil - dodávka",
+      "otherValues": []
+     },
+     "profileReadingRole": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DODAVKA-OBCHOD",
+      "systemId": "INT",
+      "entryId": "DODAVKA-OBCHOD",
+      "longValue": "N/A",
+      "entryOrder": 40,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_PRFL_ROLE",
+      "value": "Celkové předané množství elektřiny (dodané zákazníkem do sítě)",
+      "otherValues": []
+     }
+    },
+    {
+     "profileReadingDatetimeTo": "2026-11-01T22:59:59Z",
+     "profileReadingValue": 0.11,
+     "profileReadingDatetimeFrom": "2026-10-31T23:00:00Z",
+     "profileReadingTariff": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DOD",
+      "systemId": "INT",
+      "entryId": "DOD",
+      "longValue": "N/A",
+      "entryOrder": 3,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_MET_READ_TARIFF",
+      "value": "Profil - dodávka",
+      "otherValues": []
+     },
+     "profileReadingRole": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DODAVKA-OBCHOD",
+      "systemId": "INT",
+      "entryId": "DODAVKA-OBCHOD",
+      "longValue": "N/A",
+      "entryOrder": 40,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_PRFL_ROLE",
+      "value": "Celkové předané množství elektřiny (dodané zákazníkem do sítě)",
+      "otherValues": []
+     }
+    },
+    {
+     "profileReadingDatetimeTo": "2026-11-02T22:59:59Z",
+     "profileReadingValue": 0.0,
+     "profileReadingDatetimeFrom": "2026-11-01T23:00:00Z",
+     "profileReadingTariff": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DOD",
+      "systemId": "INT",
+      "entryId": "DOD",
+      "longValue": "N/A",
+      "entryOrder": 3,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_MET_READ_TARIFF",
+      "value": "Profil - dodávka",
+      "otherValues": []
+     },
+     "profileReadingRole": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DODAVKA-OBCHOD",
+      "systemId": "INT",
+      "entryId": "DODAVKA-OBCHOD",
+      "longValue": "N/A",
+      "entryOrder": 40,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_PRFL_ROLE",
+      "value": "Celkové předané množství elektřiny (dodané zákazníkem do sítě)",
+      "otherValues": []
+     }
+    },
+    {
+     "profileReadingDatetimeTo": "2026-11-03T22:59:59Z",
+     "profileReadingValue": 0.0,
+     "profileReadingDatetimeFrom": "2026-11-02T23:00:00Z",
+     "profileReadingTariff": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DOD",
+      "systemId": "INT",
+      "entryId": "DOD",
+      "longValue": "N/A",
+      "entryOrder": 3,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_MET_READ_TARIFF",
+      "value": "Profil - dodávka",
+      "otherValues": []
+     },
+     "profileReadingRole": {
+      "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+      "entrySystemSpecificId": "DODAVKA-OBCHOD",
+      "systemId": "INT",
+      "entryId": "DODAVKA-OBCHOD",
+      "longValue": "N/A",
+      "entryOrder": 40,
+      "language": "CZ",
+      "validTo": "2999-12-30T23:00:00Z",
+      "validFrom": "0999-12-31T23:02:16Z",
+      "codebookId": "TP_PRFL_ROLE",
+      "value": "Celkové předané množství elektřiny (dodané zákazníkem do sítě)",
+      "otherValues": []
+     }
+    }
+   ]
+  }
+ ],
+ "periodData": {
+  "consumptionTotal": 0,
+  "weightedAverage": 0
+ },
+ "previousPeriodData": {
+  "consumptionTotal": 0
+ }
+}

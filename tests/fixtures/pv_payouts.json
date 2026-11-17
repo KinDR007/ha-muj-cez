@@ -1,0 +1,58 @@
+[
+ {
+  "dateTo": "2026-07-31",
+  "dateFrom": "2026-07-01",
+  "consumptionHT": 0.0,
+  "consumptionLT": 0.0,
+  "consumptionSum": 0.0,
+  "consumptionCurrency": "CZK",
+  "methodOfReading": "",
+  "consumptionAmount": 243.12,
+  "product": "Měsíční fakturace",
+  "graphType": "M",
+  "consumptLtShareSap": "0E-14",
+  "consumptHtShareSap": "0E-14"
+ },
+ {
+  "dateTo": "2026-08-31",
+  "dateFrom": "2026-08-01",
+  "consumptionHT": 0.0,
+  "consumptionLT": 0.0,
+  "consumptionSum": 0.0,
+  "consumptionCurrency": "CZK",
+  "methodOfReading": "",
+  "consumptionAmount": 349.52,
+  "product": "Měsíční fakturace",
+  "graphType": "M",
+  "consumptLtShareSap": "0E-14",
+  "consumptHtShareSap": "0E-14"
+ },
+ {
+  "dateTo": "2026-09-30",
+  "dateFrom": "2026-09-01",
+  "consumptionHT": 0.0,
+  "consumptionLT": 0.0,
+  "consumptionSum": 0.0,
+  "consumptionCurrency": "CZK",
+  "methodOfReading": "",
+  "consumptionAmount": 233.04,
+  "product": "Měsíční fakturace",
+  "graphType": "M",
+  "consumptLtShareSap": "0E-14",
+  "consumptHtShareSap": "0E-14"
+ },
+ {
+  "dateTo": "2026-10-31",
+  "dateFrom": "2026-10-01",
+  "consumptionHT": 0.0,
+  "consumptionLT": 0.0,
+  "consumptionSum": 0.0,
+  "consumptionCurrency": "CZK",
+  "methodOfReading": "",
+  "consumptionAmount": 73.13,
+  "product": "Měsíční fakturace",
+  "graphType": "M",
+  "consumptLtShareSap": "0E-14",
+  "consumptHtShareSap": "0E-14"
+ }
+]

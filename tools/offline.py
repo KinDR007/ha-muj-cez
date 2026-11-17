@@ -8,12 +8,13 @@ which the integration handles like a failed endpoint.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
-SNAPSHOT_DIR = ROOT / ".snapshot" / "cez"
+SNAPSHOT_DIR = Path(os.environ.get("CEZ_SNAPSHOT_DIR") or ROOT / ".snapshot" / "cez")
 
 
 def load_api() -> Any:
@@ -57,8 +58,17 @@ class OfflineCezClient(api.CezClient):
         if not manifest.exists():
             raise FileNotFoundError(f"No snapshot at {snapshot_dir}; run tools/snapshot.py first")
         self._dir = snapshot_dir
-        self._manifest: dict[str, dict[str, Any]] = json.loads(manifest.read_text())["requests"]
+        content = json.loads(manifest.read_text())
+        self._manifest: dict[str, dict[str, Any]] = content["requests"]
         self.requests: list[str] = []
+        # Local date of the capture: requests with date ranges only match for this day.
+        self.captured_on = None
+        if content.get("captured_at"):
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+
+            captured = datetime.fromisoformat(content["captured_at"])
+            self.captured_on = captured.astimezone(ZoneInfo("Europe/Prague")).date()
 
     async def authenticate(self) -> None:
         return None

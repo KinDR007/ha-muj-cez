@@ -35,12 +35,14 @@
         "data": {
           "update_period": "Update period",
           "update_time": "Update time",
-          "reference_sensor": "HA reference energy sensor"
+          "reference_sensor": "HA reference energy sensor",
+          "reference_export_sensor": "HA grid export reference sensor"
         },
         "data_description": {
           "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
           "update_time": "Local time of the update. Data is also loaded when Home Assistant starts.",
-          "reference_sensor": "Energy sensor measuring grid import (kWh, with long-term statistics). Used to compare HA measurement with the portal."
+          "reference_sensor": "Energy sensor measuring grid import (kWh, with long-term statistics). Used to compare HA measurement with the portal.",
+          "reference_export_sensor": "Energy sensor of grid export (kWh, with long-term statistics). Compared with the export measured by the ČEZ smart meter."
         }
       }
     }
@@ -142,6 +144,33 @@
       },
       "consumption_comparison": {
         "name": "Deviation from ČEZ"
+      },
+      "grid_import_month": {
+        "name": "Grid import this month"
+      },
+      "grid_import_year": {
+        "name": "Grid import this year"
+      },
+      "grid_export_month": {
+        "name": "Grid export this month"
+      },
+      "grid_export_year": {
+        "name": "Grid export this year"
+      },
+      "grid_data_date": {
+        "name": "Smart meter data date"
+      },
+      "last_payout": {
+        "name": "Last monthly payout"
+      },
+      "payout_year": {
+        "name": "Payouts this year"
+      },
+      "payout_price": {
+        "name": "Feed-in price"
+      },
+      "spot_price_yesterday": {
+        "name": "Spot price yesterday"
       }
     },
     "calendar": {

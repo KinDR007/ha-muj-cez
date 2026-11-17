@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Callable
 from datetime import date, datetime
@@ -11,12 +12,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.event import async_call_later, async_track_time_change
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
+from . import grid as gridlib
 from .api import CezAuthError, CezClient, CezData, CezError
 from .compare import DailyEnergy, build_comparison
 from .const import (
+    CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_UPDATE_PERIOD,
     CONF_UPDATE_TIME,
@@ -27,7 +31,9 @@ from .const import (
     PERIOD_WEEKLY,
     RETRY_COUNT,
     RETRY_DELAY,
+    STORAGE_VERSION,
 )
+from .statistics import async_update_statistics, statistic_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,17 +95,100 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         self.last_success_time: datetime | None = None
         self._retry_unsub: CALLBACK_TYPE | None = None
         self._retries = 0
+        self._grid_store: Store[dict[str, Any]] = Store(
+            hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.grid"
+        )
+        self._grid_cache: dict[str, dict[str, Any]] | None = None
+        self._statistics_task: asyncio.Task[None] | None = None
 
     async def _async_update_data(self) -> CezData:
+        if self._grid_cache is None:
+            self._grid_cache = await self._grid_store.async_load() or {}
         try:
-            data = await self.client.fetch_all(dt_util.now().date())
+            data = await self.client.fetch_all(dt_util.now().date(), self._grid_cache)
         except CezAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except CezError as err:
             raise UpdateFailed(str(err)) from err
+        await self._grid_store.async_save(self._grid_cache)
         await self._async_add_comparison(data)
+        await self._async_add_grid(data)
         self.last_success_time = dt_util.utcnow()
+        if data.grid:
+            self._schedule_statistics(data)
         return data
+
+    def _schedule_statistics(self, data: CezData) -> None:
+        """Import long-term statistics in the background (backfill may take minutes)."""
+        if "recorder" not in self.hass.config.components:
+            return
+        if self._statistics_task and not self._statistics_task.done():
+            return
+        self._statistics_task = self.config_entry.async_create_background_task(
+            self.hass, self._async_run_statistics(data), f"{DOMAIN}_statistics"
+        )
+
+    async def _async_run_statistics(self, data: CezData) -> None:
+        try:
+            changed = await async_update_statistics(
+                self.hass,
+                self.client,
+                [spd.supply_point for spd in data.supply_points.values()],
+                self._grid_cache or {},
+            )
+        except Exception:  # never break the integration because of statistics
+            _LOGGER.exception("Importing statistics failed")
+            return
+        if not changed:
+            return
+        await self._grid_store.async_save(self._grid_cache or {})
+        if self.data is not None:
+            await self._async_add_grid(self.data)
+            self.async_update_listeners()
+
+    async def _async_add_grid(self, data: CezData) -> None:
+        """Smart meter summaries per consumption place (only places with data)."""
+        today = dt_util.now().date()
+        options = self.config_entry.options
+        for place_id, cache in (self._grid_cache or {}).items():
+            imp = gridlib.from_cache(cache.get("import"))
+            exp = gridlib.from_cache(cache.get("export"))
+            if not imp and not exp:
+                continue
+            info: dict[str, Any] = {
+                "uid": cache.get("uid"),
+                "import_from": cache.get("import_from"),
+                "export_from": cache.get("export_from"),
+                "summary": gridlib.summary(imp, exp, today),
+                "months": [m.as_dict() for m in gridlib.monthly(imp, exp)],
+                "spot_yesterday": cache.get("spot_yesterday"),
+                "statistics": {
+                    key: statistic_id(key, place_id)
+                    for key in ("import", "export")
+                    if cache.get(f"{key}_from")
+                },
+            }
+            for key, daily, option in (
+                ("import", imp, CONF_REFERENCE_SENSOR),
+                ("export", exp, CONF_REFERENCE_EXPORT_SENSOR),
+            ):
+                sensor = options.get(option)
+                if not sensor or not daily:
+                    continue
+                try:
+                    ha = await async_get_daily_energy(self.hass, sensor, min(daily))
+                except Exception:  # recorder unavailable or statistics error
+                    _LOGGER.exception("Reading statistics of %s failed", sensor)
+                    continue
+                info[f"{key}_comparison"] = gridlib.compare_monthly(daily, ha)
+                info[f"{key}_reference_sensor"] = sensor
+            for spd in data.supply_points.values():
+                sp = spd.supply_point
+                if sp.production and sp.place_id == place_id and spd.payouts:
+                    info["payouts"] = gridlib.payout_months(
+                        spd.payouts, exp, cache.get("valuation")
+                    )
+            data.grid[place_id] = info
 
     async def _async_add_comparison(self, data: CezData) -> None:
         """Compare portal values with the configured HA energy sensor (optional)."""

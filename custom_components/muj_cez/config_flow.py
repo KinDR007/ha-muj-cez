@@ -25,6 +25,7 @@ from homeassistant.helpers.selector import (
 
 from .api import CezAuthError, CezClient, CezError
 from .const import (
+    CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_UPDATE_PERIOD,
     CONF_UPDATE_TIME,
@@ -139,6 +140,9 @@ class MujCezOptionsFlow(OptionsFlowWithReload):
                 ),
                 vol.Required(CONF_UPDATE_TIME, default=DEFAULT_UPDATE_TIME): TimeSelector(),
                 vol.Optional(CONF_REFERENCE_SENSOR): EntitySelector(
+                    EntitySelectorConfig(domain="sensor", device_class="energy")
+                ),
+                vol.Optional(CONF_REFERENCE_EXPORT_SENSOR): EntitySelector(
                     EntitySelectorConfig(domain="sensor", device_class="energy")
                 ),
             }

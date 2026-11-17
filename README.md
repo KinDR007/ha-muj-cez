@@ -32,6 +32,9 @@ Návod k instalaci a nastavení v češtině: [Instalace a nastavení](#instalac
 | Planned outages | count | planned distribution outages, list in attribute `outages` |
 | Billing periods | count | closed periods; attribute `periods` with consumption, cost, paid, advances for the whole period (`advances_total`, remaining for the current one), settlement, Kč/kWh per period, last item is the current predicted period |
 | EAN, Meter number, Contract number, Customer number, Product | text | diagnostic |
+| Grid import / export this month, this year | kWh | smart meter (interval metering) only, see below |
+| Smart meter data date | date | last day with smart meter data; attributes `months`, `import_comparison`, `export_comparison`, `payouts`, `statistics` |
+| Spot price yesterday | CZK/kWh | average, `min`, `max` (portal history, smart meter accounts) |
 | Last update | timestamp | diagnostic |
 
 Account device "Můj ČEZ":
@@ -41,6 +44,29 @@ Account device "Můj ČEZ":
   all-day event on the due date (or issue date). Event description shows contract,
   document number, dates, remaining balance and variable symbol.
 - **Unread messages** (portal inbox).
+
+Production supply point (PV feed-in, e.g. "POZE Smluvní výkup") gets its own device
+"ČEZ <address> výroba" with **Last monthly payout**, **Payouts this year** and **Feed-in
+price** (payout / exported kWh); attribute `payouts` holds every month with exported kWh,
+price and the value of the export at spot prices. Advance, prediction and meter sensors
+are not created for it.
+
+## Smart meter data (interval metering, e.g. PV)
+
+When the portal has interval data for the supply point (`/tapp/...` endpoints), the
+integration additionally:
+
+- caches daily grid import and export (history since the meter has data, then only
+  new days) and creates the grid import/export sensors,
+- imports hourly long-term statistics `muj_cez:grid_import_<place>` and
+  `muj_cez:grid_export_<place>`, selectable in the Energy dashboard (delayed by about a day),
+- imports hourly spot prices `muj_cez:spot_price` (CZK/kWh, portal history up to
+  yesterday; not suitable for planning, use a live spot price integration for that),
+- values the exported energy at spot prices per month (payout comparison).
+
+The first run backfills the history in the background (tens of requests, a few minutes).
+Accounts without interval data are detected once a month and nothing else is requested;
+no entities or statistics are created for them.
 
 ## Comparison with a Home Assistant energy sensor
 
@@ -89,6 +115,8 @@ muj.cez.cz e-mail and password.
 - **Update period**: daily, weekly (Mondays) or monthly (1st day of month)
 - **Update time**: local time, default `00:00`
 - **Reference energy sensor** (optional): HA grid import sensor for the comparison
+- **Reference export sensor** (optional): HA grid export sensor, compared with the smart
+  meter export per month (attribute `export_comparison`)
 
 Data is also loaded at Home Assistant start. A failed scheduled update is retried
 6× every 30 minutes; entities keep their last values meanwhile. Invalid credentials
@@ -191,6 +219,8 @@ Ozubené kolo u účtu otevře **Plán aktualizace**:
 - **Referenční senzor odběru v HA** (nepovinné): energetický senzor odběru ze sítě v kWh
   s dlouhodobými statistikami, typicky ten, který používá panel Energie. Integrace podle
   něj porovnává měření HA s tím, co eviduje a fakturuje ČEZ (senzor **Odchylka od ČEZ**).
+- **Referenční senzor exportu do sítě v HA** (nepovinné): senzor přetoků do sítě, porovná
+  se s přetoky naměřenými elektroměrem ČEZ (jen u elektroměru s průběhovým měřením).
 
 Uložením se integrace znovu načte. Data se načítají také při každém startu Home Assistantu.
 Když aktualizace selže, zkouší se znovu 6× po 30 minutách a entity mezitím drží poslední
@@ -220,6 +250,13 @@ Hlavní senzory odběrného místa:
 
 Diagnostické entity: EAN, číslo elektroměru, číslo smlouvy, zákaznické číslo, produkt,
 čas poslední aktualizace.
+
+**Fotovoltaika a průběhové měření:** pokud portál pro odběrné místo eviduje průběhová data
+elektroměru, přibudou senzory **Odběr ze sítě** a **Přetoky do sítě** (tento měsíc, letos),
+**Data elektroměru k** a **Spotová cena včera**. Integrace také importuje hodinové
+statistiky odběru a přetoků, které jdou vybrat v panelu Energie, a spotové ceny.
+Výrobní místo (výkup přetoků) má vlastní zařízení se senzory **Výkup za poslední měsíc**,
+**Výkup letos** a **Výkupní cena**. Bez průběhových dat se nic z toho nevytvoří.
 
 Kalendář **Doklady** obsahuje všechny doklady všech smluv na účtu (faktury, zálohy,
 platby, poplatky). Doklady lze vypsat i akcí `muj_cez.get_documents` s filtry

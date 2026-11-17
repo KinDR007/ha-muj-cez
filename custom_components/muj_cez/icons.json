@@ -87,6 +87,33 @@
       },
       "consumption_comparison": {
         "default": "mdi:compare-horizontal"
+      },
+      "grid_import_month": {
+        "default": "mdi:transmission-tower-import"
+      },
+      "grid_import_year": {
+        "default": "mdi:transmission-tower-import"
+      },
+      "grid_export_month": {
+        "default": "mdi:transmission-tower-export"
+      },
+      "grid_export_year": {
+        "default": "mdi:transmission-tower-export"
+      },
+      "grid_data_date": {
+        "default": "mdi:meter-electric-outline"
+      },
+      "last_payout": {
+        "default": "mdi:solar-power-variant"
+      },
+      "payout_year": {
+        "default": "mdi:cash-plus"
+      },
+      "payout_price": {
+        "default": "mdi:currency-usd"
+      },
+      "spot_price_yesterday": {
+        "default": "mdi:chart-bell-curve-cumulative"
       }
     },
     "calendar": {

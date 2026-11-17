@@ -15,7 +15,18 @@ import aiohttp
 from offline import OfflineCezClient, api
 
 
-def _print(data: "api.CezData") -> None:
+def _print(data: "api.CezData", grid: dict | None = None) -> None:
+    for place, cache in (grid or {}).items():
+        print(
+            f"grid {place}: from import={cache.get('import_from')} export={cache.get('export_from')}"
+        )
+        for key in ("import", "export"):
+            values = cache.get(key) or {}
+            if values:
+                print(
+                    f"  {key}: {len(values)} days {min(values)}..{max(values)} sum={sum(values.values()):.1f}"
+                )
+
     print("unread_messages:", data.unread_messages)
     print("documents:", len(data.documents))
     for uid, spd in data.supply_points.items():
@@ -34,8 +45,10 @@ async def main(offline: bool) -> int:
         except FileNotFoundError as err:
             print(err, file=sys.stderr)
             return 2
-        data = await client.fetch_all(date.today())
-        _print(data)
+        today = client.captured_on or date.today()
+        grid: dict = {}
+        data = await client.fetch_all(today, grid)
+        _print(data, grid)
         return 0
     user, pwd = os.environ.get("CEZ_USER"), os.environ.get("CEZ_PASS")
     if not user or not pwd:

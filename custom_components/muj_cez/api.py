@@ -14,11 +14,13 @@ import secrets
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urljoin, urlparse
 
 import aiohttp
+
+from . import grid as gridlib
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,6 +41,10 @@ TOKEN_EXPIRY_MARGIN = 60
 
 # Meter reading type used by the portal for simulated (future) readings.
 SIMULATED_READING_TYPE = "Odečet pro použití v simulaci faktury"
+
+# Smart meter data: re-check availability monthly, re-fetch last days (late corrections).
+GRID_RECHECK_DAYS = 30
+GRID_REFETCH_DAYS = 3
 
 
 class CezError(Exception):
@@ -71,6 +77,12 @@ class SupplyPoint:
     agreement_id: str = ""
     continuous_measurement: bool | None = None
     electronic_invoicing: str | None = None
+    # Production supply point (PV feed-in, monthly payout) instead of consumption.
+    production: bool = False
+    # Consumption place shared by the consumption and production point of one address.
+    place_id: str = ""
+    # Raw supply point code as used in API paths (may carry a suffix, e.g. "  SV").
+    code: str = ""
 
 
 @dataclass
@@ -268,6 +280,19 @@ class MeterReadingPoint:
 
 
 @dataclass
+class Payout:
+    """Monthly payout for energy fed into the grid (production supply point)."""
+
+    date_from: date
+    date_to: date
+    amount: float | None
+
+    @property
+    def month(self) -> str:
+        return self.date_from.strftime("%Y-%m")
+
+
+@dataclass
 class SupplyPointData:
     supply_point: SupplyPoint
     simulation: InvoiceSimulation | None = None
@@ -281,6 +306,7 @@ class SupplyPointData:
     periods: list[BillingPeriod] | None = None
     months: list[MonthValue] | None = None
     readings: list[MeterReadingPoint] | None = None
+    payouts: list[Payout] | None = None
 
 
 @dataclass
@@ -291,6 +317,8 @@ class CezData:
     documents: list[BillingDocument] = field(default_factory=list)
     # Per supply point uid: comparison with the HA reference sensor (filled by coordinator).
     comparison: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Per consumption place id: smart meter grid import/export summary (filled by coordinator).
+    grid: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -335,9 +363,16 @@ def parse_supply_points(data: list[dict[str, Any]]) -> list[SupplyPoint]:
     result = []
     for sp in data or []:
         uid = sp.get("supplyPointUniqueId")
-        ean = sp.get("supplyPointCode")
+        code = str(sp.get("supplyPointCode") or "")
+        # Production points have a suffix ("859182400512345678  SV").
+        ean = code.split()[0] if code.split() else ""
         if not uid or not ean:
             continue
+        sp_type = sp.get("supplyPointType")
+        production = (
+            isinstance(sp_type, dict)
+            and (sp_type.get("entrySystemSpecificId") == "VYR" or sp_type.get("value") == "Výroba")
+        ) or code.rstrip().endswith(" SV")
         addr = sp.get("address") or {}
         street = _val(addr.get("addressStreet")) or ""
         number = addr.get("addressLandRegistryNumber") or ""
@@ -350,7 +385,13 @@ def parse_supply_points(data: list[dict[str, Any]]) -> list[SupplyPoint]:
             SupplyPoint(
                 uid=uid,
                 ean=ean,
-                name=sp.get("consumptionPlaceName") or contract.get("contractName") or ean,
+                name=_supply_point_name(
+                    sp.get("consumptionPlaceName")
+                    or contract.get("contractName")
+                    or address
+                    or ean,
+                    production,
+                ),
                 address=address,
                 product=sp.get("Product") or "",
                 commodity=_val(sp.get("supplyPointCommodity")) or "",
@@ -361,9 +402,29 @@ def parse_supply_points(data: list[dict[str, Any]]) -> list[SupplyPoint]:
                 electronic_invoicing=(sp.get("agreement") or {}).get(
                     "agreementElectronicInvoicingTypeId"
                 ),
+                production=production,
+                place_id=str(sp.get("consumptionPlaceIdIsu") or ""),
+                code=code,
             )
         )
     return result
+
+
+def _supply_point_name(name: str, production: bool) -> str:
+    return f"{name} výroba" if production else name
+
+
+def parse_payouts(data: list[dict[str, Any]]) -> list[Payout]:
+    """Monthly payouts of a production point (consumption history holds CZK, kWh are 0)."""
+    result = []
+    for row in data if isinstance(data, list) else []:
+        start, end = _date(row.get("dateFrom")), _date(row.get("dateTo"))
+        if start is None or end is None:
+            continue
+        result.append(
+            Payout(date_from=start, date_to=end, amount=_float(row.get("consumptionAmount")))
+        )
+    return sorted(result, key=lambda p: p.date_from)
 
 
 def parse_simulation(data: dict[str, Any]) -> InvoiceSimulation | None:
@@ -497,31 +558,44 @@ def parse_consumption_history(data: list[dict[str, Any]]) -> ConsumptionPeriod |
 
 
 def parse_meter_reading_history(data: list[dict[str, Any]], today: date) -> list[MeterReadingPoint]:
-    """Real (non-simulated) high tariff readings up to today, one per day, oldest first.
+    """Real (non-simulated) readings up to today, one per day, oldest first.
 
-    Zero values are skipped; when several readings exist for a day (distributor and
-    self reading), the distributor one wins.
+    The value is the total of all registers (VT + NT for dual tariff). A day is used
+    only when every register the meter has is read that day, so the total is
+    comparable between readings. Zero values are skipped; when several reading types
+    exist for a day (distributor and self reading), the distributor one wins.
     """
     if not isinstance(data, list):
         return []
-    by_day: dict[date, MeterReadingPoint] = {}
+    # (day, device, reading type) -> {register: value}
+    groups: dict[tuple[date, str, str | None], dict[str, float]] = {}
+    registers: dict[str, set[str]] = {}
     for row in data:
         if not isinstance(row, dict):
             continue
         rtype = _val(row.get("meterReadingType"))
-        if rtype == SIMULATED_READING_TYPE or "VT" not in str(_val(row.get("meterReadingTariff"))):
+        tariff = str(_val(row.get("meterReadingTariff")) or "")
+        register = "VT" if "VT" in tariff else "NT" if "NT" in tariff else None
+        if rtype == SIMULATED_READING_TYPE or register is None:
             continue
         day = _date(row.get("meterReadingRegisterDate"))
         value = _float(row.get("meterReadingValue"))
         if day is None or day > today or not value:
             continue
+        device = (row.get("meterReadingDeviceNumber") or "").lstrip("0")
+        groups.setdefault((day, device, rtype), {})[register] = value
+        registers.setdefault(device, set()).add(register)
+    by_day: dict[date, MeterReadingPoint] = {}
+    for (day, device, rtype), values in sorted(groups.items(), key=lambda g: g[0][0]):
+        if set(values) != registers[device]:
+            continue
         current = by_day.get(day)
         if current is None or "distributor" in str(rtype):
             by_day[day] = MeterReadingPoint(
                 reading_date=day,
-                value=value,
+                value=round(sum(values.values()), 3),
                 reading_type=rtype,
-                device=(row.get("meterReadingDeviceNumber") or "").lstrip("0") or None,
+                device=device or None,
             )
     return [by_day[d] for d in sorted(by_day)]
 
@@ -1105,21 +1179,156 @@ class CezClient:
             events = None
         return parse_advance_settings(settings, events)
 
-    async def _optional(self, what: str, coro: Any) -> Any:
-        """Await an optional call; log and return None on non-auth errors."""
+    async def get_payouts(self, sp: SupplyPoint) -> list[Payout]:
+        return parse_payouts(
+            await self._get(
+                f"/supply-points/{sp.uid}/ReadConsumptionHistory", {"aggregation": "year"}
+            )
+        )
+
+    # --- Smart meter data (only for interval metered supply points) ----------
+
+    async def get_grid_availability(self, sp: SupplyPoint, role: str, today: date) -> date | None:
+        """First day with interval data for the role, None when the meter has none."""
+        midnight = gridlib.local_midnight(today)
+        data = await self._get(
+            "/tapp/metering/profile-data/time-intervals",
+            {
+                "supplyPointUid": sp.uid,
+                "profileReadingRoleId": role,
+                "profileReadingDatetimeFrom": gridlib.iso_utc(midnight - timedelta(days=1100)),
+                "profileReadingDatetimeTo": gridlib.iso_utc(midnight),
+            },
+        )
+        return gridlib.parse_availability(data)
+
+    async def get_grid_daily(
+        self, sp: SupplyPoint, role: str, start: date, end: date
+    ) -> gridlib.DailyValues:
+        """Daily kWh for local days start .. end-1 (requests split into windows)."""
+        result: gridlib.DailyValues = {}
+        for a, b in gridlib.windows(start, end, gridlib.DAILY_WINDOW_DAYS):
+            data = await self._get(
+                "/tapp/metering/grid-data",
+                {
+                    "supplyPointUid": sp.uid,
+                    "profileReadingRoleId": role,
+                    "profileReadingIntervalId": "DEN",
+                    "meterReadingUnitId": "KWH",
+                    "profileReadingDatetimeFrom": gridlib.iso_utc(gridlib.local_midnight(a)),
+                    "profileReadingDatetimeTo": gridlib.iso_utc(gridlib.local_midnight(b)),
+                },
+            )
+            result.update({d: v for d, v in gridlib.parse_daily(data).items() if a <= d < b})
+        return result
+
+    async def get_profile(
+        self, sp: SupplyPoint, role: str, start: date, end: date
+    ) -> dict[datetime, float]:
+        """Hourly kWh (UTC hour start) for local days start .. end-1."""
+        result: dict[datetime, float] = {}
+        for a, b in gridlib.windows(start, end, gridlib.PROFILE_WINDOW_DAYS):
+            data = await self._get(
+                "/tapp/metering/profile-data",
+                {
+                    "supplyPointUid": sp.uid,
+                    "profileReadingRoleId": role,
+                    "profileReadingIntervalId": "HODINA",
+                    "meterReadingUnitId": "KWH",
+                    "profileReadingDatetimeFrom": gridlib.iso_utc(gridlib.local_midnight(a)),
+                    "profileReadingDatetimeTo": gridlib.iso_utc(gridlib.local_midnight(b)),
+                },
+            )
+            result.update(gridlib.parse_profile(data))
+        return result
+
+    async def get_spot_prices(self, start: date, end: date) -> dict[datetime, float]:
+        """Hourly spot prices (CZK/kWh, UTC hour start) for local days start .. end-1.
+
+        Missing days (HTTP 404 for some windows) are skipped.
+        """
+        result: dict[datetime, float] = {}
+        for a, b in gridlib.windows(start, end, gridlib.SPOT_WINDOW_DAYS):
+            params = {
+                "pricelistConfigurationUnitId": "MWH",
+                "pricelistSpotConfigurationIntervalId": "HODINA",
+                "pricelistSpotConfigurationPriceCurrencyId": "CZK",
+                "pricelistSpotConfigurationDatetimeFrom": gridlib.iso_utc(
+                    gridlib.local_midnight(a)
+                ),
+                "pricelistSpotConfigurationDatetimeTo": gridlib.iso_utc(gridlib.local_midnight(b)),
+            }
+            data = await self._optional(
+                f"spot prices {a}",
+                self._get("/tapp/metering/price-lists/spot-prices-simple", params),
+                quiet=True,
+            )
+            # The portal sometimes answers with other days than requested.
+            lo, hi = gridlib.local_midnight(a), gridlib.local_midnight(b)
+            result.update(
+                {h: v for h, v in gridlib.parse_spot_prices(data).items() if lo <= h < hi}
+            )
+        return result
+
+    async def update_grid_cache(
+        self, sp: SupplyPoint, cache: dict[str, Any], today: date
+    ) -> dict[str, Any]:
+        """Refresh cached daily import/export of a consumption point.
+
+        The availability (first day with data) is checked once a month; without
+        interval data nothing else is requested. Daily values are fetched from the
+        last cached day minus a few days (late corrections) up to yesterday.
+        """
+        checked = _date(cache.get("checked"))
+        if checked is None or (today - checked).days >= GRID_RECHECK_DAYS:
+            for key, role in (("import", gridlib.ROLE_IMPORT), ("export", gridlib.ROLE_EXPORT)):
+                first = await self._optional(
+                    f"{key} availability {sp.ean}",
+                    self.get_grid_availability(sp, role, today),
+                    quiet=True,
+                )
+                cache[f"{key}_from"] = first.isoformat() if first else None
+            cache["checked"] = today.isoformat()
+        for key, role in (("import", gridlib.ROLE_IMPORT), ("export", gridlib.ROLE_EXPORT)):
+            first = _date(cache.get(f"{key}_from"))
+            if first is None:
+                continue
+            values = cache.get(key) or {}
+            start = first
+            if values:
+                start = max(
+                    first, date.fromisoformat(max(values)) - timedelta(days=GRID_REFETCH_DAYS)
+                )
+            if start >= today:
+                continue
+            fresh = await self._optional(
+                f"{key} daily {sp.ean}", self.get_grid_daily(sp, role, start, today)
+            )
+            if fresh:
+                cache[key] = gridlib.merge_daily(values, fresh)
+        return cache
+
+    async def _optional(self, what: str, coro: Any, quiet: bool = False) -> Any:
+        """Await an optional call; log and return None on non-auth errors.
+
+        quiet: the endpoint is expected to fail for some accounts (log at debug level).
+        """
         try:
             return await coro
         except CezAuthError:
             raise
         except CezError as err:
-            _LOGGER.warning("%s failed: %s", what, err)
+            (_LOGGER.debug if quiet else _LOGGER.warning)("%s failed: %s", what, err)
             return None
 
-    async def fetch_all(self, today: date) -> CezData:
+    async def fetch_all(
+        self, today: date, grid_cache: dict[str, dict[str, Any]] | None = None
+    ) -> CezData:
         """Fetch all data for all supply points of the account.
 
         A failure of a single optional endpoint is logged and leaves that part empty;
-        failure to list supply points raises.
+        failure to list supply points raises. With `grid_cache` (place id -> cache,
+        updated in place) smart meter daily import/export is refreshed as well.
         """
         supply_points = await self.get_supply_points()
         historical = await self._optional(
@@ -1136,6 +1345,15 @@ class CezClient:
         result: dict[str, SupplyPointData] = {}
         for sp in supply_points:
             spd = SupplyPointData(supply_point=sp)
+            if sp.production:
+                await self._fetch_production(spd, documents, outages, today)
+                result[sp.uid] = spd
+                continue
+            if grid_cache is not None and sp.continuous_measurement and sp.place_id:
+                place = grid_cache.setdefault(sp.place_id, {})
+                if place.get("uid") in (None, sp.uid):
+                    place["uid"] = sp.uid
+                    await self.update_grid_cache(sp, place, today)
             spd.simulation, spd.months = await self._optional(
                 f"simulation {sp.ean}", self.get_simulation(sp)
             ) or (None, None)
@@ -1169,3 +1387,24 @@ class CezClient:
             unread_messages=parse_unread_messages(messages),
             documents=documents,
         )
+
+    async def _fetch_production(
+        self,
+        spd: SupplyPointData,
+        documents: list[BillingDocument],
+        outages: Any,
+        today: date,
+    ) -> None:
+        """Production point: no advances, simulation or distribution rate exist."""
+        sp = spd.supply_point
+        spd.payouts = await self._optional(f"payouts {sp.ean}", self.get_payouts(sp))
+        detail = await self._optional(
+            f"contract info {sp.ean}",
+            self._get(
+                f"/product-calculator/{sp.agreement_id}/supply-point/{sp.code or sp.ean}",
+                {"commodity": sp.commodity},
+            ),
+        )
+        spd.contract = parse_contract_info(detail) if detail else None
+        spd.billing = summarize_billing(documents, sp.agreement_id, today)
+        spd.outages = parse_outages(outages, sp.ean)

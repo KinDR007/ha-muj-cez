@@ -1,6 +1,6 @@
 """Capture raw Muj CEZ API responses once for offline development.
 
-Usage: CEZ_USER=... CEZ_PASS=... .venv/bin/python tools/snapshot.py
+Usage: CEZ_USER=... CEZ_PASS=... [CEZ_SNAPSHOT_DIR=.snapshot/<name>] .venv/bin/python tools/snapshot.py
 Writes .snapshot/cez/<n>.json and manifest.json (git-ignored, contains personal data).
 
 The live client is wrapped so every `_get` call made by `fetch_all` is recorded,
@@ -12,7 +12,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import shutil
 import sys
 from datetime import UTC, date, datetime
 from typing import Any
@@ -47,7 +46,7 @@ async def main() -> int:
         client = RecordingClient(session, user, pwd)
         try:
             await client.authenticate()
-            data = await client.fetch_all(date.today())
+            data = await client.fetch_all(date.today(), {})
             active = {spd.supply_point.agreement_id for spd in data.supply_points.values()}
             billings = client.records.get(request_key("/billings", {"includeNotPayed": "true"}))
             for row in (billings[1] if billings else None) or []:
@@ -71,9 +70,10 @@ async def main() -> int:
             print(f"ERROR: {err}", file=sys.stderr)
             return 1
 
-    if SNAPSHOT_DIR.exists():
-        shutil.rmtree(SNAPSHOT_DIR)
-    SNAPSHOT_DIR.mkdir(parents=True)
+    # Replace only files of a previous capture; keep other content (e.g. subdirectories).
+    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    for old in SNAPSHOT_DIR.glob("*.json"):
+        old.unlink()
     manifest: dict[str, Any] = {
         "captured_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "requests": {},

@@ -14,3 +14,6 @@
 - [ ] Ověřit formát plánovaných odstávek na reálných datech
 - [ ] Volitelně: výběr odběrných míst v options (víc OM na účtu)
 - [ ] Volitelně: uložení refresh tokenu mezi restarty (méně loginů)
+- [x] Výrobní odběrné místo (výkup), dvoutarif v historii odečtů, data elektroměru (odběr/přetoky), statistiky, spotové ceny
+- [ ] Ověřit na vzdáleném HA: backfill statistik a výběr v panelu Energie
+- [ ] Spotové ceny z portálu: některé dny 404 nebo vrací jiné dny; sledovat

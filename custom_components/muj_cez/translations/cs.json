@@ -35,12 +35,14 @@
         "data": {
           "update_period": "Perioda aktualizace",
           "update_time": "Čas aktualizace",
-          "reference_sensor": "Referenční senzor odběru v HA"
+          "reference_sensor": "Referenční senzor odběru v HA",
+          "reference_export_sensor": "Referenční senzor exportu do sítě v HA"
         },
         "data_description": {
           "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
           "update_time": "Místní čas aktualizace. Data se načtou i při startu Home Assistantu.",
-          "reference_sensor": "Energetický senzor odběru ze sítě (kWh, s dlouhodobými statistikami). Slouží k porovnání měření HA s portálem."
+          "reference_sensor": "Energetický senzor odběru ze sítě (kWh, s dlouhodobými statistikami). Slouží k porovnání měření HA s portálem.",
+          "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ."
         }
       }
     }
@@ -142,6 +144,33 @@
       },
       "consumption_comparison": {
         "name": "Odchylka od ČEZ"
+      },
+      "grid_import_month": {
+        "name": "Odběr ze sítě tento měsíc"
+      },
+      "grid_import_year": {
+        "name": "Odběr ze sítě letos"
+      },
+      "grid_export_month": {
+        "name": "Přetoky do sítě tento měsíc"
+      },
+      "grid_export_year": {
+        "name": "Přetoky do sítě letos"
+      },
+      "grid_data_date": {
+        "name": "Data elektroměru k"
+      },
+      "last_payout": {
+        "name": "Výkup za poslední měsíc"
+      },
+      "payout_year": {
+        "name": "Výkup letos"
+      },
+      "payout_price": {
+        "name": "Výkupní cena"
+      },
+      "spot_price_yesterday": {
+        "name": "Spotová cena včera"
       }
     },
     "calendar": {
