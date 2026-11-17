@@ -15,6 +15,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfElectricCurrent, UnitOfEnergy
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
@@ -493,7 +494,22 @@ async def async_setup_entry(
         if not spd.supply_point.production
     )
     entities.append(MujCezUnreadMessagesSensor(coordinator))
+    _remove_foreign_entities(hass, coordinator)
     async_add_entities(entities)
+
+
+def _remove_foreign_entities(hass: HomeAssistant, coordinator: MujCezCoordinator) -> None:
+    """Remove entities that do not belong to the supply point type (e.g. consumption
+    sensors created for a production point by older versions)."""
+    registry = er.async_get(hass)
+    for uid, spd in coordinator.data.supply_points.items():
+        if not spd.supply_point.production:
+            continue
+        keys = [d.key for d in SENSORS if d.kind == KIND_CONSUMPTION] + ["consumption_comparison"]
+        for key in keys:
+            entity_id = registry.async_get_entity_id("sensor", DOMAIN, f"{uid}_{key}")
+            if entity_id:
+                registry.async_remove(entity_id)
 
 
 class MujCezSensor(CoordinatorEntity[MujCezCoordinator], SensorEntity):

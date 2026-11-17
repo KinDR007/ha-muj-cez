@@ -60,8 +60,9 @@ integration additionally:
   new days) and creates the grid import/export sensors,
 - imports hourly long-term statistics `muj_cez:grid_import_<place>` and
   `muj_cez:grid_export_<place>`, selectable in the Energy dashboard (delayed by about a day),
-- imports hourly spot prices `muj_cez:spot_price` (CZK/kWh, portal history up to
-  yesterday; not suitable for planning, use a live spot price integration for that),
+- imports hourly spot prices `muj_cez:spot_price` (CZK/kWh) as far as the portal has
+  them: in practice only until 30 September 2025 (the portal stopped filling them after
+  the market moved to 15 minute prices); never usable for planning,
 - values the exported energy at spot prices per month (payout comparison).
 
 The first run backfills the history in the background (tens of requests, a few minutes).

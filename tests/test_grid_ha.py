@@ -75,6 +75,10 @@ async def test_pv_entities(
     hass: HomeAssistant, entry: MockConfigEntry, mock_client: AsyncMock
 ) -> None:
     mock_client.fetch_all.side_effect = fake_fetch_all
+    # Left over by an older version: consumption sensor on the production point.
+    stale = er.async_get(hass).async_get_or_create(
+        "sensor", DOMAIN, f"{SV_UID}_invoice_balance", config_entry=entry
+    )
     ha_daily = {date(2026, 10, 1): 23.0, date(2026, 11, 1): 1.0}
     with patch(
         "custom_components.muj_cez.coordinator.async_get_daily_energy",
@@ -111,6 +115,7 @@ async def test_pv_entities(
     for key in ("invoice_balance", "current_advance", "meter_reading", "consumption_comparison"):
         assert _entity(hass, SV_UID, key) is None, key
     assert _entity(hass, SV_UID, "grid_import_month") is None
+    assert er.async_get(hass).async_get(stale.entity_id) is None
 
 
 async def test_no_smart_meter_entities_without_data(

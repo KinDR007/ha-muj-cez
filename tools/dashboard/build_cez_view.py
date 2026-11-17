@@ -424,13 +424,239 @@ check = {
     ],
 }
 
+# --- Smart meter / PV (only when the prefixes are given) -----------------------------
+# Entities of the consumption place (grid import/export) and of the production point.
+G = os.environ.get("CEZ_GRID_PREFIX", "")
+V = os.environ.get("CEZ_PROD_PREFIX", "")
+GRID_DATE = G + "data_elektromeru_k"
+UNIT_EXPR = f"const UN=(states['{SELECT}']||{{}}).state==='czk'?'czk':'kwh';"
+assert UNIT_EXPR in CH
+
+
+def fixed_unit(unit: str) -> str:
+    """Chart helpers with a fixed unit (FVE charts do not follow the kWh/Kč switch)."""
+    return CH.replace(UNIT_EXPR, f"const UN='{unit}';")
+
+
+GJS = (
+    f"const GS=states['{GRID_DATE}'];const GD=GS?GS.attributes:{{}};"
+    "const EXP='#f4b400';const IMP='#8e8e93';"
+    "const gnum=(e,d=0)=>{const s=states[e];return s?f(s.state,d):'–'};"
+    "const gat=(e,a)=>{const s=states[e];return s?s.attributes[a]:undefined};"
+)
+
+
+def grid_sections() -> list[dict]:
+    if not G:
+        return []
+    e = lambda k: G + k  # noqa: E731
+    overview = stack(
+        head(
+            e("pretoky_do_site_tento_mesic"),
+            "mdi:transmission-tower-export",
+            "Přetoky do sítě",
+            GJS + f"return 'data k '+dt(states['{GRID_DATE}']?.state);",
+            GJS + f"return u(gnum('{e('pretoky_do_site_tento_mesic')}',1),'kWh');",
+        ),
+        details(
+            GJS + "const cmp=(k)=>{const c=(GD[k]||[]).filter(x=>x.diff_pct!=null).pop();"
+            "return c?mlabg(c.month)+': '+f(c.ha_kwh,0)+' / '+f(c.cez_kwh,0)+' kWh · '+pctg(c.diff_pct):'–'};"
+            f"return row('{e('pretoky_do_site_tento_mesic')}','Přetoky minulý měsíc',f(gat('{e('pretoky_do_site_tento_mesic')}','last_month'),1)+' kWh')"
+            f"+row('{e('pretoky_do_site_letos')}','Přetoky letos / loni',gnum('{e('pretoky_do_site_letos')}')+' / '+f(gat('{e('pretoky_do_site_letos')}','last_year'))+' kWh')"
+            f"+row('{e('odber_ze_site_tento_mesic')}','Odběr ze sítě tento měsíc',gnum('{e('odber_ze_site_tento_mesic')}')+' kWh')"
+            f"+row('{e('odber_ze_site_tento_mesic')}','Odběr minulý měsíc',f(gat('{e('odber_ze_site_tento_mesic')}','last_month'))+' kWh')"
+            f"+row('{e('odber_ze_site_letos')}','Odběr letos / loni',gnum('{e('odber_ze_site_letos')}')+' / '+f(gat('{e('odber_ze_site_letos')}','last_year'))+' kWh')"
+            f"+row('{GRID_DATE}','Odběr HA / ČEZ',cmp('import_comparison'))"
+            f"+row('{GRID_DATE}','Přetoky HA / ČEZ',cmp('export_comparison'));",
+        ),
+    )
+    sections = [
+        {
+            "type": "grid",
+            "column_span": 1,
+            "cards": [heading("Elektroměr", "mdi:meter-electric-outline"), overview],
+        }
+    ]
+    if V:
+        payout = stack(
+            head(
+                V + "vykup_za_posledni_mesic",
+                "mdi:cash-plus",
+                "Výkup přetoků",
+                GJS
+                + f"const m=gat('{V}vykup_za_posledni_mesic','month');return m?'za '+mlabg(m):'';",
+                GJS + f"return u(gnum('{V}vykup_za_posledni_mesic'),'Kč');",
+            ),
+            details(
+                GJS
+                + f"const ps=gat('{V}vykup_za_posledni_mesic','payouts')||[];const l=ps.filter(p=>p.spot_value!=null).pop();"
+                f"const sy=states['{e('spotova_cena_vcera')}'];const sa=sy?sy.attributes:{{}};"
+                f"return row('{V}vykup_letos','Výkup letos',gnum('{V}vykup_letos')+' Kč')"
+                f"+row('{V}vykupni_cena','Výkupní cena (poslední měsíc)',gnum('{V}vykupni_cena',2)+' Kč/kWh')"
+                f"+row('{V}vykup_za_posledni_mesic','Přetoky za spot ('+(l?mlabg(l.month):'–')+')',l?f(l.spot_value)+' Kč · '+f(l.spot_price_per_kwh,2)+' Kč/kWh':'–')"
+                f"+row('{e('spotova_cena_vcera')}','Spotová cena včera',sy&&sy.state!=='unknown'?f(sy.state,2)+' Kč/kWh ('+f(sa.min,2)+' – '+f(sa.max,2)+')':'–');",
+            ),
+        )
+        sections.append(
+            {
+                "type": "grid",
+                "column_span": 1,
+                "cards": [heading("Výkup přetoků", "mdi:solar-power-variant"), payout],
+            }
+        )
+
+    monthly_grid = {
+        "type": "grid",
+        "column_span": 3,
+        "cards": [
+            heading("Odběr a přetoky po měsících", "mdi:chart-bar-stacked"),
+            stack(
+                head(
+                    GRID_DATE,
+                    "mdi:chart-bar-stacked",
+                    "Elektroměr ČEZ",
+                    GJS + "return 'posledních 13 měsíců';",
+                    GJS + f"return u(gnum('{e('pretoky_do_site_letos')}'),'kWh přetoků letos');",
+                ),
+                details(
+                    fixed_unit("kwh")
+                    + GJS
+                    + "const ic=GD.import_comparison||[],ec=GD.export_comparison||[];"
+                    "const ms=(GD.months||[]).slice(-13);"
+                    "const g=ms.map(m=>{const a=ic.find(x=>x.month===m.month),b=ec.find(x=>x.month===m.month);"
+                    "const x=[];if(a)x.push('HA odběr '+f(a.ha_kwh,0)+' kWh ('+pct(a.diff_pct)+')');"
+                    "if(b)x.push('HA přetoky '+f(b.ha_kwh,0)+' kWh ('+pct(b.diff_pct)+')');"
+                    "return {l:m.month.endsWith('-01')?mlab(m.month):MN[+m.month.slice(5)-1],h:mlab(m.month)+' ('+m.days+' dní)',x,"
+                    "b:[{v:m.import_kwh,c:IMP,n:'Odběr ze sítě'},{v:m.export_kwh,c:EXP,n:'Přetoky do sítě'}]}});"
+                    "return chart(g,[[IMP,'Odběr ze sítě (elektroměr ČEZ)'],[EXP,'Přetoky do sítě (elektroměr ČEZ)']]);",
+                ),
+            ),
+        ],
+    }
+    comparison_index = len(sections)
+    sections.append(monthly_grid)
+    if V:
+        sections.append(
+            {
+                "type": "grid",
+                "column_span": 3,
+                "cards": [
+                    heading("Výkup po měsících", "mdi:cash-multiple"),
+                    stack(
+                        head(
+                            V + "vykup_letos",
+                            "mdi:cash-multiple",
+                            "Výkup vs spot",
+                            GJS + "return 'Kč za měsíc';",
+                            GJS + f"return u(gnum('{V}vykup_letos'),'Kč letos');",
+                        ),
+                        details(
+                            fixed_unit("czk")
+                            + GJS
+                            + f"const ps=(gat('{V}vykup_za_posledni_mesic','payouts')||[]).slice(-13);"
+                            "const g=ps.map(p=>({l:p.month.endsWith('-01')?mlab(p.month):MN[+p.month.slice(5)-1],h:mlab(p.month),"
+                            "x:[p.export_kwh!=null?'Přetoky '+f(p.export_kwh,1)+' kWh':'',p.price_per_kwh!=null?'Výkup '+f(p.price_per_kwh,2)+' Kč/kWh':'',"
+                            "p.spot_price_per_kwh!=null?'Spot '+f(p.spot_price_per_kwh,2)+' Kč/kWh':''].filter(Boolean),"
+                            "b:[{v:p.amount,c:EXP,n:'Vyplacený výkup'},{v:p.spot_value??null,c:IMP,n:'Přetoky za spotovou cenu'}]}));"
+                            "return chart(g,[[EXP,'Vyplacený výkup'],[IMP,'Přetoky oceněné spotem']],130);",
+                        ),
+                    ),
+                ],
+            }
+        )
+    sections.insert(
+        comparison_index,
+        {
+            "type": "grid",
+            "column_span": 1 if V else 2,
+            "cards": [
+                heading("HA vs elektroměr ČEZ", "mdi:scale-unbalanced"),
+                stack(
+                    head(
+                        GRID_DATE,
+                        "mdi:scale-unbalanced",
+                        "Měsíční porovnání",
+                        GJS + "return 'odběr · přetoky';",
+                        GJS
+                        + "const c=(GD.export_comparison||[]).filter(x=>x.diff_pct!=null).pop();"
+                        "return c?u(pctg(c.diff_pct).replace(' %',''),'% přetoky'):'–';",
+                    ),
+                    details(
+                        GJS + "const ic=GD.import_comparison||[],ec=GD.export_comparison||[];"
+                        "const months=[...new Set([...ic,...ec].map(x=>x.month))].sort().reverse().slice(0,12);"
+                        "if(!months.length)return `<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0;white-space:normal'>"
+                        "Nastavte referenční senzory odběru a exportu v možnostech integrace.</div>`;"
+                        "const w=(c)=>c?`<span style='color:${Math.abs(c.diff_pct)>5?'var(--warning-color,#ffa600)':'inherit'}'>${pctg(c.diff_pct)}</span>`:'–';"
+                        f"return months.map(m=>row('{GRID_DATE}',mlabg(m),w(ic.find(x=>x.month===m))+' · '+w(ec.find(x=>x.month===m)))).join('')"
+                        "+`<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0;white-space:normal'>Odchylka HA od elektroměru "
+                        "ČEZ, jen dny s daty v obou zdrojích.</div>`;",
+                    ),
+                ),
+            ],
+        },
+    )
+    return sections
+
+
+def yoy_meter() -> dict:
+    """Year over year by calendar month from the ČEZ smart meter (import and export)."""
+    return {
+        "type": "grid",
+        "column_span": 3,
+        "cards": [
+            heading("Meziroční porovnání", "mdi:chart-timeline-variant"),
+            stack(
+                head(
+                    GRID_DATE,
+                    "mdi:chart-timeline-variant",
+                    "Odběr ze sítě po letech",
+                    GJS + "return 'elektroměr ČEZ';",
+                    GJS + "const ms=GD.months||[];const now=new Date();const y=now.getFullYear();"
+                    "const sum=(yr)=>ms.filter(m=>m.month.startsWith(yr+'-')&&+m.month.slice(5)<=now.getMonth()+1)"
+                    ".reduce((a,m)=>a+(m.import_kwh||0),0);const a=sum(y),b=sum(y-1);"
+                    "return b?u(pctg((a-b)/b*100).replace(' %',''),'% vs '+(y-1)+' (stejné měsíce)'):'–';",
+                ),
+                details(
+                    fixed_unit("kwh")
+                    + GJS
+                    + "const ms=GD.months||[];const years=[...new Set(ms.map(m=>m.month.slice(0,4)))].slice(-3);"
+                    "const pal=['#5a5a5e','#b0b0b5',HA];const col={};years.forEach((yr,i)=>{col[yr]=pal[pal.length-years.length+i]});"
+                    "const g=MN.map((lab,i)=>{const mm=String(i+1).padStart(2,'0');"
+                    "const b=years.map(yr=>{const m=ms.find(x=>x.month===yr+'-'+mm);return {v:m?m.import_kwh:null,c:col[yr],n:yr+(m&&m.export_kwh!=null?' (přetoky '+f(m.export_kwh,0)+' kWh)':''),"
+                    "o:{dim:m&&m.days<new Date(+yr,i+1,0).getDate()}}});return {l:lab,b,h:lab}});"
+                    "return chart(g,years.map(yr=>[col[yr],'odběr '+yr]))+`<div style='font-size:12px;color:var(--secondary-text-color);"
+                    "padding:4px 0;white-space:normal'>Odběr ze sítě podle elektroměru ČEZ po kalendářních měsících; světlejší = neúplný měsíc. "
+                    "Přetoky v tooltipu.</div>`;",
+                ),
+            ),
+        ],
+    }
+
+
+GJS += (
+    "const MNG=['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro'];"
+    "const mlabg=(ym)=>{const [y,m]=String(ym).split('-');return MNG[+m-1]+' '+y.slice(2)};"
+    "const pctg=(x)=>x==null?'–':(x>0?'+':'')+f(x,1)+' %';"
+)
+
 view = {
     "title": "ČEZ",
     "path": "cez",
     "icon": "mdi:lightning-bolt-circle",
     "type": "sections",
     "max_columns": 3,
-    "sections": [billing, advances, contract, monthly, yoy, totals, check, periods, documents],
+    "sections": [
+        billing,
+        advances,
+        contract,
+        *grid_sections(),
+        monthly,
+        yoy_meter() if G else yoy,
+        totals,
+        check,
+        periods,
+        documents,
+    ],
 }
 
 with open(sys.argv[1], "w") as fh:
