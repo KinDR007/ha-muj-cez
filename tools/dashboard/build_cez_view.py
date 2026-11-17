@@ -27,7 +27,11 @@ JS = (
     "const dt=(v)=>v?String(v).slice(0,10).split('-').reverse().join('.'):'–';"
     "const u=(v,unit)=>`${v}<span class='u'>${unit}</span>`;"
     'const row=(k,l,v)=>`<div class=\'r\' data-tap=\'{"action":"more-info","entity":"${id(k)}"}\' '
-    "onclick='dashTap(event,this)'><span class='l'>${l}</span><span>${v}</span></div>`;"
+    "onclick='dashTap(event,this)' ontouchstart='cezTs(event)' ontouchend='cezTe(event,this)' style='pointer-events:auto;cursor:pointer'><span class='l'>${l}</span><span>${v}</span></div>`;"
+    # Touch: button-card swallows the click on touch devices; tap = touch without movement.
+    "globalThis.cezTs=(ev)=>{const t=ev.changedTouches[0];globalThis.__cezT=[t.clientX,t.clientY]};"
+    "globalThis.cezTe=(ev,el)=>{const t=ev.changedTouches[0],s=globalThis.__cezT||[1e9,1e9];"
+    "if(Math.abs(t.clientX-s[0])+Math.abs(t.clientY-s[1])<10){ev.preventDefault();dashTap(ev,el)}};"
 )
 RENAME = {"st": "so", "f": "fm", "u": "uu"}
 _RENAME_RE = re.compile(r"(?<![\w.$'\"])(st|f|u)(?=\(|=)")
@@ -197,7 +201,7 @@ periods_rows = (
     "else if(!p.predicted&&p.paid!=null&&p.advances_total!=null&&Math.abs(p.advances_total-p.paid)>=1)"
     "x=sub(`platby ${f(p.paid)} Kč · ostatní ${f(p.advances_total-p.paid)} Kč`);"
     "return f(t)+' Kč'+x};"
-    'const body=ps.map(p=>`<tr data-tap=\'{"action":"more-info","entity":"${id(\'zuctovaci_obdobi\')}"}\' onclick=\'dashTap(event,this)\'>`'
+    "const body=ps.map(p=>`<tr data-tap='{\"action\":\"more-info\",\"entity\":\"${id('zuctovaci_obdobi')}\"}' onclick='dashTap(event,this)' ontouchstart='cezTs(event)' ontouchend='cezTe(event,this)' style='pointer-events:auto;cursor:pointer'>`"
     "+td(`${dt(p.from)} – ${dt(p.to)}`+(p.predicted?\" <span style='color:var(--primary-color)'>predikce</span>\":''))"
     "+td(f(p.consumption_kwh)+' kWh',1)+td(f(p.cost)+' Kč',1)+td(adv(p),1)"
     "+td(res(p.settlement),1)+td(f(p.avg_price,2),1)+'</tr>').join('');"
@@ -252,7 +256,8 @@ CH = (
     "const mlab=(ym)=>{const [y,m]=ym.split('-');return MN[+m-1]+' '+y.slice(2)};"
     'const pill=(o,t)=>`<span data-tap=\'{"action":"perform-action","perform_action":"${SVC}",'
     '"target":{"entity_id":"${SEL}"},"data":{"option":"${o}"}}\' onclick=\'dashTap(event,this)\' '
-    "style='cursor:pointer;padding:2px 10px;border-radius:10px;margin-left:4px;${UN===o?"
+    "ontouchstart='cezTs(event)' ontouchend='cezTe(event,this)' "
+    "style='pointer-events:auto;cursor:pointer;padding:2px 10px;border-radius:10px;margin-left:4px;${UN===o?"
     "'background:var(--primary-color);color:var(--text-primary-color,#fff)':'border:1px solid var(--divider-color)'}'>${t}</span>`;"
     "const pills=()=>pill('kwh','kWh')+pill('czk','Kč');"
     "const HA='var(--primary-color)';const CZ='#8e8e93';"
