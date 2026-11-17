@@ -1,0 +1,44 @@
+[
+ {
+  "paymentPrescriptionPrescribedAmount": 1450.0,
+  "paymentPrescriptionVariableSymbol": "1111111100",
+  "paymentPrescriptionDueDate": "2026-11-16",
+  "bankAccountFullNumber": "7770227",
+  "bankAccountBankCode": {
+   "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+   "value": "0100"
+  },
+  "supplyPointCommodity": {
+   "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+   "value": "E1"
+  }
+ },
+ {
+  "paymentPrescriptionPrescribedAmount": 1450.0,
+  "paymentPrescriptionVariableSymbol": "1111111100",
+  "paymentPrescriptionDueDate": "2026-12-15",
+  "bankAccountFullNumber": "7770227",
+  "bankAccountBankCode": {
+   "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+   "value": "0100"
+  },
+  "supplyPointCommodity": {
+   "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+   "value": "E1"
+  }
+ },
+ {
+  "paymentPrescriptionPrescribedAmount": 1450.0,
+  "paymentPrescriptionVariableSymbol": "1111111100",
+  "paymentPrescriptionDueDate": "2027-01-15",
+  "bankAccountFullNumber": "7770227",
+  "bankAccountBankCode": {
+   "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+   "value": "0100"
+  },
+  "supplyPointCommodity": {
+   "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+   "value": "E1"
+  }
+ }
+]

@@ -1,0 +1,23 @@
+"""Constants for the Muj CEZ integration."""
+
+from datetime import timedelta
+
+DOMAIN = "muj_cez"
+MANUFACTURER = "ČEZ"
+PORTAL_URL = "https://muj.cez.cz"
+
+CONF_UPDATE_PERIOD = "update_period"
+CONF_UPDATE_TIME = "update_time"
+CONF_REFERENCE_SENSOR = "reference_sensor"
+
+PERIOD_DAILY = "daily"
+PERIOD_WEEKLY = "weekly"
+PERIOD_MONTHLY = "monthly"
+UPDATE_PERIODS = [PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY]
+
+DEFAULT_UPDATE_PERIOD = PERIOD_DAILY
+DEFAULT_UPDATE_TIME = "00:00:00"
+
+# Retry a failed scheduled update this many times with this delay.
+RETRY_COUNT = 6
+RETRY_DELAY = timedelta(minutes=30)

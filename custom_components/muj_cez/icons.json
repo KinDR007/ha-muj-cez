@@ -1,0 +1,108 @@
+{
+  "entity": {
+    "sensor": {
+      "invoice_balance": {
+        "default": "mdi:scale-balance"
+      },
+      "predicted_cost": {
+        "default": "mdi:cash-clock"
+      },
+      "recommended_advance": {
+        "default": "mdi:cash-check"
+      },
+      "current_advance": {
+        "default": "mdi:cash-sync"
+      },
+      "predicted_consumption": {
+        "default": "mdi:lightning-bolt-outline"
+      },
+      "billing_period_end": {
+        "default": "mdi:calendar-end"
+      },
+      "next_advance_date": {
+        "default": "mdi:calendar-clock"
+      },
+      "next_advance_amount": {
+        "default": "mdi:cash-fast"
+      },
+      "unpaid_advances": {
+        "default": "mdi:cash-remove"
+      },
+      "last_period_consumption": {
+        "default": "mdi:lightning-bolt"
+      },
+      "last_period_cost": {
+        "default": "mdi:cash"
+      },
+      "meter_reading": {
+        "default": "mdi:meter-electric"
+      },
+      "last_update": {
+        "default": "mdi:update"
+      },
+      "last_invoice": {
+        "default": "mdi:file-document-outline"
+      },
+      "last_payment": {
+        "default": "mdi:cash-check"
+      },
+      "overdue_amount": {
+        "default": "mdi:alert-circle-outline"
+      },
+      "distribution_rate": {
+        "default": "mdi:transmission-tower"
+      },
+      "circuit_breaker": {
+        "default": "mdi:electric-switch"
+      },
+      "contract_end": {
+        "default": "mdi:file-sign"
+      },
+      "price_change_date": {
+        "default": "mdi:tag-arrow-up-outline"
+      },
+      "planned_outages": {
+        "default": "mdi:power-plug-off-outline"
+      },
+      "ean": {
+        "default": "mdi:barcode"
+      },
+      "meter_number": {
+        "default": "mdi:counter"
+      },
+      "contract_number": {
+        "default": "mdi:file-document-edit-outline"
+      },
+      "customer_number": {
+        "default": "mdi:account-box-outline"
+      },
+      "product": {
+        "default": "mdi:package-variant"
+      },
+      "unread_messages": {
+        "default": "mdi:email-outline"
+      },
+      "billing_periods": {
+        "default": "mdi:calendar-range"
+      },
+      "consumption_comparison": {
+        "default": "mdi:compare-horizontal"
+      }
+    },
+    "calendar": {
+      "documents": {
+        "default": "mdi:file-document-multiple-outline"
+      }
+    },
+    "select": {
+      "chart_unit": {
+        "default": "mdi:swap-horizontal"
+      }
+    }
+  },
+  "services": {
+    "get_documents": {
+      "service": "mdi:file-search-outline"
+    }
+  }
+}

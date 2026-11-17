@@ -1,0 +1,20 @@
+{
+ "isCalculatorProducts": false,
+ "descriptionCalc": "",
+ "phase": 1,
+ "productCrm": "E_ELE_REFIX_2",
+ "highTariffConsumption": 1.163,
+ "circuitBreakerValue": 25.0,
+ "showAdditionalProducts": false,
+ "tariffType": "D02D",
+ "lowTariffConsumption": 0.0,
+ "serviceId": "CEZ-DI",
+ "calculationType": "01",
+ "priceIncreaseDate": "2027-07-17",
+ "showFixation": false,
+ "showCancelledProduct": false,
+ "hasDoubleTariff": false,
+ "loginDate": "2025-07-16T00:00:00+02:00",
+ "additionalSupplyPointProducts": [],
+ "contractPlannedEndDate": "2027-07-16"
+}

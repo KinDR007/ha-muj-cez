@@ -1,0 +1,14 @@
+{
+ "unreadTotal": 2,
+ "unreadUnclosedTotal": 2,
+ "messages": [
+  {
+   "messageClosed": false,
+   "eventGuidIsu": "259"
+  },
+  {
+   "messageClosed": false,
+   "eventGuidIsu": "262"
+  }
+ ]
+}

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Deploy the integration to a Home Assistant OS host over SSH and restart HA core.
+# Usage: HA_HOST=192.168.88.201 [HA_USER=root] [HA_SSH_PASS=...] scripts/deploy [--no-restart]
+set -euo pipefail
+cd "$(dirname "$0")/../custom_components"
+: "${HA_HOST:?Set HA_HOST}"
+HA_USER="${HA_USER:-root}"
+ssh_cmd=(ssh -o ConnectTimeout=10 "$HA_USER@$HA_HOST")
+if [[ -n "${HA_SSH_PASS:-}" ]]; then
+  command -v sshpass >/dev/null || { echo "sshpass not installed" >&2; exit 1; }
+  ssh_cmd=(sshpass -e "${ssh_cmd[@]}")
+  export SSHPASS="$HA_SSH_PASS"
+fi
+COPYFILE_DISABLE=1 tar --exclude='__pycache__' --exclude='.DS_Store' -czf - muj_cez \
+  | "${ssh_cmd[@]}" 'rm -rf /config/custom_components/muj_cez.new \
+      && mkdir -p /config/custom_components/muj_cez.new \
+      && tar -xzf - -C /config/custom_components/muj_cez.new \
+      && rm -rf /config/custom_components/muj_cez \
+      && mv /config/custom_components/muj_cez.new/muj_cez /config/custom_components/muj_cez \
+      && rmdir /config/custom_components/muj_cez.new \
+      && ha core check'
+if [[ "${1:-}" != "--no-restart" ]]; then
+  "${ssh_cmd[@]}" 'ha core restart'
+fi
+echo "Deployed to $HA_HOST"

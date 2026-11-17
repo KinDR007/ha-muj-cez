@@ -1,0 +1,69 @@
+[
+ {
+  "consumptionPlaceIdIsu": "0002222222",
+  "prodExtOrderType": "",
+  "productDashboardText": "",
+  "parentAgreement": {
+   "parentAgreementIdIsu": ""
+  },
+  "agreement": {
+   "agreementIdIsu": "000011111111",
+   "agreementElectronicInvoicingTypeId": "Elfa",
+   "isAggregated": false,
+   "isGrouped": false
+  },
+  "supplyPointCode": "859100000000000001",
+  "contract": {
+   "contractIdIsu": "000011111111",
+   "contractAdvancePaymentAmount": 1450.0,
+   "contractAdvancePaymentFrequency": {
+    "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+    "value": "01"
+   },
+   "contractName": "Testovací 123"
+  },
+  "consumptionPlaceName": "Testovací 123",
+  "address": {
+   "addressCity": {
+    "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+    "value": "Praha"
+   },
+   "addressLandRegistryNumber": "123",
+   "addressHouseNumber": "",
+   "addressZipCode": "110 00",
+   "addressStreet": {
+    "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+    "value": "Testovací"
+   }
+  },
+  "supplyPointCommodity": {
+   "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+   "value": "E1"
+  },
+  "supplyPointUniqueId": "0000111111110002222222859100000000000001",
+  "productInstanceId": "",
+  "hasCsvDataFile": true,
+  "hasMonthlyInvoicing": false,
+  "supplyPointMeasurementSubKind": "",
+  "supplyPointNumber": "",
+  "hiddenByFilter": "",
+  "Product": "ELE_REFIX_2_E",
+  "hasFixedProduct": false,
+  "supplyPointType": {
+   "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+   "entrySystemSpecificId": "SPOTR",
+   "systemId": "INT",
+   "entryId": "SPOTR",
+   "longValue": "N/A",
+   "entryOrder": 3,
+   "language": "CZ",
+   "validTo": "2999-12-30T23:00:00Z",
+   "validFrom": "0999-12-31T23:02:16Z",
+   "codebookId": "TP_SUPPL_PNT",
+   "value": "Spotřeba"
+  },
+  "productBannerText": "",
+  "productInfoText": "",
+  "supplyPointIsContinuousMeasurement": true
+ }
+]

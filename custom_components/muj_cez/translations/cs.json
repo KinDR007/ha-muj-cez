@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Můj ČEZ",
+        "description": "Přihlaste se účtem z muj.cez.cz.",
+        "data": {
+          "username": "E-mail",
+          "password": "Heslo"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Znovu přihlásit Můj ČEZ",
+        "description": "Zadejte aktuální heslo pro {username}.",
+        "data": {
+          "password": "Heslo"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Neplatný e-mail nebo heslo.",
+      "cannot_connect": "Nelze se připojit k muj.cez.cz.",
+      "no_supply_points": "Účet nemá žádné odběrné místo.",
+      "unknown": "Neočekávaná chyba."
+    },
+    "abort": {
+      "already_configured": "Tento účet je již nastaven.",
+      "reauth_successful": "Přihlášení bylo obnoveno."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Plán aktualizace",
+        "data": {
+          "update_period": "Perioda aktualizace",
+          "update_time": "Čas aktualizace",
+          "reference_sensor": "Referenční senzor odběru v HA"
+        },
+        "data_description": {
+          "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
+          "update_time": "Místní čas aktualizace. Data se načtou i při startu Home Assistantu.",
+          "reference_sensor": "Energetický senzor odběru ze sítě (kWh, s dlouhodobými statistikami). Slouží k porovnání měření HA s portálem."
+        }
+      }
+    }
+  },
+  "selector": {
+    "update_period": {
+      "options": {
+        "daily": "Denně",
+        "weekly": "Týdně",
+        "monthly": "Měsíčně"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "invoice_balance": {
+        "name": "Predikce vyúčtování"
+      },
+      "predicted_cost": {
+        "name": "Predikované náklady za období"
+      },
+      "recommended_advance": {
+        "name": "Doporučená záloha"
+      },
+      "current_advance": {
+        "name": "Aktuální záloha"
+      },
+      "predicted_consumption": {
+        "name": "Predikovaná spotřeba za období"
+      },
+      "billing_period_end": {
+        "name": "Konec zúčtovacího období"
+      },
+      "next_advance_date": {
+        "name": "Splatnost příští zálohy"
+      },
+      "next_advance_amount": {
+        "name": "Výše příští zálohy"
+      },
+      "unpaid_advances": {
+        "name": "Nezaplacené zálohy"
+      },
+      "last_period_consumption": {
+        "name": "Spotřeba za minulé období"
+      },
+      "last_period_cost": {
+        "name": "Náklady za minulé období"
+      },
+      "meter_reading": {
+        "name": "Stav elektroměru"
+      },
+      "last_update": {
+        "name": "Poslední aktualizace"
+      },
+      "last_invoice": {
+        "name": "Poslední faktura"
+      },
+      "last_payment": {
+        "name": "Poslední platba"
+      },
+      "overdue_amount": {
+        "name": "Částka po splatnosti"
+      },
+      "distribution_rate": {
+        "name": "Distribuční sazba"
+      },
+      "circuit_breaker": {
+        "name": "Hlavní jistič"
+      },
+      "contract_end": {
+        "name": "Konec smlouvy"
+      },
+      "price_change_date": {
+        "name": "Datum změny ceny"
+      },
+      "planned_outages": {
+        "name": "Plánované odstávky"
+      },
+      "ean": {
+        "name": "EAN"
+      },
+      "meter_number": {
+        "name": "Číslo elektroměru"
+      },
+      "contract_number": {
+        "name": "Číslo smlouvy"
+      },
+      "customer_number": {
+        "name": "Zákaznické číslo"
+      },
+      "product": {
+        "name": "Produkt"
+      },
+      "unread_messages": {
+        "name": "Nepřečtené zprávy"
+      },
+      "billing_periods": {
+        "name": "Zúčtovací období"
+      },
+      "consumption_comparison": {
+        "name": "Odchylka od ČEZ"
+      }
+    },
+    "calendar": {
+      "documents": {
+        "name": "Doklady"
+      }
+    },
+    "select": {
+      "chart_unit": {
+        "name": "Jednotka grafů",
+        "state": {
+          "kwh": "kWh",
+          "czk": "Kč"
+        }
+      }
+    }
+  },
+  "services": {
+    "get_documents": {
+      "name": "Načíst doklady",
+      "description": "Vrátí účetní doklady (faktury, zálohy, platby, …) všech smluv, od nejnovějších.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Účet",
+          "description": "Účet Můj ČEZ. Nepovinné, pokud je nastaven jen jeden."
+        },
+        "date_from": {
+          "name": "Od",
+          "description": "Jen doklady se splatností/vystavením od tohoto data."
+        },
+        "date_to": {
+          "name": "Do",
+          "description": "Jen doklady se splatností/vystavením do tohoto data."
+        },
+        "document_type": {
+          "name": "Typ dokladu",
+          "description": "Část názvu typu dokladu, např. Faktura, Záloha, Platba."
+        },
+        "contract": {
+          "name": "Smlouva",
+          "description": "Číslo smlouvy nebo část názvu smlouvy."
+        },
+        "unpaid_only": {
+          "name": "Jen neuhrazené",
+          "description": "Jen doklady se zbývající částkou k úhradě."
+        },
+        "limit": {
+          "name": "Limit",
+          "description": "Maximální počet vrácených dokladů."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": {
+      "message": "Účet Můj ČEZ není načten."
+    },
+    "entry_required": {
+      "message": "Je nastaveno více účtů, vyberte jeden."
+    }
+  }
+}

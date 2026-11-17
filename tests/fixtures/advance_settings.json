@@ -1,0 +1,40 @@
+{
+ "advancePaymentChangeFromLimit": 480,
+ "advancePaymentChangeToLimit": 14500,
+ "advancePaymentPlanFartherestDate": "2026-11-17",
+ "advancePaymentChangeWithOverpayment": false,
+ "agreementIdIsu": "000011111111",
+ "advancePaymentPlanDueDay": {
+  "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+  "entrySystemSpecificId": "15",
+  "systemId": "",
+  "entryId": "",
+  "longValue": "",
+  "language": "",
+  "validTo": "+999999999-12-31T23:59:59.999999999-18:00",
+  "validFrom": "-999999999-01-01T00:00:00+18:00",
+  "codebookId": "",
+  "value": ""
+ },
+ "advancePaymentPlanCurrentAmount": 1450.0,
+ "advancePaymentPlanFarthestDate": "2027-01-15",
+ "supplyPointCommodity": {
+  "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+  "value": "E1"
+ },
+ "isGrouped": false,
+ "isAggregated": false,
+ "firstFollowingPaymentPrescription": {
+  "paymentPrescriptionDueDate": "2026-11-16"
+ },
+ "advancePaymentChangeNewFollowingAmount": 1450.0,
+ "isSipo": false,
+ "advancePaymentChangeRemainingPayments": 3,
+ "lastFollowingPaymentPrescription": {
+  "paymentPrescriptionDueDate": "2027-01-15"
+ },
+ "advancePaymentChangeNewFollowingAmountDate": "2026-11-16",
+ "supplyPointCode": "859100000000000001",
+ "advancePaymentPlanId": "390000000001",
+ "advancePaymentPermanentAmountEnabled": true
+}

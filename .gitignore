@@ -1,0 +1,15 @@
+probe_out/
+venv/
+.venv/
+__pycache__/
+*.har
+secrets*
+.env
+index.js
+chunks/
+zadani.md
+.DS_Store
+.pytest_cache/
+.ruff_cache/
+.backup/
+.snapshot/

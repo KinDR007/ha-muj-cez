@@ -1,0 +1,64 @@
+{
+ "recommendedSupplyPointDistributionRate": {
+  "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+  "entrySystemSpecificId": "STD_D02D",
+  "systemId": "INT",
+  "entryId": "STD_D02D",
+  "longValue": "N/A",
+  "entryOrder": 2,
+  "language": "CZ",
+  "validTo": "2999-12-30T23:00:00Z",
+  "validFrom": "0999-12-31T23:02:16Z",
+  "codebookId": "TP_DISTR_RX",
+  "value": "D02d - Běžná domácnost bez topení a bojleru",
+  "otherValues": [
+   {
+    "key": "DistributionRateType",
+    "value": "DOMACNOST"
+   },
+   {
+    "key": "DoubleTariff",
+    "value": "0"
+   },
+   {
+    "key": "PricelistDistributionRateCode",
+    "value": "KC"
+   },
+   {
+    "key": "ApppDistributionRateActiveFlag",
+    "value": "1"
+   }
+  ]
+ },
+ "currentSupplyPointDistributionRate": {
+  "@class": "cz.cez.cpr.restapi.common.v1_0.dto.CodebookEntryDto",
+  "entrySystemSpecificId": "STD_D02D",
+  "systemId": "INT",
+  "entryId": "STD_D02D",
+  "longValue": "N/A",
+  "entryOrder": 2,
+  "language": "CZ",
+  "validTo": "2999-12-30T23:00:00Z",
+  "validFrom": "0999-12-31T23:02:16Z",
+  "codebookId": "TP_DISTR_RX",
+  "value": "D02d - Běžná domácnost bez topení a bojleru",
+  "otherValues": [
+   {
+    "key": "DistributionRateType",
+    "value": "DOMACNOST"
+   },
+   {
+    "key": "DoubleTariff",
+    "value": "0"
+   },
+   {
+    "key": "PricelistDistributionRateCode",
+    "value": "KC"
+   },
+   {
+    "key": "ApppDistributionRateActiveFlag",
+    "value": "1"
+   }
+  ]
+ }
+}

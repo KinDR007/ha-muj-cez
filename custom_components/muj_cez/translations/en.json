@@ -1,0 +1,206 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Můj ČEZ",
+        "description": "Sign in with your muj.cez.cz account.",
+        "data": {
+          "username": "E-mail",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Můj ČEZ",
+        "description": "Enter the current password for {username}.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid e-mail or password.",
+      "cannot_connect": "Cannot connect to muj.cez.cz.",
+      "no_supply_points": "The account has no supply points.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Re-authentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update schedule",
+        "data": {
+          "update_period": "Update period",
+          "update_time": "Update time",
+          "reference_sensor": "HA reference energy sensor"
+        },
+        "data_description": {
+          "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
+          "update_time": "Local time of the update. Data is also loaded when Home Assistant starts.",
+          "reference_sensor": "Energy sensor measuring grid import (kWh, with long-term statistics). Used to compare HA measurement with the portal."
+        }
+      }
+    }
+  },
+  "selector": {
+    "update_period": {
+      "options": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "invoice_balance": {
+        "name": "Predicted invoice balance"
+      },
+      "predicted_cost": {
+        "name": "Predicted cost for period"
+      },
+      "recommended_advance": {
+        "name": "Recommended advance payment"
+      },
+      "current_advance": {
+        "name": "Current advance payment"
+      },
+      "predicted_consumption": {
+        "name": "Predicted consumption for period"
+      },
+      "billing_period_end": {
+        "name": "Billing period end"
+      },
+      "next_advance_date": {
+        "name": "Next advance payment date"
+      },
+      "next_advance_amount": {
+        "name": "Next advance payment amount"
+      },
+      "unpaid_advances": {
+        "name": "Unpaid advance payments"
+      },
+      "last_period_consumption": {
+        "name": "Last period consumption"
+      },
+      "last_period_cost": {
+        "name": "Last period cost"
+      },
+      "meter_reading": {
+        "name": "Meter reading"
+      },
+      "last_update": {
+        "name": "Last update"
+      },
+      "last_invoice": {
+        "name": "Last invoice"
+      },
+      "last_payment": {
+        "name": "Last payment"
+      },
+      "overdue_amount": {
+        "name": "Overdue amount"
+      },
+      "distribution_rate": {
+        "name": "Distribution rate"
+      },
+      "circuit_breaker": {
+        "name": "Circuit breaker"
+      },
+      "contract_end": {
+        "name": "Contract end"
+      },
+      "price_change_date": {
+        "name": "Price change date"
+      },
+      "planned_outages": {
+        "name": "Planned outages"
+      },
+      "ean": {
+        "name": "EAN"
+      },
+      "meter_number": {
+        "name": "Meter number"
+      },
+      "contract_number": {
+        "name": "Contract number"
+      },
+      "customer_number": {
+        "name": "Customer number"
+      },
+      "product": {
+        "name": "Product"
+      },
+      "unread_messages": {
+        "name": "Unread messages"
+      },
+      "billing_periods": {
+        "name": "Billing periods"
+      },
+      "consumption_comparison": {
+        "name": "Deviation from ČEZ"
+      }
+    },
+    "calendar": {
+      "documents": {
+        "name": "Documents"
+      }
+    },
+    "select": {
+      "chart_unit": {
+        "name": "Chart unit",
+        "state": {
+          "kwh": "kWh",
+          "czk": "CZK"
+        }
+      }
+    }
+  },
+  "services": {
+    "get_documents": {
+      "name": "Get documents",
+      "description": "Returns accounting documents (invoices, advances, payments, ...) of all contracts, newest first.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Můj ČEZ account. Optional when only one account is configured."
+        },
+        "date_from": {
+          "name": "From",
+          "description": "Only documents with due/issue date on or after this date."
+        },
+        "date_to": {
+          "name": "To",
+          "description": "Only documents with due/issue date on or before this date."
+        },
+        "document_type": {
+          "name": "Document type",
+          "description": "Substring of the document type, e.g. Faktura, Záloha, Platba."
+        },
+        "contract": {
+          "name": "Contract",
+          "description": "Contract number or part of the contract name."
+        },
+        "unpaid_only": {
+          "name": "Unpaid only",
+          "description": "Only documents with a remaining balance."
+        },
+        "limit": {
+          "name": "Limit",
+          "description": "Maximum number of returned documents."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": {
+      "message": "The Můj ČEZ account is not loaded."
+    },
+    "entry_required": {
+      "message": "More accounts are configured, select one."
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "domain": "muj_cez",
+  "name": "Můj ČEZ",
+  "after_dependencies": ["recorder"],
+  "codeowners": ["@KinDR007"],
+  "config_flow": true,
+  "documentation": "https://github.com/KinDR007/ha-muj-cez",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/KinDR007/ha-muj-cez/issues",
+  "loggers": ["custom_components.muj_cez"],
+  "requirements": [],
+  "version": "0.4.2"
+}

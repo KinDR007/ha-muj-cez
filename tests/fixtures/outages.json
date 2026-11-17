@@ -1,0 +1,27 @@
+{
+ "outages": [
+  {
+   "supplyPointCode": "859100000000000001",
+   "manipulationStartDate": "2026-12-03",
+   "manipulationStartTime": "07:30:00",
+   "manipulationEndTime": "2026-12-03T14:00:00Z",
+   "deviceReliefReasonText": "Údržba zařízení",
+   "cancelled": false
+  },
+  {
+   "supplyPointCode": "859100000000000001",
+   "manipulationStartDate": "2026-11-20",
+   "manipulationStartTime": "08:00:00",
+   "manipulationEndTime": "2026-11-20T12:00:00Z",
+   "deviceReliefReasonText": "Zrušeno",
+   "cancelled": true
+  },
+  {
+   "supplyPointCode": "859199999999999999",
+   "manipulationStartDate": "2026-11-25",
+   "manipulationStartTime": "08:00:00",
+   "deviceReliefReasonText": "Jiné OM",
+   "cancelled": false
+  }
+ ]
+}
