@@ -164,6 +164,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
                 "summary": gridlib.summary(imp, exp, today),
                 "months": [m.as_dict() for m in gridlib.monthly(imp, exp)],
                 "spot_yesterday": cache.get("spot_yesterday"),
+                "spot_overview": cache.get("spot_overview"),
                 "statistics": {
                     key: statistic_id(key, place_id)
                     for key in ("import", "export")

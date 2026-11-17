@@ -166,6 +166,7 @@ async def test_import_grid_and_spot(
     assert cache["valuation"]["2026-11"]["kwh"] == pytest.approx(144.0)
     assert cache["valuation"]["2026-11"]["value"] == pytest.approx(288.0)
     assert cache["spot_yesterday"]["average"] == pytest.approx(2.0)
+    assert cache["spot_overview"]["months"][-1]["avg"] == pytest.approx(2.0)
 
     # Second run: nothing new, nothing re-imported or double counted.
     client.calls.clear()
@@ -289,3 +290,22 @@ async def test_spot_prices_from_ote_fill_missing_days(
     )
     assert fake_ote.calls == [date(2026, 11, 13)]
     assert len(prices) == 24
+
+
+def test_spot_overview() -> None:
+    today = date(2026, 11, 17)
+    prices = {}
+    for d in range(20):
+        day = today - timedelta(days=20 - d)
+        start = grid.local_midnight(day).astimezone(UTC)
+        for h in range(statistics.expected_hours(day)):
+            prices[start + timedelta(hours=h)] = float(h) + (0.5 if d % 2 else 0.0)
+    ov = statistics.spot_overview(prices, today)
+    assert [m["month"] for m in ov["months"]] == ["2026-10", "2026-11"]
+    assert len(ov["days"]) == 14
+    assert ov["days"][-1]["date"] == "2026-11-16"
+    assert ov["days"][-1]["min"] == pytest.approx(0.5)
+    assert len(ov["profile"]) == 24
+    # Hour 5 over the last 7 days: 5 or 5.5 alternating.
+    assert 5.0 <= ov["profile"][5] <= 5.5
+    assert statistics.spot_overview({}, today)["profile"] == [None] * 24

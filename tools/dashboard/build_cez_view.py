@@ -604,6 +604,113 @@ def grid_sections() -> list[dict]:
     return sections
 
 
+S_TODAY = os.environ.get("CEZ_SPOT_TODAY", "")
+S_TOMORROW = os.environ.get("CEZ_SPOT_TOMORROW", "")
+SPOT_INFO = G + "spotova_cena_vcera"
+
+
+def price_unit() -> str:
+    """Chart helpers for prices in CZK/kWh with two decimals."""
+    ch = fixed_unit("price")
+    for old, new in (
+        ("const UL=UN==='czk'?'Kč':'kWh';", "const UL='Kč/kWh';"),
+        ("f(x.v,UN==='czk'?0:1)", "f(x.v,2)"),
+        ("max ${f(max)} ${UL}", "max ${f(max,2)} ${UL}"),
+    ):
+        assert old in ch, old
+        ch = ch.replace(old, new)
+    return ch
+
+
+SJS = (
+    f"const SY=states['{SPOT_INFO}'];const SA=SY?SY.attributes:{{}};"
+    "const pts=(e)=>{const s=states[e];return s?Object.entries(s.attributes)"
+    ".filter(([k])=>/^\\d{4}-\\d\\d-\\d\\dT/.test(k)).map(([k,v])=>[new Date(k),Array.isArray(v)?v[1]:v])"
+    ".sort((a,b)=>a[0]-b[0]):[]};"
+)
+
+
+def spot_sections() -> list[dict]:
+    if not G:
+        return []
+    today_tomorrow = {
+        "type": "grid",
+        "column_span": 3,
+        "cards": [
+            heading("Spotová cena dnes a zítra", "mdi:chart-bell-curve"),
+            stack(
+                head(
+                    S_TODAY or SPOT_INFO,
+                    "mdi:chart-bell-curve",
+                    "Aktuální spotová cena",
+                    GJS + SJS + f"const t=pts('{S_TODAY}').map(x=>x[1]);"
+                    "return t.length?'dnes '+f(Math.min(...t),2)+' – '+f(Math.max(...t),2)+' Kč/kWh':'';",
+                    GJS + SJS + f"const s=states['{S_TODAY}'];return s?u(f(s.state,2),'Kč/kWh'):"
+                    "u(f(SA.average,2),'Kč/kWh včera');",
+                ),
+                details(
+                    price_unit()
+                    + GJS
+                    + SJS
+                    + f"const today=pts('{S_TODAY}'),tom=pts('{S_TOMORROW}');const now=new Date();"
+                    "const prof=SA.profile||[];const est=!tom.length;"
+                    "const lab=(d,h)=>h%6===0?String(h):'';const g=[];"
+                    "today.forEach(([t,v])=>{const h=t.getHours();const cur=h===now.getHours()&&t.toDateString()===now.toDateString();"
+                    "g.push({l:lab(t,h),h:'Dnes '+h+':00',b:[{v,c:cur?EXP:HA,n:cur?'Teď':'Dnes'}],"
+                    "x:cur?['aktuální hodina']:[]})});"
+                    "if(!est){tom.forEach(([t,v])=>{const h=t.getHours();g.push({l:h===0?'zítra':lab(t,h),h:'Zítra '+h+':00',"
+                    "b:[{v,c:IMP,n:'Zítra'}]})})}"
+                    "else{prof.forEach((v,h)=>g.push({l:h===0?'zítra':lab(null,h),h:'Zítra '+h+':00 (odhad)',"
+                    "b:[{v,c:IMP,n:'Odhad',o:{hatch:1}}],x:['průměr stejné hodiny za 7 dní']}))}"
+                    "const leg=[[HA,'dnes'],[EXP,'aktuální hodina'],est?[IMP,'zítra – odhad (průměr 7 dní)',{hatch:1}]:[IMP,'zítra (OTE)']];"
+                    "return (g.length?chart(g,leg,140):'')+`<div style='font-size:12px;color:var(--secondary-text-color);padding:4px 0;"
+                    "white-space:normal'>${est?'Zítřejší ceny OTE zveřejňuje kolem 13:00; do té doby je zítřek jen odhad podle "
+                    "posledních 7 dní.':'Zítřejší ceny jsou zveřejněné (OTE).'}</div>`;",
+                ),
+            ),
+        ],
+    }
+    monthly_spot = {
+        "type": "grid",
+        "column_span": 3,
+        "cards": [
+            heading("Spotová cena po měsících", "mdi:chart-areaspline"),
+            stack(
+                head(
+                    SPOT_INFO,
+                    "mdi:chart-areaspline",
+                    "Průměrná spotová cena",
+                    GJS + SJS + "return 'včera '+f(SA.average,2)+' Kč/kWh';",
+                    GJS
+                    + SJS
+                    + "const m=(SA.months||[]).slice(-1)[0];return m?u(f(m.avg,2),'Kč/kWh · '+mlabg(m.month)):'–';",
+                ),
+                details(
+                    price_unit()
+                    + GJS
+                    + SJS
+                    + (
+                        f"const ps=gat('{V}vykup_za_posledni_mesic','payouts')||[];"
+                        if V
+                        else "const ps=[];"
+                    )
+                    + "const ms=(SA.months||[]).slice(-13);"
+                    "const g=ms.map(m=>{const p=ps.find(x=>x.month===m.month)||{};return {l:m.month.endsWith('-01')?mlab(m.month):MN[+m.month.slice(5)-1],"
+                    "h:mlab(m.month)+' (min '+f(m.min,2)+', max '+f(m.max,2)+')',b:[{v:m.avg,c:IMP,n:'Průměr spotu'},"
+                    "{v:p.spot_price_per_kwh??null,c:EXP,n:'Spot vážený přetoky',o:{hatch:1}},{v:p.price_per_kwh??null,c:EXP,n:'Vyplacený výkup'}]}});"
+                    "const rows=ms.slice().reverse().map(m=>{const p=ps.find(x=>x.month===m.month)||{};"
+                    f"return row('{SPOT_INFO}',mlabg(m.month),f(m.avg,2)+' · '+(p.spot_price_per_kwh!=null?f(p.spot_price_per_kwh,2):'–')"
+                    "+' · '+(p.price_per_kwh!=null?f(p.price_per_kwh,2):'–')+' Kč/kWh')}).join('');"
+                    "return chart(g,[[IMP,'průměr spotu'],[EXP,'spot vážený přetoky',{hatch:1}],[EXP,'vyplacený výkup']],130)"
+                    "+`<div style='font-size:12px;color:var(--secondary-text-color);padding:8px 0 2px'>Měsíc: průměr spotu · spot vážený "
+                    "přetoky · výkup</div>`+rows;",
+                ),
+            ),
+        ],
+    }
+    return [today_tomorrow, monthly_spot]
+
+
 def yoy_meter() -> dict:
     """Year over year by calendar month from the ČEZ smart meter (import and export)."""
     return {
@@ -656,6 +763,7 @@ view = {
         advances,
         contract,
         *grid_sections(),
+        *spot_sections(),
         monthly,
         yoy_meter() if G else yoy,
         totals,

@@ -422,7 +422,10 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
         native_unit_of_measurement=f"{CURRENCY}/{UnitOfEnergy.KILO_WATT_HOUR}",
         suggested_display_precision=2,
         value_fn=lambda c, d: ((grid_info(c, d) or {}).get("spot_yesterday") or {}).get("average"),
-        cattrs_fn=lambda c, d: (grid_info(c, d) or {}).get("spot_yesterday") or {},
+        cattrs_fn=lambda c, d: {
+            **((grid_info(c, d) or {}).get("spot_yesterday") or {}),
+            **((grid_info(c, d) or {}).get("spot_overview") or {}),
+        },
         exists_fn=lambda c, d: grid_info(c, d) is not None,
     ),
     # Production point: payouts for energy fed into the grid

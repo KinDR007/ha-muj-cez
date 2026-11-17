@@ -266,6 +266,42 @@ async def async_import_grid(
     return imported
 
 
+def spot_overview(prices: dict[datetime, float], today: date) -> dict[str, Any]:
+    """Spot price summaries for dashboards from hourly prices (CZK/kWh).
+
+    months: average per local month; days: last 14 days (avg/min/max);
+    profile: average price per local hour of day over the last 7 days (a naive
+    estimate for days whose prices are not published yet).
+    """
+    by_month: dict[str, list[float]] = defaultdict(list)
+    by_day: dict[date, list[float]] = defaultdict(list)
+    by_hour: dict[int, list[float]] = defaultdict(list)
+    week_ago = today - timedelta(days=7)
+    for hour, price in prices.items():
+        local = hour.astimezone(gridlib.TZ)
+        by_month[local.strftime("%Y-%m")].append(price)
+        if local.date() >= today - timedelta(days=14):
+            by_day[local.date()].append(price)
+        if local.date() >= week_ago:
+            by_hour[local.hour].append(price)
+
+    def stats(values: list[float]) -> dict[str, float]:
+        return {
+            "avg": round(sum(values) / len(values), 4),
+            "min": round(min(values), 4),
+            "max": round(max(values), 4),
+        }
+
+    return {
+        "months": [{"month": m, **stats(v)} for m, v in sorted(by_month.items())],
+        "days": [{"date": d.isoformat(), **stats(v)} for d, v in sorted(by_day.items())],
+        "profile": [
+            round(sum(by_hour[h]) / len(by_hour[h]), 4) if by_hour.get(h) else None
+            for h in range(24)
+        ],
+    }
+
+
 def spot_day_summary(prices: dict[datetime, float], day: date) -> dict[str, Any] | None:
     values = [p for h, p in prices.items() if h.astimezone(gridlib.TZ).date() == day]
     if not values:
@@ -321,9 +357,16 @@ async def async_update_statistics(
     prices = await sensor_spot_prices(hass, spot_sensor, day_start, day_end)
     prices.update(await _spot_for(hass, day_start, day_end))
     summary = spot_day_summary(prices, yesterday)
+    history_start = gridlib.local_midnight(today - timedelta(days=800)).astimezone(UTC)
+    history = await sensor_spot_prices(hass, spot_sensor, history_start, day_end)
+    history.update(await _spot_for(hass, history_start, day_end))
+    overview = spot_overview(history, today) if history else None
     for sp, cache in places:
         if summary and cache.get("spot_yesterday") != summary:
             cache["spot_yesterday"] = summary
+            changed = True
+        if overview and cache.get("spot_overview") != overview:
+            cache["spot_overview"] = overview
             changed = True
         if cache.get("export_from"):
             valuation = await async_valuation(hass, sp.place_id, cache["export_from"], spot_sensor)
