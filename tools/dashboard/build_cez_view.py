@@ -193,9 +193,7 @@ contract = {
                 "+row('stav_elektromeru','Stav elektroměru',num('stav_elektromeru')+' kWh · '+dt(at('stav_elektromeru','reading_date')))"
                 "+row('spotreba_za_minule_obdobi','Minulé období',num('spotreba_za_minule_obdobi')+' kWh · '+num('naklady_za_minule_obdobi')+' Kč')"
                 "+row('planovane_odstavky','Plánované odstávky',st('planovane_odstavky')?.state??'–')"
-                "+"
-                + PRICE_ROW
-                + ""
+                "+" + PRICE_ROW + ""
                 f"+row('{A_MESSAGES}','Nepřečtené zprávy',st('{A_MESSAGES}')?.state??'–')"
                 "+row('ean','EAN',st('ean')?.state||'–')"
                 "+row('cislo_elektromeru','Číslo elektroměru',st('cislo_elektromeru')?.state||'–')"
