@@ -22,6 +22,7 @@ from .compare import DailyEnergy, build_comparison
 from .const import (
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
+    CONF_SPOT_PRICE_SENSOR,
     CONF_UPDATE_PERIOD,
     CONF_UPDATE_TIME,
     DEFAULT_UPDATE_PERIOD,
@@ -135,6 +136,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
                 self.client,
                 [spd.supply_point for spd in data.supply_points.values()],
                 self._grid_cache or {},
+                self.config_entry.options.get(CONF_SPOT_PRICE_SENSOR),
             )
         except Exception:  # never break the integration because of statistics
             _LOGGER.exception("Importing statistics failed")

@@ -36,13 +36,15 @@
           "update_period": "Perioda aktualizace",
           "update_time": "Čas aktualizace",
           "reference_sensor": "Referenční senzor odběru v HA",
-          "reference_export_sensor": "Referenční senzor exportu do sítě v HA"
+          "reference_export_sensor": "Referenční senzor exportu do sítě v HA",
+          "spot_price_sensor": "Senzor spotové ceny v HA"
         },
         "data_description": {
           "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
           "update_time": "Místní čas aktualizace. Data se načtou i při startu Home Assistantu.",
           "reference_sensor": "Energetický senzor odběru ze sítě (kWh, s dlouhodobými statistikami). Slouží k porovnání měření HA s portálem.",
-          "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ."
+          "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ.",
+          "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025)."
         }
       }
     }

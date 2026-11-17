@@ -7,8 +7,8 @@ External statistics (selectable in the Energy dashboard):
 
 Data are available with a delay of about one day; only complete local days are
 imported so a later run never leaves holes. Each run continues after the last
-imported hour. While exporting hours are imported, their value at the spot price is
-accumulated per month in the grid cache (used for payout comparison).
+imported hour. The exported energy is valued at spot prices per month (portal prices,
+gaps filled from an optional HA spot price sensor) for the payout comparison.
 """
 
 from __future__ import annotations
@@ -121,17 +121,63 @@ async def async_import_spot_prices(
     return prices
 
 
-async def _spot_for(hass: HomeAssistant, start: datetime, end: datetime) -> dict[datetime, float]:
-    """Spot prices already in the recorder for [start, end)."""
+async def _hourly(
+    hass: HomeAssistant, stat_id: str, start: datetime, end: datetime | None, kind: str
+) -> dict[datetime, float]:
+    """Hourly statistic values ("mean" or "change") from the recorder for [start, end)."""
     from homeassistant.components.recorder.statistics import statistics_during_period
 
     rows = await get_instance(hass).async_add_executor_job(
-        statistics_during_period, hass, start, end, {SPOT_STATISTIC_ID}, "hour", None, {"mean"}
+        statistics_during_period, hass, start, end, {stat_id}, "hour", None, {kind}
     )
+    return {_start_of(r): r[kind] for r in rows.get(stat_id, []) if r.get(kind) is not None}
+
+
+async def _spot_for(hass: HomeAssistant, start: datetime, end: datetime) -> dict[datetime, float]:
+    """Portal spot prices already in the recorder for [start, end)."""
+    return await _hourly(hass, SPOT_STATISTIC_ID, start, end, "mean")
+
+
+async def sensor_spot_prices(
+    hass: HomeAssistant, sensor: str | None, start: datetime, end: datetime | None
+) -> dict[datetime, float]:
+    """Hourly mean of a HA spot price sensor in CZK/kWh (CZK/MWh converted)."""
+    if not sensor:
+        return {}
+    state = hass.states.get(sensor)
+    unit = str((state.attributes.get("unit_of_measurement") if state else "") or "")
+    divisor = 1000.0 if "mwh" in unit.lower() else 1.0
+    prices = await _hourly(hass, sensor, start, end, "mean")
+    return {h: v / divisor for h, v in prices.items()}
+
+
+async def async_valuation(
+    hass: HomeAssistant, place_id: str, export_from: str, spot_sensor: str | None
+) -> dict[str, dict[str, float]]:
+    """Exported kWh valued at hourly spot prices, per local month.
+
+    Portal prices win; hours without them use the HA spot price sensor.
+    """
+    start = gridlib.local_midnight(date.fromisoformat(export_from)).astimezone(UTC)
+    export = await _hourly(hass, statistic_id("export", place_id), start, None, "change")
+    if not export:
+        return {}
+    first = min(export)
+    prices = await sensor_spot_prices(hass, spot_sensor, first, None)
+    prices.update(await _hourly(hass, SPOT_STATISTIC_ID, first, None, "mean"))
+    months: dict[str, dict[str, float]] = {}
+    for hour, kwh in export.items():
+        price = prices.get(hour)
+        if price is None or not kwh:
+            continue
+        m = months.setdefault(
+            hour.astimezone(gridlib.TZ).strftime("%Y-%m"), {"value": 0.0, "kwh": 0.0}
+        )
+        m["value"] += kwh * price
+        m["kwh"] += kwh
     return {
-        _start_of(r): r["mean"]
-        for r in rows.get(SPOT_STATISTIC_ID, [])
-        if r.get("mean") is not None
+        k: {"value": round(v["value"], 4), "kwh": round(v["kwh"], 4)}
+        for k, v in sorted(months.items())
     }
 
 
@@ -141,7 +187,6 @@ async def async_import_grid(
     sp: SupplyPoint,
     cache: dict[str, Any],
     today: date,
-    spot: dict[datetime, float],
 ) -> int:
     """Import hourly import/export of one consumption place; returns imported hours."""
     imported = 0
@@ -158,8 +203,6 @@ async def async_import_grid(
             after = _start_of(last)
             base = last.get("sum") or 0.0
             start_day = (after + timedelta(hours=1)).astimezone(gridlib.TZ).date()
-        elif kind == "export":
-            cache["valuation"] = {}
         if start_day >= today:
             continue
         hourly: dict[datetime, float] = {}
@@ -191,23 +234,6 @@ async def async_import_grid(
             rows,
         )
         imported += len(rows)
-        if kind == "export":
-            prices = dict(spot)
-            missing = [h for h in hours if h not in prices]
-            if missing:
-                prices.update(
-                    await _spot_for(hass, min(missing), max(missing) + timedelta(hours=1))
-                )
-            valuation = cache.setdefault("valuation", {})
-            for hour, kwh in hours.items():
-                price = prices.get(hour)
-                if price is None or not kwh:
-                    continue
-                month = valuation.setdefault(
-                    hour.astimezone(gridlib.TZ).strftime("%Y-%m"), {"value": 0.0, "kwh": 0.0}
-                )
-                month["value"] = round(month["value"] + kwh * price, 4)
-                month["kwh"] = round(month["kwh"] + kwh, 4)
     return imported
 
 
@@ -229,6 +255,7 @@ async def async_update_statistics(
     client: CezClient,
     supply_points: list[SupplyPoint],
     grid_cache: dict[str, dict[str, Any]],
+    spot_sensor: str | None = None,
 ) -> bool:
     """Import statistics for all places with smart meter data. Returns True on change."""
     today = dt_util.now().date()
@@ -251,21 +278,27 @@ async def async_update_statistics(
             for k in ("import", "export")
             if cache.get(k)
         ]
-        spot: dict[datetime, float] = {}
         if firsts:
-            spot = await async_import_spot_prices(hass, client, min(firsts), today)
-            summary = spot_day_summary(spot, today - timedelta(days=1))
-            if summary is None and not spot:
-                yesterday = today - timedelta(days=1)
-                start = gridlib.local_midnight(yesterday).astimezone(UTC)
-                existing = await _spot_for(hass, start, start + timedelta(days=1))
-                summary = spot_day_summary(existing, yesterday)
-            for _sp, cache in places:
-                if summary:
-                    cache["spot_yesterday"] = summary
-            changed = bool(spot)
+            changed = bool(await async_import_spot_prices(hass, client, min(firsts), today))
         for sp, cache in places:
-            changed |= await async_import_grid(hass, client, sp, cache, today, spot) > 0
+            changed |= await async_import_grid(hass, client, sp, cache, today) > 0
     except CezError as err:
         _LOGGER.warning("Importing statistics failed: %s", err)
+    # Let the recorder store the queued imports before reading them back.
+    await get_instance(hass).async_block_till_done()
+    yesterday = today - timedelta(days=1)
+    day_start = gridlib.local_midnight(yesterday).astimezone(UTC)
+    day_end = day_start + timedelta(days=1)
+    prices = await sensor_spot_prices(hass, spot_sensor, day_start, day_end)
+    prices.update(await _spot_for(hass, day_start, day_end))
+    summary = spot_day_summary(prices, yesterday)
+    for sp, cache in places:
+        if summary and cache.get("spot_yesterday") != summary:
+            cache["spot_yesterday"] = summary
+            changed = True
+        if cache.get("export_from"):
+            valuation = await async_valuation(hass, sp.place_id, cache["export_from"], spot_sensor)
+            if valuation != cache.get("valuation"):
+                cache["valuation"] = valuation
+                changed = True
     return changed

@@ -63,7 +63,8 @@ integration additionally:
 - imports hourly spot prices `muj_cez:spot_price` (CZK/kWh) as far as the portal has
   them: in practice only until 30 September 2025 (the portal stopped filling them after
   the market moved to 15 minute prices); never usable for planning,
-- values the exported energy at spot prices per month (payout comparison).
+- values the exported energy at spot prices per month (payout comparison); hours without
+  portal prices use the optional spot price sensor (only as far back as its statistics go).
 
 The first run backfills the history in the background (tens of requests, a few minutes).
 Accounts without interval data are detected once a month and nothing else is requested;
@@ -118,6 +119,9 @@ muj.cez.cz e-mail and password.
 - **Reference energy sensor** (optional): HA grid import sensor for the comparison
 - **Reference export sensor** (optional): HA grid export sensor, compared with the smart
   meter export per month (attribute `export_comparison`)
+- **Spot price sensor** (optional): HA spot price sensor with statistics (CZK/kWh or
+  CZK/MWh, e.g. `sensor.current_spot_electricity_price` of cz_energy_spot_prices); fills
+  spot prices for the export valuation where the portal has none
 
 Data is also loaded at Home Assistant start. A failed scheduled update is retried
 6× every 30 minutes; entities keep their last values meanwhile. Invalid credentials
@@ -222,6 +226,9 @@ Ozubené kolo u účtu otevře **Plán aktualizace**:
   něj porovnává měření HA s tím, co eviduje a fakturuje ČEZ (senzor **Odchylka od ČEZ**).
 - **Referenční senzor exportu do sítě v HA** (nepovinné): senzor přetoků do sítě, porovná
   se s přetoky naměřenými elektroměrem ČEZ (jen u elektroměru s průběhovým měřením).
+- **Senzor spotové ceny v HA** (nepovinné): např. `sensor.current_spot_electricity_price`
+  z integrace cz_energy_spot_prices. Portál ČEZ má spotové ceny jen do září 2025; senzor
+  doplní ceny pro ocenění přetoků, ovšem jen za dobu, kterou pokrývají jeho statistiky.
 
 Uložením se integrace znovu načte. Data se načítají také při každém startu Home Assistantu.
 Když aktualizace selže, zkouší se znovu 6× po 30 minutách a entity mezitím drží poslední

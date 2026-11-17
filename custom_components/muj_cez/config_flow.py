@@ -27,6 +27,7 @@ from .api import CezAuthError, CezClient, CezError
 from .const import (
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
+    CONF_SPOT_PRICE_SENSOR,
     CONF_UPDATE_PERIOD,
     CONF_UPDATE_TIME,
     DEFAULT_UPDATE_PERIOD,
@@ -144,6 +145,9 @@ class MujCezOptionsFlow(OptionsFlowWithReload):
                 ),
                 vol.Optional(CONF_REFERENCE_EXPORT_SENSOR): EntitySelector(
                     EntitySelectorConfig(domain="sensor", device_class="energy")
+                ),
+                vol.Optional(CONF_SPOT_PRICE_SENSOR): EntitySelector(
+                    EntitySelectorConfig(domain="sensor")
                 ),
             }
         )

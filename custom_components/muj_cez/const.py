@@ -10,6 +10,7 @@ CONF_UPDATE_PERIOD = "update_period"
 CONF_UPDATE_TIME = "update_time"
 CONF_REFERENCE_SENSOR = "reference_sensor"
 CONF_REFERENCE_EXPORT_SENSOR = "reference_export_sensor"
+CONF_SPOT_PRICE_SENSOR = "spot_price_sensor"
 
 PERIOD_DAILY = "daily"
 PERIOD_WEEKLY = "weekly"

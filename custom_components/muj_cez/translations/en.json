@@ -36,13 +36,15 @@
           "update_period": "Update period",
           "update_time": "Update time",
           "reference_sensor": "HA reference energy sensor",
-          "reference_export_sensor": "HA grid export reference sensor"
+          "reference_export_sensor": "HA grid export reference sensor",
+          "spot_price_sensor": "HA spot price sensor"
         },
         "data_description": {
           "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
           "update_time": "Local time of the update. Data is also loaded when Home Assistant starts.",
           "reference_sensor": "Energy sensor measuring grid import (kWh, with long-term statistics). Used to compare HA measurement with the portal.",
-          "reference_export_sensor": "Energy sensor of grid export (kWh, with long-term statistics). Compared with the export measured by the ČEZ smart meter."
+          "reference_export_sensor": "Energy sensor of grid export (kWh, with long-term statistics). Compared with the export measured by the ČEZ smart meter.",
+          "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025)."
         }
       }
     }

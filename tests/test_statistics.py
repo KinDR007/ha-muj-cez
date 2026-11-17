@@ -160,3 +160,66 @@ async def test_no_statistics_without_smart_meter(
     client = FakeClient(lambda p, q: (_ for _ in ()).throw(AssertionError("no request")))
     cache = {sp.place_id: {"uid": sp.uid, "import_from": None, "export_from": None}}
     assert not await statistics.async_update_statistics(hass, client, [sp], cache)
+
+
+async def test_valuation_from_ha_spot_sensor(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    pv_sp: api.SupplyPoint,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Portal has no spot prices: the HA sensor (CZK/MWh) fills them."""
+    from homeassistant.components.recorder.models import (
+        StatisticData,
+        StatisticMeanType,
+        StatisticMetaData,
+    )
+    from homeassistant.components.recorder.statistics import async_import_statistics
+
+    await hass.config.async_set_time_zone("Europe/Prague")
+    today = date(2026, 11, 13)
+    freezer.move_to(datetime(2026, 11, 13, 12, 0, tzinfo=grid.TZ))
+    hass.states.async_set("sensor.spot", "3000", {"unit_of_measurement": "CZK/MWh"})
+    start = grid.local_midnight(date(2026, 11, 10)).astimezone(UTC)
+    async_import_statistics(
+        hass,
+        StatisticMetaData(
+            source="recorder",
+            statistic_id="sensor.spot",
+            name="spot",
+            unit_of_measurement="CZK/MWh",
+            unit_class=None,
+            has_sum=False,
+            mean_type=StatisticMeanType.ARITHMETIC,
+        ),
+        [
+            StatisticData(start=start + timedelta(hours=i), mean=3000.0, min=3000.0, max=3000.0)
+            for i in range(72)
+        ],
+    )
+
+    def handler(path: str, params: dict[str, str]) -> Any:
+        if path.endswith("profile-data"):
+            frm = datetime.fromisoformat(
+                params["profileReadingDatetimeFrom"].replace("Z", "+00:00")
+            )
+            day = frm.astimezone(grid.TZ).date()
+            if day >= today:
+                return []
+            return _profile(day, (today - day).days, 0.5)
+        raise api.CezConnectionError("HTTP 404")
+
+    statistics.REQUEST_PAUSE = 0
+    cache = {"uid": pv_sp.uid, "export_from": "2026-11-10", "export": {"2026-11-10": 48.0}}
+    await statistics.async_update_statistics(
+        hass, FakeClient(handler), [pv_sp], {pv_sp.place_id: cache}, "sensor.spot"
+    )
+    assert cache["valuation"]["2026-11"]["kwh"] == pytest.approx(144.0)
+    assert cache["valuation"]["2026-11"]["value"] == pytest.approx(432.0)
+    assert cache["spot_yesterday"]["average"] == pytest.approx(3.0)
+    # Without the sensor nothing can be valued.
+    cache2 = {"uid": pv_sp.uid, "export_from": "2026-11-10"}
+    await statistics.async_update_statistics(
+        hass, FakeClient(handler), [pv_sp], {pv_sp.place_id: cache2}
+    )
+    assert cache2.get("valuation") in (None, {})
