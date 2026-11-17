@@ -68,7 +68,11 @@ async def async_missing_cards(hass: HomeAssistant) -> list[str]:
     return [card.name for card in CARDS if card.name not in urls]
 
 
-STORES = ("marketplace", "hacs")
+# Store -> command that installs a repository (Marketplace renamed HACS' "download").
+STORES = {
+    "marketplace": "marketplace/repository/install",
+    "hacs": "hacs/repository/download",
+}
 
 
 class _Connection:
@@ -112,25 +116,30 @@ async def _store_call(hass: HomeAssistant, command: str, **payload: Any) -> Any:
 
 
 async def _install_store(hass: HomeAssistant, card: Card) -> str | None:
-    """Install through Marketplace or HACS; returns the store name or None."""
-    for store in STORES:
+    """Install through Marketplace or HACS; returns the store name or None.
+
+    A store that is missing a command or refuses the install (e.g. its warning was not
+    accepted yet) is skipped, so the next store or the GitHub fallback is used.
+    """
+    for store, install in STORES.items():
+        if install not in (hass.data.get("websocket_api") or {}):
+            continue
         try:
             repositories = await _store_call(hass, f"{store}/repositories/list")
         except (CardInstallError, TimeoutError) as err:
             _LOGGER.debug("%s repository list failed: %s", store, err)
             continue
-        if repositories is None:
-            continue
         repo = next(
-            (r for r in repositories if str(r.get("full_name", "")).lower() == card.repo),
+            (r for r in repositories or [] if str(r.get("full_name", "")).lower() == card.repo),
             None,
         )
         if repo is None:
             continue
         try:
-            await _store_call(hass, f"{store}/repository/download", repository=str(repo["id"]))
-        except TimeoutError as err:
-            raise CardInstallError(f"{store}: timeout") from err
+            await _store_call(hass, install, repository=str(repo["id"]))
+        except (CardInstallError, TimeoutError) as err:
+            _LOGGER.warning("Installing %s through %s failed: %s", card.name, store, err)
+            continue
         return store
     return None
 

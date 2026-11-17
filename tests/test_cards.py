@@ -28,8 +28,20 @@ async def lovelace(hass: HomeAssistant) -> Any:
     return resources
 
 
-def _register_store(hass: HomeAssistant, store: str, installed: list[str], resources: Any) -> None:
-    """Fake Marketplace/HACS websocket commands (list + download adding the resource)."""
+def _register_store(
+    hass: HomeAssistant,
+    store: str,
+    installed: list[str],
+    resources: Any,
+    install: str | None = None,
+    error: str | None = None,
+) -> None:
+    """Fake Marketplace/HACS websocket commands (list + install adding the resource).
+
+    The install command names are the real ones (Marketplace: repository/install, HACS:
+    repository/download); `install` overrides it, `error` makes the install fail.
+    """
+    install = install or cards.STORES[store]
     repos = [
         {"id": str(i), "full_name": card.repo, "installed": False}
         for i, card in enumerate(cards.CARDS)
@@ -41,10 +53,13 @@ def _register_store(hass: HomeAssistant, store: str, installed: list[str], resou
     async def list_repos(hass: HomeAssistant, connection: Any, msg: dict) -> None:
         connection.send_message(websocket_api.result_message(msg["id"], repos))
 
-    @websocket_api.websocket_command({"type": f"{store}/repository/download", "repository": str})
+    @websocket_api.websocket_command({"type": install, "repository": str})
     @websocket_api.require_admin
     @websocket_api.async_response
     async def download(hass: HomeAssistant, connection: Any, msg: dict) -> None:
+        if error:
+            connection.send_error(msg["id"], "warning_not_accepted", error)
+            return
         card = cards.CARDS[int(msg["repository"])]
         installed.append(card.name)
         await resources.async_create_item(
@@ -71,6 +86,33 @@ async def test_install_via_hacs_when_no_marketplace(hass: HomeAssistant, lovelac
     _register_store(hass, "hacs", installed, lovelace)
     result = await cards.async_install_cards(hass, ["stack-in-card"])
     assert result == {"stack-in-card": "hacs"}
+
+
+def test_store_commands_are_the_real_ones() -> None:
+    assert cards.STORES == {
+        "marketplace": "marketplace/repository/install",
+        "hacs": "hacs/repository/download",
+    }
+
+
+async def test_store_without_install_command_is_not_a_success(
+    hass: HomeAssistant, lovelace: Any
+) -> None:
+    """A store whose install command has another name must not report a fake success."""
+    installed: list[str] = []
+    _register_store(hass, "marketplace", installed, lovelace, install="marketplace/other")
+    _register_store(hass, "hacs", installed, lovelace)
+    result = await cards.async_install_cards(hass, ["stack-in-card"])
+    assert result == {"stack-in-card": "hacs"}
+    assert installed == ["stack-in-card"]
+
+
+async def test_store_refusing_install_falls_back(hass: HomeAssistant, lovelace: Any) -> None:
+    installed: list[str] = []
+    _register_store(hass, "marketplace", installed, lovelace, error="accept the warning first")
+    _register_store(hass, "hacs", installed, lovelace)
+    result = await cards.async_install_cards(hass, ["button-card"])
+    assert result == {"button-card": "hacs"}
 
 
 async def test_install_from_github(
