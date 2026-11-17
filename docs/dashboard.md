@@ -105,10 +105,14 @@ billing-period month, period totals and the meter reading check. The kWh/Kč pil
 
 `tools/dashboard/push_lovelace.py` renders the view with the editor's renderer and inserts it
 into a plain Lovelace dashboard (backup in `.backup/`, other views and existing button-card
-templates are kept). PV sections are added when `CEZ_GRID_PREFIX` (consumption place entities,
+templates are kept). Spot sections (today and tomorrow, monthly spot vs payout) use the
+spot price sensor of this integration; `CEZ_SPOT_TODAY` / `CEZ_SPOT_TOMORROW` name sensors with
+hourly prices in attributes (cz_energy_spot_prices), without them tomorrow is only the 7 day
+profile estimate. PV sections are added when `CEZ_GRID_PREFIX` (consumption place entities,
 e.g. `sensor.cez_<address>_`) and `CEZ_PROD_PREFIX` (production point, `..._vyroba_`) are set:
 
 ```bash
+CEZ_SPOT_TODAY=sensor.current_spot_electricity_price CEZ_SPOT_TOMORROW=sensor.tomorrow_spot_electricity_hour_order \
 CEZ_PREFIX=sensor.cez_<ean>_ CEZ_GRID_PREFIX=sensor.cez_<address>_ CEZ_PROD_PREFIX=sensor.cez_<address>_vyroba_ \
   .venv/bin/python tools/dashboard/build_cez_view.py view.json
 HA_URL=http://<ha>:8123 HA_TOKEN=... EDITOR_DIR=<dashboard_editor_app> \
