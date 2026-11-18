@@ -67,8 +67,9 @@ integration additionally:
   ČEZ portal showed until September 2025), the portal is only a fallback; up to yesterday,
 - values the exported energy at spot prices per month (payout comparison); hours without
   portal prices use the optional spot price sensor (only as far back as its statistics go),
-- keeps the 15 min import/export values (HA statistics are hourly only) in its own storage
-  (`.storage/muj_cez.<entry>.profile_*`, about 0.5 MB per year) for the dashboard section
+- keeps the 15 min import/export values of the current month and the 12 months before it
+  (HA statistics are hourly only) in its own storage (`.storage/muj_cez.<entry>.profile_*`,
+  under 1 MB; older days are deleted) for the dashboard section
   "Průběh po 15 minutách"; websocket command `muj_cez/profile` (`entity_id` of the
   smart meter date sensor, optional `month` `YYYY-MM`) returns one month.
 
@@ -353,8 +354,8 @@ porovnání, zúčtovací období a doklady. Pokud portál eviduje průběhová 
 (button-card, stack-in-card, mini-graph-card) integrace doinstaluje sama.
 
 Sekce **Průběh po 15 minutách** (jen s průběhovými daty elektroměru) ukazuje čtvrthodinové
-hodnoty odběru a přetoků po kalendářních měsících včetně celé historie (šipkami se přepíná
-měsíc): tabulku po týdnech (odběr, přetok, maximální čtvrthodinový výkon s časem), teplotní
+hodnoty odběru a přetoků po kalendářních měsících za aktuální měsíc a 12 předchozích
+(šipkami se přepíná měsíc, tlačítko **Dnes** vrátí nejnovější data): tabulku po týdnech (odběr, přetok, maximální čtvrthodinový výkon s časem), teplotní
 mapu měsíce (dny × čtvrthodiny), typický den každého týdne a detail vybraného týdne.
 Hodnoty se zobrazí po najetí myší nebo dotyku. Data jsou den zpětně; první načtení
 historie po instalaci trvá několik minut.

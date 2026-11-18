@@ -16,7 +16,7 @@ from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
 from custom_components.muj_cez import api, grid
 from custom_components.muj_cez.const import DOMAIN
-from custom_components.muj_cez.profile import ProfileStore
+from custom_components.muj_cez.profile import ProfileStore, history_start
 
 from .conftest import PASSWORD, USERNAME, load
 from .test_grid import PV_UID
@@ -217,3 +217,44 @@ def test_parse_quarters_split_aggregates() -> None:
     assert len(q) == 4
     assert q[datetime(2025, 3, 31, 21, 30, tzinfo=UTC)] == 0.3
     assert q[datetime(2025, 4, 1, 0, 0, tzinfo=UTC)] == 0.1
+
+
+def test_history_start() -> None:
+    assert history_start(date(2026, 11, 18)) == date(2025, 11, 1)
+    assert history_start(date(2026, 1, 5)) == date(2025, 1, 1)
+    assert history_start(date(2026, 12, 31)) == date(2025, 12, 1)
+
+
+async def test_only_recent_history_kept(hass: HomeAssistant, hass_storage: dict[str, Any]) -> None:
+    store = ProfileStore(hass, "entry1")
+    client = FakeProfileClient(date(2023, 11, 13))
+    cache = {"uid": PV_UID, "import_from": "2023-11-13", "export_from": None}
+    await store.async_update(client, SP, cache, date(2026, 1, 10))
+    assert client.calls[0][1] == date(2025, 1, 1)
+    assert (await store.async_month(SP.place_id, None))["months"][0] == "2025-01"
+
+    # A month later January 2025 drops out, the year 2025 store stays for the rest.
+    await store.async_update(client, SP, cache, date(2026, 2, 10))
+    months = (await store.async_month(SP.place_id, None))["months"]
+    assert months[0] == "2025-02" and months[-1] == "2026-02"
+    # A year later the whole 2025 store is deleted.
+    await store.async_update(client, SP, cache, date(2027, 1, 3))
+    assert (await store.async_month(SP.place_id, None))["months"][0] == "2026-01"
+    assert f"{DOMAIN}.entry1.profile_0004444444_2025" not in hass_storage
+    reloaded = ProfileStore(hass, "entry1")
+    assert (await reloaded.async_month(SP.place_id, "2025-12"))["days"] == []
+
+
+async def test_year_listed_when_data_unchanged(
+    hass: HomeAssistant, hass_storage: dict[str, Any]
+) -> None:
+    """A year store left without its index entry is listed again on the next fetch."""
+    store = ProfileStore(hass, "entry1")
+    client = FakeProfileClient(date(2025, 12, 1))
+    await store.async_update(client, SP, CACHE | {"import_from": "2025-12-01"}, date(2026, 1, 20))
+    del hass_storage[f"{DOMAIN}.entry1.profile"]  # index lost, year stores kept
+    reloaded = ProfileStore(hass, "entry1")
+    await reloaded.async_update(
+        client, SP, CACHE | {"import_from": "2025-12-01"}, date(2026, 1, 20)
+    )
+    assert (await reloaded.async_month(SP.place_id, None))["months"] == ["2025-12", "2026-01"]

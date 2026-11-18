@@ -7,8 +7,9 @@ are stored by the integration: one store per place and year
   {"import": {"2026-11-01": [12, 8, ...96 values], ...}, "export": {...}}
 
 A day has 96 values (92 / 100 on the days the clock changes), None where the portal
-has no value. The first run fills the history from the first day with data (about two
-requests per month and direction), later runs fetch the last days again (the portal
+has no value. Kept are the current month and the HISTORY_MONTHS months before it (the
+whole current year included); older days are deleted. The first run fills this history
+(about 15 requests per direction), later runs fetch the last days again (the portal
 publishes and corrects them with a delay of about a day).
 """
 
@@ -31,9 +32,16 @@ _LOGGER = logging.getLogger(__name__)
 KINDS = (("import", gridlib.PROFILE_IMPORT), ("export", gridlib.PROFILE_EXPORT))
 # Days fetched again on every run.
 RECENT_DAYS = 3
+HISTORY_MONTHS = 12
 REQUEST_PAUSE = 0.5
 
 type YearData = dict[str, dict[str, list[int | None]]]
+
+
+def history_start(today: date) -> date:
+    """First day of the month HISTORY_MONTHS months before the current one."""
+    months = today.year * 12 + today.month - 1 - HISTORY_MONTHS
+    return date(months // 12, months % 12 + 1, 1)
 
 
 class ProfileStore:
@@ -79,7 +87,7 @@ class ProfileStore:
                 if not first:
                     continue
                 done = place.get(f"{kind}_done")
-                start = date.fromisoformat(first)
+                start = max(date.fromisoformat(first), history_start(today))
                 if done:
                     start = max(
                         start,
@@ -98,7 +106,27 @@ class ProfileStore:
                     place[f"{kind}_done"] = (b - timedelta(days=1)).isoformat()
                     await self._meta_store.async_save(meta)
                     await asyncio.sleep(REQUEST_PAUSE)
+            await self._prune(sp.place_id, history_start(today))
             return changed
+
+    async def _prune(self, place_id: str, keep_from: date) -> None:
+        """Delete the days before keep_from (whole years by their store)."""
+        assert self._meta is not None
+        place = self._meta[place_id]
+        keep = keep_from.isoformat()
+        for y in list(place["years"]):
+            if y < keep_from.year:
+                await self._store(place_id, y).async_remove()
+                self._years.pop((place_id, y), None)
+                place["years"].remove(y)
+            elif y == keep_from.year:
+                data = await self._year(place_id, y)
+                old = [(k, d) for k, _ in KINDS for d in data[k] if d < keep]
+                for k, d in old:
+                    del data[k][d]
+                if old:
+                    await self._store(place_id, y).async_save(data)
+        await self._meta_store.async_save(self._meta)
 
     async def _put(
         self, place_id: str, kind: str, quarters: dict[Any, float], start: date, end: date
@@ -107,10 +135,12 @@ class ProfileStore:
         assert self._meta is not None
         place = self._meta[place_id]
         dirty: set[int] = set()
+        seen: set[int] = set()
         day = start
         while day < end:
             values = gridlib.day_quarters(quarters, day)
             if any(v is not None for v in values):
+                seen.add(day.year)
                 year = await self._year(place_id, day.year)
                 if year[kind].get(day.isoformat()) != values:
                     year[kind][day.isoformat()] = values
@@ -120,8 +150,8 @@ class ProfileStore:
             data = self._years[(place_id, y)]
             data[kind] = dict(sorted(data[kind].items()))
             await self._store(place_id, y).async_save(data)
-            if y not in place["years"]:
-                place["years"] = sorted([*place["years"], y])
+        # Every year with data is listed, also when its store already had the same days.
+        place["years"] = sorted(set(place["years"]) | seen)
         return bool(dirty)
 
     async def async_month(self, place_id: str, month: str | None) -> dict[str, Any]:

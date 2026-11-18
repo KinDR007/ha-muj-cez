@@ -855,7 +855,9 @@ PJS = (
     "globalThis.cezPfR=()=>globalThis.__cezPf.cards.forEach(c=>{if(!c.isConnected){globalThis.__cezPf.cards.delete(c);return}"
     "try{c._config&&c.setConfig?c.setConfig(c._config):c.requestUpdate()}catch(e){}});"
     "globalThis.cezPfGo=(ev,el)=>{ev.stopPropagation();const C=globalThis.__cezPf,e=el.dataset.e;"
-    "if(el.dataset.m){C.m[e]=el.dataset.m;C.w[e]=null}if(el.dataset.w)C.w[e]=+el.dataset.w;globalThis.cezPfR()};"
+    "if(el.dataset.m){C.m[e]=el.dataset.m;C.w[e]=null}if(el.dataset.w)C.w[e]=+el.dataset.w;"
+    # Today: forget the chosen month / week and load the newest data again.
+    "if(el.dataset.today){delete C.m[e];C.w[e]=null;delete C.d[e+'|']}globalThis.cezPfR()};"
     "globalThis.cezPfTe=(ev,el)=>{const t=ev.changedTouches[0],s=globalThis.__cezT||[1e9,1e9];"
     "if(Math.abs(t.clientX-s[0])+Math.abs(t.clientY-s[1])<10){ev.preventDefault();globalThis.cezPfGo(ev,el)}};"
     # Tooltip of the charts: PC.t[entity|chart](x, y) gives {t: html, b: [x0, x1, y0, y1]} for the
@@ -870,7 +872,7 @@ PJS = (
     "const tw=tp.offsetWidth,th=tp.offsetHeight,mx=ev.clientX-r.left,my=ev.clientY-r.top;"
     "tp.style.left=Math.min(Math.max(mx-tw/2,0),Math.max(0,W-tw))+'px';tp.style.top=(my-th-14<0?my+18:my-th-14)+'px'};"
     "const PK=(m)=>PE+'|'+(m||'');"
-    "const PLOAD=(m)=>{const k=PK(m),o=PC.d[k];if(PC.ld[k]||(o&&(o.err||Date.now()-o.ts<36e5)))return;PC.ld[k]=1;"
+    "const PLOAD=(m)=>{const k=PK(m),o=PC.d[k];if(PC.ld[k]||(o&&Date.now()-o.ts<6e5))return;PC.ld[k]=1;"
     "hass.callWS(Object.assign({type:'muj_cez/profile',entity_id:PE},m?{month:m}:{}))"
     ".then(r=>{const v={r,ts:Date.now()};PC.d[k]=v;if(r.month){PC.d[PK(r.month)]=v;if(!PC.m[PE])PC.m[PE]=r.month}})"
     ".catch(e=>{PC.d[k]={err:String((e&&e.message)||e),ts:Date.now()}}).finally(()=>{delete PC.ld[k];globalThis.cezPfR()})};"
@@ -929,7 +931,8 @@ def profile_body() -> str:
         "`<span style='padding:2px 12px;opacity:.3'>${t}</span>`;"
         "const nav=`<div style='display:flex;align-items:center;justify-content:center;gap:10px;padding:4px 0 10px;font-size:15px'>"
         "${arrow(ms[mi-1],'‹')}<span style='min-width:130px;text-align:center;font-weight:500'>${mlong(PD.month)}</span>"
-        "${arrow(ms[mi+1],'›')}</div>`;"
+        "${arrow(ms[mi+1],'›')}${tap(`data-today='1'`,'Dnes',`padding:2px 12px;border-radius:10px;font-size:13px;"
+        "border:1px solid var(--divider-color);${mi===ms.length-1&&PC.w[PE]==null?'opacity:.45':''}`)}</div>`;"
         # Selected week: chosen one, else the last week with data.
         "const wl=M.weeks.filter(w=>w.s.nd);let sw=PC.w[PE];if(sw==null||!M.weeks.some(w=>w.w===sw))sw=wl.length?wl[wl.length-1].w:null;"
         "const lab=(w)=>{const a=w.days[0],b=w.days[w.days.length-1];return a.i===b.i?a.i+'. '+M.mo+'.':a.i+'.–'+b.i+'. '+M.mo+'.'};"
