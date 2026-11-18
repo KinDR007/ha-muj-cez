@@ -29,7 +29,7 @@ from custom_components.muj_cez.const import (
 )
 
 from .conftest import PASSWORD, USERNAME, FakeDip, load
-from .test_grid import SV_UID
+from .test_grid import PV_UID, SV_UID
 from .test_grid_ha import fake_fetch_all
 
 TZ = ZoneInfo("Europe/Prague")
@@ -94,6 +94,7 @@ async def test_new_dashboard_without_pv(
     ]
     assert len(view["sections"]) == len(expected)
     assert "Přetoky do sítě" not in text and "Výkup přetoků" not in text
+    assert "muj_cez/profile" not in text
     # Custom cards are not installed in the test instance.
     issue = ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_CARDS)
     assert issue and "button-card" in issue.translation_placeholders["cards"]
@@ -135,6 +136,9 @@ async def test_pv_dashboard_into_existing(
     payout = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{SV_UID}_last_payout")
     assert payout and payout in text
     assert "Odběr ze sítě po letech" in text  # smart meter year over year instead of HA based
+    # 15 min section loads the data of the place through the smart meter date sensor.
+    grid_date = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{PV_UID}_grid_data_date")
+    assert "Průběh po 15 minutách" in text and f"const PE='{grid_date}'" in text
 
 
 async def test_strategy_dashboard_refused(

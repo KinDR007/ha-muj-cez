@@ -1254,10 +1254,10 @@ class CezClient:
             result.update({d: v for d, v in gridlib.parse_daily(data).items() if a <= d < b})
         return result
 
-    async def get_profile(
+    async def get_profile_quarters(
         self, sp: SupplyPoint, role: str, start: date, end: date
     ) -> dict[datetime, float]:
-        """Hourly kWh (UTC hour start) for local days start .. end-1."""
+        """15 min kWh (UTC interval start) for local days start .. end-1."""
         result: dict[datetime, float] = {}
         for a, b in gridlib.windows(start, end, gridlib.PROFILE_WINDOW_DAYS):
             data = await self._get(
@@ -1271,8 +1271,14 @@ class CezClient:
                     "profileReadingDatetimeTo": gridlib.iso_utc(gridlib.local_midnight(b)),
                 },
             )
-            result.update(gridlib.parse_profile(data))
+            result.update(gridlib.parse_quarters(data))
         return result
+
+    async def get_profile(
+        self, sp: SupplyPoint, role: str, start: date, end: date
+    ) -> dict[datetime, float]:
+        """Hourly kWh (UTC hour start) for local days start .. end-1."""
+        return gridlib.hourly_from_quarters(await self.get_profile_quarters(sp, role, start, end))
 
     async def get_spot_prices(self, start: date, end: date) -> dict[datetime, float]:
         """Hourly spot prices (CZK/kWh, UTC hour start) for local days start .. end-1.

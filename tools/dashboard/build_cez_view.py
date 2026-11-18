@@ -846,6 +846,201 @@ GJS += (
 )
 
 
+# --- 15 min profile (websocket muj_cez/profile, loaded when the section renders) -------
+# Shared state of all cards of the page: data per month, selected month and week.
+PJS = (
+    f"const PE='{GRID_DATE}';"
+    "const PC=globalThis.__cezPf=globalThis.__cezPf||{d:{},m:{},w:{},ld:{},cards:new Set()};PC.cards.add(this);"
+    # requestUpdate() keeps the cached template results; setConfig re-evaluates them.
+    "globalThis.cezPfR=()=>globalThis.__cezPf.cards.forEach(c=>{if(!c.isConnected){globalThis.__cezPf.cards.delete(c);return}"
+    "try{c._config&&c.setConfig?c.setConfig(c._config):c.requestUpdate()}catch(e){}});"
+    "globalThis.cezPfGo=(ev,el)=>{ev.stopPropagation();const C=globalThis.__cezPf,e=el.dataset.e;"
+    "if(el.dataset.m){C.m[e]=el.dataset.m;C.w[e]=null}if(el.dataset.w)C.w[e]=+el.dataset.w;globalThis.cezPfR()};"
+    "globalThis.cezPfTe=(ev,el)=>{const t=ev.changedTouches[0],s=globalThis.__cezT||[1e9,1e9];"
+    "if(Math.abs(t.clientX-s[0])+Math.abs(t.clientY-s[1])<10){ev.preventDefault();globalThis.cezPfGo(ev,el)}};"
+    # Tooltip of the charts: PC.t[entity|chart](x, y) gives {t: html, b: [x0, x1, y0, y1]} for the
+    # pointer position (fractions of the chart); b is the highlighted cell or time line.
+    "PC.t=PC.t||{};"
+    "globalThis.cezPfTip=(ev,el,show)=>{ev.stopPropagation();const tp=el.querySelector('.czpt'),mk=el.querySelector('.czpl');"
+    "const T=globalThis.__cezPf.t[el.dataset.e+'|'+el.dataset.k];const r=el.querySelector('svg').getBoundingClientRect();"
+    "const h=show&&T&&r.width?T((ev.clientX-r.left)/r.width,(ev.clientY-r.top)/r.height):null;"
+    "if(!h){tp.style.display='none';mk.style.display='none';return}"
+    "const W=r.width,H=r.height,b=h.b;mk.style.display='block';mk.style.left=b[0]*W+'px';mk.style.width=Math.max(2,(b[1]-b[0])*W)+'px';"
+    "mk.style.top=b[2]*H+'px';mk.style.height=Math.max(2,(b[3]-b[2])*H)+'px';tp.innerHTML=h.t;tp.style.display='block';"
+    "const tw=tp.offsetWidth,th=tp.offsetHeight,mx=ev.clientX-r.left,my=ev.clientY-r.top;"
+    "tp.style.left=Math.min(Math.max(mx-tw/2,0),Math.max(0,W-tw))+'px';tp.style.top=(my-th-14<0?my+18:my-th-14)+'px'};"
+    "const PK=(m)=>PE+'|'+(m||'');"
+    "const PLOAD=(m)=>{const k=PK(m),o=PC.d[k];if(PC.ld[k]||(o&&(o.err||Date.now()-o.ts<36e5)))return;PC.ld[k]=1;"
+    "hass.callWS(Object.assign({type:'muj_cez/profile',entity_id:PE},m?{month:m}:{}))"
+    ".then(r=>{const v={r,ts:Date.now()};PC.d[k]=v;if(r.month){PC.d[PK(r.month)]=v;if(!PC.m[PE])PC.m[PE]=r.month}})"
+    ".catch(e=>{PC.d[k]={err:String((e&&e.message)||e),ts:Date.now()}}).finally(()=>{delete PC.ld[k];globalThis.cezPfR()})};"
+    "const PM=PC.m[PE];PLOAD(PM);const POBJ=PC.d[PK(PM)]||(PM?null:PC.d[PK()]);const PD=POBJ&&POBJ.r;"
+    "const MNL=['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];"
+    "const WDL=['po','út','st','čt','pá','so','ne'];"
+    "const IMB='#3b82f6';const EXB='#f4b400';"
+    # Day arrays have 92 / 100 values on the days the clock changes: map them to 96 clock slots.
+    "const P96=(a)=>{if(!a)return null;if(a.length===96)return a;const o=new Array(96).fill(null);"
+    "a.forEach((v,i)=>{const c=a.length===92?(i<8?i:i+4):(i<12?i:i-4);if(v!=null)o[c]=(o[c]||0)+v});return o};"
+    "const hm=(i)=>String(Math.floor(i/4)).padStart(2,'0')+':'+String(i%4*15).padStart(2,'0');"
+    "const isoW=(dd)=>{const t=new Date(Date.UTC(dd.getFullYear(),dd.getMonth(),dd.getDate()));const dn=(t.getUTCDay()+6)%7;"
+    "t.setUTCDate(t.getUTCDate()-dn+3);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,4));"
+    "return 1+Math.round(((t-y0)/864e5-3+((y0.getUTCDay()+6)%7))/7)};"
+    # Month model: calendar days, weeks (Monday to Sunday, cut at the month edges), stats.
+    "const PMOD=(()=>{if(!PD||!PD.month)return null;const y=+PD.month.slice(0,4),mo=+PD.month.slice(5);"
+    "const byD={};(PD.days||[]).forEach(x=>{byD[x.date]=x});const nd=new Date(y,mo,0).getDate();const days=[];"
+    "for(let i=1;i<=nd;i++){const dd=new Date(y,mo-1,i);const key=PD.month+'-'+String(i).padStart(2,'0');const x=byD[key]||{};"
+    "days.push({i,dd,wd:(dd.getDay()+6)%7,w:isoW(dd),im:P96(x.import),ex:P96(x.export)})}"
+    "const weeks=[];days.forEach(d=>{let w=weeks[weeks.length-1];if(!w||w.w!==d.w){w={w:d.w,days:[]};weeks.push(w)}w.days.push(d)});"
+    "const st0=()=>({imp:0,exp:0,mi:null,me:null,nd:0});"
+    "const acc=(s,d)=>{let has=0;['im','ex'].forEach(k=>{(d[k]||[]).forEach((v,q)=>{if(v==null)return;has=1;"
+    "if(k==='im'){s.imp+=v;if(!s.mi||v>s.mi.v)s.mi={v,d,q}}else{s.exp+=v;if(!s.me||v>s.me.v)s.me={v,d,q}}})});if(has)s.nd++};"
+    "weeks.forEach(w=>{w.s=st0();w.days.forEach(d=>acc(w.s,d))});const tot=st0();days.forEach(d=>acc(tot,d));"
+    "return {y,mo,days,weeks,tot}})();"
+    "const kwh=(wh,dg=1)=>f(wh/1000,dg);const kw=(o)=>o?f(o.v*4/1000,1)+' kW':'–';"
+    "const mlong=(ym)=>MNL[+ym.slice(5)-1]+' '+ym.slice(0,4);"
+)
+
+
+def profile_body() -> str:
+    """Details of the 15 min section: month switch, weeks table, heat map, typical day, week detail."""
+    return (
+        GJS
+        + PJS
+        + "const msg=(t)=>`<div style='padding:12px 0;color:var(--secondary-text-color);white-space:normal'>${t}</div>`;"
+        "if(POBJ&&POBJ.err)return msg('15minutová data nejsou dostupná: '+POBJ.err);"
+        "if(!PD)return msg('Načítám 15minutová data…');"
+        "if(!PD.months.length)return msg('15minutová data se stahují z portálu ČEZ. První načtení celé historie trvá několik minut, "
+        "pak se sekce naplní.');"
+        "const M=PMOD;const ms=PD.months,mi=ms.indexOf(PD.month);"
+        # Hover / touch tooltip: wrapper with the chart, highlight and tooltip box.
+        "const hv=(k)=>`data-e='${PE}' data-k='${k}' onmousemove='cezPfTip(event,this,1)' onpointermove='cezPfTip(event,this,1)' "
+        "onpointerdown='cezPfTip(event,this,1)' onmouseleave='cezPfTip(event,this,0)' onclick='event.stopPropagation()'`;"
+        "const HVS='pointer-events:auto;cursor:crosshair;touch-action:pan-y;';"
+        "const tipbox=`<div class='czpl' style='display:none;position:absolute;pointer-events:none;box-sizing:border-box;"
+        "border:1px solid var(--primary-text-color);border-radius:1px'></div><div class='czpt' style='display:none;position:absolute;z-index:3;"
+        "pointer-events:none;font-size:12px;line-height:1.6;white-space:nowrap;padding:8px 10px;border-radius:8px;"
+        "background:var(--card-background-color,#1c1c1c);border:1px solid var(--divider-color);box-shadow:0 4px 12px rgba(0,0,0,.35)'></div>`;"
+        "const dot=(c)=>`<span style='display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;background:${c}'></span>`;"
+        "const tl=(c,t,v)=>`<div>${dot(c)}${t}: ${v==null?'bez dat':f(v/1000,2)+' kWh · '+f(v*4/1000,2)+' kW'}</div>`;"
+        "const qt=(d,q)=>`<div style='font-weight:500'>${WDL[d.wd]} ${d.i}. ${M.mo}. ${hm(q)}–${hm(q+1)}</div>`;"
+        "const tap=(attrs,inner,sty)=>`<span ${attrs} data-e='${PE}' onclick='cezPfGo(event,this)' ontouchstart='cezTs(event)' "
+        "ontouchend='cezPfTe(event,this)' style='pointer-events:auto;cursor:pointer;${sty||''}'>${inner}</span>`;"
+        "const arrow=(m,t)=>m?tap(`data-m='${m}'`,t,'padding:2px 12px;border-radius:10px;border:1px solid var(--divider-color)'):"
+        "`<span style='padding:2px 12px;opacity:.3'>${t}</span>`;"
+        "const nav=`<div style='display:flex;align-items:center;justify-content:center;gap:10px;padding:4px 0 10px;font-size:15px'>"
+        "${arrow(ms[mi-1],'‹')}<span style='min-width:130px;text-align:center;font-weight:500'>${mlong(PD.month)}</span>"
+        "${arrow(ms[mi+1],'›')}</div>`;"
+        # Selected week: chosen one, else the last week with data.
+        "const wl=M.weeks.filter(w=>w.s.nd);let sw=PC.w[PE];if(sw==null||!M.weeks.some(w=>w.w===sw))sw=wl.length?wl[wl.length-1].w:null;"
+        "const lab=(w)=>{const a=w.days[0],b=w.days[w.days.length-1];return a.i===b.i?a.i+'. '+M.mo+'.':a.i+'.–'+b.i+'. '+M.mo+'.'};"
+        "const when=(o)=>o?`<div style='font-size:10px;color:var(--secondary-text-color)'>${WDL[o.d.wd]} ${o.d.i}. ${hm(o.q)}</div>`:'';"
+        "const TC='display:grid;grid-template-columns:minmax(78px,1.4fr) repeat(4,minmax(0,1fr));gap:4px;align-items:center;"
+        "padding:5px 6px;border-radius:6px;font-size:12px';"
+        "const cell=(v,x)=>`<div style='text-align:right'>${v}${x||''}</div>`;"
+        "const hdr=`<div style='${TC};color:var(--secondary-text-color);font-size:11px'><div>Týden</div>${cell('Odběr kWh')}"
+        "${cell('Přetok kWh')}${cell('Max odběr')}${cell('Max přetok')}</div>`;"
+        "const rows=M.weeks.map(w=>{const s=w.s,sel=w.w===sw;"
+        "const inner=`<div>${w.w}. <span style='color:var(--secondary-text-color)'>(${lab(w)})</span></div>`"
+        "+(s.nd?cell(kwh(s.imp))+cell(kwh(s.exp))+cell(kw(s.mi),when(s.mi))+cell(kw(s.me),when(s.me)):cell('–')+cell('–')+cell('')+cell(''));"
+        "return s.nd?tap(`data-w='${w.w}'`,inner,TC+';display:grid;'+(sel?'background:rgba(127,127,127,.15)':'')):`<div style='${TC};opacity:.5'>${inner}</div>`}).join('');"
+        "const T=M.tot;const total=`<div style='${TC};border-top:1px solid var(--divider-color);border-radius:0;font-weight:500'>"
+        "<div>Měsíc celkem</div>${cell(kwh(T.imp))}${cell(kwh(T.exp))}${cell(kw(T.mi),when(T.mi))}${cell(kw(T.me),when(T.me))}</div>`;"
+        "const table=`<div style='margin-bottom:14px'>${hdr}${rows}${total}</div>`;"
+        # Heat map: rows = days, columns = 96 quarter hours; import blue, export orange.
+        "const q98=(k)=>{const v=M.days.flatMap(d=>(d[k]||[]).filter(x=>x>0)).sort((a,b)=>a-b);return v.length?v[Math.floor((v.length-1)*.98)]:1};"
+        "const QI=q98('im'),QE=q98('ex');const RH=12,GP=4;let rects='',yy=0;const YS=M.days.map((d,r)=>{if(d.wd===0&&r)yy+=GP;const y=yy;yy+=RH;return y});const HH=yy;"
+        "M.days.forEach((d,r)=>{const y0=YS[r];if(!d.im&&!d.ex){rects+=`<rect x='0' y='${y0}' width='96' height='${RH-1}' fill='rgba(127,127,127,.12)'/>`;return}"
+        "for(let q=0;q<96;q++){const a=d.im?d.im[q]:null,b=d.ex?d.ex[q]:null;if(a==null&&b==null){rects+=`<rect x='${q}' y='${y0}' width='1' height='${RH-1}' fill='rgba(127,127,127,.12)'/>`;continue}"
+        "const e=(b||0)>(a||0);const v=e?b:a;if(!v)continue;const op=Math.min(1,.12+.88*v/(e?QE:QI)).toFixed(2);"
+        "rects+=`<rect x='${q}' y='${y0}' width='1.02' height='${RH-1}' fill='${e?EXB:IMB}' fill-opacity='${op}'/>`}"
+        "});"
+        "PC.t[PE+'|heat']=(x,y)=>{const q=Math.min(95,Math.max(0,Math.floor(x*96))),py=y*HH;const r=YS.findIndex(v=>py>=v&&py<v+RH);"
+        "if(r<0)return null;const d=M.days[r];return {t:qt(d,q)+tl(IMB,'odběr',d.im?d.im[q]:null)+tl(EXB,'přetok',d.ex?d.ex[q]:null),"
+        "b:[q/96,(q+1)/96,YS[r]/HH,(YS[r]+RH-1)/HH]}};"
+        "const dl=M.days.map((d,r)=>`<div style='height:${RH}px;line-height:${RH}px;margin-top:${d.wd===0&&r?GP:0}px;font-size:9px;color:var(--secondary-text-color);"
+        "white-space:nowrap;${d.wd>4?'font-weight:600':''}'>${WDL[d.wd]} ${d.i}.</div>`).join('');"
+        "const ax=(lft)=>`<div style='position:relative;height:14px;margin-left:${lft}px;font-size:9px;color:var(--secondary-text-color)'>`"
+        "+[0,6,12,18,24].map(h=>`<span style='position:absolute;left:${h/24*100}%;transform:translateX(${h===24?'-100%':h?'-50%':'0'})'>${h}</span>`).join('')+'</div>';"
+        "const grad=(c,t,mx)=>`<span style='display:inline-flex;align-items:center;gap:6px;margin-right:14px;white-space:nowrap'>${t}"
+        "<span style='width:60px;height:8px;border-radius:2px;background:linear-gradient(90deg,rgba(127,127,127,.12),${c})'></span>"
+        "do ${f(mx*4/1000,1)} kW</span>`;"
+        "const heat=`<div style='font-size:13px;font-weight:500;margin:4px 0 6px'>Měsíc po čtvrthodinách</div>"
+        "<div style='display:flex;gap:6px'><div style='flex:0 0 40px'>${dl}</div>"
+        "<div ${hv('heat')} style='${HVS}flex:1;min-width:0;position:relative'><svg viewBox='0 0 96 ${HH}' preserveAspectRatio='none' shape-rendering='crispEdges' "
+        "style='display:block;width:100%;height:${HH}px'>${rects}</svg>${tipbox}</div></div>"
+        "${ax(46)}<div style='font-size:11px;color:var(--secondary-text-color);padding:4px 0 14px;line-height:1.8;white-space:normal'>"
+        "${grad(IMB,'odběr',QI)}${grad(EXB,'přetok',QE)}· mezera = nový týden · šedá = bez dat · hodnoty po najetí myší</div>`;"
+        # Typical day: average kW per quarter hour for every week; the selected week highlighted.
+        "const avg=(w,k)=>{const sm=new Array(96).fill(0),cn=new Array(96).fill(0);w.days.forEach(d=>(d[k]||[]).forEach((v,q)=>{if(v!=null){sm[q]+=v;cn[q]++}}));"
+        "return sm.map((s,q)=>cn[q]?s/cn[q]*4/1000:null)};"
+        "const lines=wl.map(w=>({w:w.w,im:avg(w,'im'),ex:avg(w,'ex')}));"
+        "const LM=Math.max(.1,...lines.flatMap(l=>[...l.im,...l.ex].filter(v=>v!=null)));"
+        "const CH0=150,mid=CH0/2;const path=(a,sg)=>{let p='',pen=0;a.forEach((v,q)=>{if(v==null){pen=0;return}"
+        "p+=(pen?'L':'M')+(q+.5)+' '+(mid-sg*v/LM*(mid-4)).toFixed(1)+' ';pen=1});return p};"
+        "const svgl=lines.map(l=>{const sel=l.w===sw;const at=sel?\"stroke-width='2.2'\":\"stroke-width='1' stroke-opacity='.3'\";"
+        "return `<path d='${path(l.im,1)}' fill='none' stroke='${IMB}' ${at} vector-effect='non-scaling-stroke'/>"
+        "<path d='${path(l.ex,-1)}' fill='none' stroke='${EXB}' ${at} vector-effect='non-scaling-stroke'/>`}).join('');"
+        "const kv=(v)=>v==null?'–':f(v,2)+' kW';"
+        "PC.t[PE+'|typ']=(x)=>{const q=Math.min(95,Math.max(0,Math.floor(x*96)));"
+        "return {t:`<div style='font-weight:500'>${hm(q)}–${hm(q+1)} <span style='font-weight:400;color:var(--secondary-text-color)'>průměr týdne</span></div>`"
+        "+lines.map(l=>`<div style='${l.w===sw?'font-weight:600':'opacity:.75'}'>týden ${l.w}: ${dot(IMB)}${kv(l.im[q])} · ${dot(EXB)}${kv(l.ex[q])}</div>`).join(''),"
+        "b:[(q+.5)/96-.002,(q+.5)/96+.002,0,1]}};"
+        "const typ=`<div style='font-size:13px;font-weight:500;margin:4px 0 2px'>Typický den po týdnech</div>"
+        "<div style='font-size:10px;color:var(--secondary-text-color)'>průměrný výkon za čtvrthodinu, nahoře odběr, dole přetok · max ${f(LM,1)} kW</div>"
+        "<div ${hv('typ')} style='${HVS}position:relative'><svg viewBox='0 0 96 ${CH0}' preserveAspectRatio='none' style='width:100%;height:${CH0}px;display:block'>"
+        "<line x1='0' x2='96' y1='${mid}' y2='${mid}' stroke='var(--divider-color)' vector-effect='non-scaling-stroke'/>${svgl}</svg>${tipbox}</div>${ax(0)}"
+        "<div style='font-size:11px;color:var(--secondary-text-color);padding:2px 0 14px;white-space:normal'>Zvýrazněný je týden ${sw??'–'}; "
+        "jiný týden vyberete klepnutím v tabulce.</div>`;"
+        # Week detail: all quarter hours of the selected week (days of this month).
+        "const W=M.weeks.find(w=>w.w===sw);let det='';"
+        "if(W){const DW=W.days;const NQ=DW.length*96;const DM=Math.max(.1,...DW.flatMap(d=>[...(d.im||[]),...(d.ex||[])].filter(v=>v!=null).map(v=>v*4/1000)));"
+        "const DH=160,dm=DH/2;let bars='';DW.forEach((d,j)=>{for(let q=0;q<96;q++){const x=j*96+q;"
+        "const a=d.im?d.im[q]:null,b=d.ex?d.ex[q]:null;"
+        "if(a){const h=a*4/1000/DM*(dm-2);bars+=`<rect x='${x}' y='${(dm-h).toFixed(1)}' width='1' height='${h.toFixed(1)}' fill='${IMB}'/>`}"
+        "if(b){const h=b*4/1000/DM*(dm-2);bars+=`<rect x='${x}' y='${dm}' width='1' height='${h.toFixed(1)}' fill='${EXB}'/>`}}"
+        "if(j)bars+=`<rect x='${j*96}' y='0' width='.6' height='${DH}' fill='var(--divider-color)'/>`});"
+        "PC.t[PE+'|det']=(x)=>{const i=Math.min(NQ-1,Math.max(0,Math.floor(x*NQ)));const d=DW[Math.floor(i/96)],q=i%96;"
+        "return {t:qt(d,q)+tl(IMB,'odběr',d.im?d.im[q]:null)+tl(EXB,'přetok',d.ex?d.ex[q]:null),b:[i/NQ,(i+1)/NQ,0,1]}};"
+        "const dlab=DW.map(d=>`<div style='flex:1;text-align:center;font-size:10px;color:var(--secondary-text-color);white-space:nowrap'>${WDL[d.wd]} ${d.i}.</div>`).join('');"
+        "const drow=DW.map(d=>{const s={imp:0,exp:0,mi:null,me:null,nd:0};['im','ex'].forEach(k=>(d[k]||[]).forEach((v,q)=>{if(v==null)return;"
+        "if(k==='im'){s.imp+=v;if(!s.mi||v>s.mi.v)s.mi={v,d,q}}else{s.exp+=v;if(!s.me||v>s.me.v)s.me={v,d,q}}}));"
+        "const has=d.im||d.ex;return `<div style='${TC}'><div>${WDL[d.wd]} ${d.i}. ${M.mo}.</div>`+(has?cell(kwh(s.imp))+cell(kwh(s.exp))"
+        "+cell(kw(s.mi),s.mi?`<div style='font-size:10px;color:var(--secondary-text-color)'>${hm(s.mi.q)}</div>`:'')"
+        "+cell(kw(s.me),s.me?`<div style='font-size:10px;color:var(--secondary-text-color)'>${hm(s.me.q)}</div>`:''):cell('–')+cell('–')+cell('')+cell(''))+'</div>'}).join('');"
+        "det=`<div style='font-size:13px;font-weight:500;margin:4px 0 2px'>Týden ${W.w} (${lab(W)}) po čtvrthodinách</div>"
+        "<div style='font-size:10px;color:var(--secondary-text-color)'>nahoře odběr, dole přetok · max ${f(DM,1)} kW</div>"
+        "<div ${hv('det')} style='${HVS}position:relative'><svg viewBox='0 0 ${NQ} ${DH}' preserveAspectRatio='none' shape-rendering='crispEdges' "
+        "style='width:100%;height:${DH}px;display:block'><rect x='0' y='${dm}' width='${NQ}' height='.6' fill='var(--divider-color)'/>${bars}</svg>${tipbox}</div>"
+        "<div style='display:flex'>${dlab}</div><div style='margin-top:8px'>${hdr.replace('Týden','Den')}${drow}</div>`}"
+        "return `<div style='text-align:left'>`+nav+table+heat+typ+det+`<div style='font-size:12px;color:var(--secondary-text-color);padding:8px 0 2px;white-space:normal'>"
+        "15minutové hodnoty elektroměru z portálu ČEZ Distribuce (k dispozici den zpětně). Max = průměrný výkon za čtvrthodinu "
+        "(kWh × 4).</div></div>`;"
+    )
+
+
+def profile_section() -> dict:
+    return {
+        "type": "grid",
+        "column_span": 3,
+        "_requires": ["grid"],
+        "cards": [
+            heading("Průběh po 15 minutách", "mdi:chart-timeline-variant"),
+            stack(
+                head(
+                    GRID_DATE,
+                    "mdi:chart-timeline-variant",
+                    "Odběr a přetoky po čtvrthodinách",
+                    GJS
+                    + PJS
+                    + "return PD&&PD.month?mlong(PD.month)+(PMOD?' · přetoky '+kwh(PMOD.tot.exp)+' kWh':''):'';",
+                    GJS + PJS + "return PMOD?u(kwh(PMOD.tot.imp),'kWh odběr'):'–';",
+                ),
+                details(profile_body()),
+            ),
+        ],
+    }
+
+
 def _tag(section: dict, *requires: str) -> dict:
     return {**section, "_requires": list(requires)} if requires else section
 
@@ -856,6 +1051,7 @@ SECTIONS = [
     contract,
     *([_tag(hdo, "hdo")] if EXPORT else ([hdo] if HDO_ON else [])),
     *grid_sections(),
+    *([profile_section()] if G else []),
     *spot_sections(),
     monthly,
     *([_tag(yoy_meter(), "grid"), _tag(yoy, "no_grid")] if EXPORT else [yoy_meter() if G else yoy]),

@@ -6,7 +6,9 @@ accounts they return errors or empty lists and everything here yields empty resu
 
 - grid-data (daily): import (role SPOTREBA) and export to the grid (role VYROBA).
   A request may cover at most ~45 days.
-- profile-data (15 min values): import M12, export M11; at most ~31 days per request.
+- profile-data (15 min values): import M12, export M11; one request returns at most one
+  calendar month from its start (days after it are silently missing).
+  Kept as 15 min values for the dashboard (profile.py), summed to hours for statistics.
 - spot-prices-simple (hourly, CZK/MWh): history up to yesterday; at most ~7 days.
 """
 
@@ -27,7 +29,8 @@ PROFILE_IMPORT = "M12"
 PROFILE_EXPORT = "M11"
 
 DAILY_WINDOW_DAYS = 40
-PROFILE_WINDOW_DAYS = 31
+# Never longer than a calendar month (see profile-data above).
+PROFILE_WINDOW_DAYS = 28
 SPOT_WINDOW_DAYS = 7
 
 # Daily rows come in two copies (distribution and trade view); prefer the first known.
@@ -100,21 +103,45 @@ def parse_daily(data: Any) -> DailyValues:
     return next(iter(by_role.values()), {})
 
 
-def parse_profile(data: Any) -> dict[datetime, float]:
-    """Hourly kWh (UTC hour start) from a profile-data response (15 min values summed)."""
-    hourly: dict[datetime, float] = defaultdict(float)
+def parse_quarters(data: Any) -> dict[datetime, float]:
+    """15 min kWh (UTC interval start) from a profile-data response."""
+    quarters: dict[datetime, float] = {}
     for aggregate in data if isinstance(data, list) else []:
         for row in (aggregate or {}).get("data") or []:
             start = _parse_dt(row.get("profileReadingDatetimeFrom"))
             value = row.get("profileReadingValue")
             if start is None or not isinstance(value, int | float):
                 continue
-            hour = start.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
-            hourly[hour] += float(value)
+            quarters[start.astimezone(UTC).replace(second=0, microsecond=0)] = float(value)
         # Several aggregates may describe the same meter; the first one is enough.
-        if hourly:
+        if quarters:
             break
+    return dict(sorted(quarters.items()))
+
+
+def hourly_from_quarters(quarters: dict[datetime, float]) -> dict[datetime, float]:
+    """Hourly kWh (UTC hour start), the 15 min values summed."""
+    hourly: dict[datetime, float] = defaultdict(float)
+    for start, value in quarters.items():
+        hourly[start.replace(minute=0)] += value
     return {h: round(v, 4) for h, v in sorted(hourly.items())}
+
+
+def parse_profile(data: Any) -> dict[datetime, float]:
+    """Hourly kWh (UTC hour start) from a profile-data response (15 min values summed)."""
+    return hourly_from_quarters(parse_quarters(data))
+
+
+def day_quarters(quarters: dict[datetime, float], day: date) -> list[int | None]:
+    """Wh of the 15 min intervals of a local day in time order, None where missing.
+
+    A day has 96 intervals, 92 or 100 on the days the clock changes.
+    """
+    start = local_midnight(day).astimezone(UTC)
+    end = local_midnight(day + timedelta(days=1)).astimezone(UTC)
+    count = int((end - start).total_seconds()) // 900
+    values = (quarters.get(start + timedelta(minutes=15 * i)) for i in range(count))
+    return [None if v is None else round(v * 1000) for v in values]
 
 
 def parse_spot_prices(data: Any) -> dict[datetime, float]:

@@ -66,7 +66,11 @@ integration additionally:
   [OTE](https://www.ote-cr.cz) converted with the ČNB EUR rate (identical to the prices the
   ČEZ portal showed until September 2025), the portal is only a fallback; up to yesterday,
 - values the exported energy at spot prices per month (payout comparison); hours without
-  portal prices use the optional spot price sensor (only as far back as its statistics go).
+  portal prices use the optional spot price sensor (only as far back as its statistics go),
+- keeps the 15 min import/export values (HA statistics are hourly only) in its own storage
+  (`.storage/muj_cez.<entry>.profile_*`, about 0.5 MB per year) for the dashboard section
+  "Průběh po 15 minutách"; websocket command `muj_cez/profile` (`entity_id` of the
+  smart meter date sensor, optional `month` `YYYY-MM`) returns one month.
 
 The first run backfills the history in the background (tens of requests, a few minutes).
 Accounts without interval data are detected once a month and nothing else is requested;
@@ -347,6 +351,13 @@ fotovoltaiky obsahuje vyúčtování, zálohy, smlouvu, spotřebu po měsících
 porovnání, zúčtovací období a doklady. Pokud portál eviduje průběhová data elektroměru
 (typicky FVE), přibudou sekce elektroměru, výkupu přetoků a spotových cen. Potřebné karty
 (button-card, stack-in-card, mini-graph-card) integrace doinstaluje sama.
+
+Sekce **Průběh po 15 minutách** (jen s průběhovými daty elektroměru) ukazuje čtvrthodinové
+hodnoty odběru a přetoků po kalendářních měsících včetně celé historie (šipkami se přepíná
+měsíc): tabulku po týdnech (odběr, přetok, maximální čtvrthodinový výkon s časem), teplotní
+mapu měsíce (dny × čtvrthodiny), typický den každého týdne a detail vybraného týdne.
+Hodnoty se zobrazí po najetí myší nebo dotyku. Data jsou den zpětně; první načtení
+historie po instalaci trvá několik minut.
 
 Ukázka pohledu ČEZ bez FVE s predikcí, měsíčními a meziročními grafy (přepínání kWh / Kč)
 a porovnáním s měřením HA:

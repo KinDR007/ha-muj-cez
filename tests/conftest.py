@@ -72,6 +72,7 @@ def mock_client() -> Generator[AsyncMock]:
     client = AsyncMock(spec=api.CezClient)
     client.fetch_all.return_value = sample_data()
     client.get_supply_points.return_value = api.parse_supply_points(load("supply_points.json"))
+    client.get_profile_quarters.return_value = {}
     with (
         patch("custom_components.muj_cez.CezClient", return_value=client),
         patch("custom_components.muj_cez.config_flow.CezClient", return_value=client),
@@ -108,3 +109,10 @@ def fake_dip() -> Generator[type[FakeDip]]:
     FakeDip.signals_data, FakeDip.error, FakeDip.calls = {}, None, 0
     with patch("custom_components.muj_cez.coordinator.DipClient", FakeDip):
         yield FakeDip
+
+
+@pytest.fixture(autouse=True)
+def no_profile_pause() -> Generator[None]:
+    """No pause between the 15 min data requests (the backfill would wait in frozen time)."""
+    with patch("custom_components.muj_cez.profile.REQUEST_PAUSE", 0):
+        yield

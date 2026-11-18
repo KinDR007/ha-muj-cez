@@ -15,7 +15,9 @@ from .api import CezClient
 from .const import CONF_DASHBOARD, DASHBOARD_OFF, DOMAIN
 from .coordinator import MujCezConfigEntry, MujCezCoordinator
 from .dashboard import async_update_dashboard
+from .profile import ProfileStore
 from .services import async_setup_services
+from .websocket import async_setup_websocket
 
 DASHBOARD_WAIT_SECONDS = 30
 # Pause after the entities appear so all platforms finish adding theirs.
@@ -26,6 +28,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_setup_services(hass)
+    async_setup_websocket(hass)
     return True
 
 
@@ -58,3 +61,8 @@ async def _async_dashboard_after_setup(hass: HomeAssistant, entry: MujCezConfigE
 
 async def async_unload_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> None:
+    """Delete the stored 15 min data of the entry."""
+    await ProfileStore(hass, entry.entry_id).async_remove()

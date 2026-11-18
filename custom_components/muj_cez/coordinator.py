@@ -42,6 +42,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .distribuce import DipClient, DipError, merge, parse_signals, prune
+from .profile import ProfileStore
 from .statistics import async_update_statistics, statistic_id
 
 _LOGGER = logging.getLogger(__name__)
@@ -116,6 +117,8 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         self._hdo_fetched: datetime | None = None
         self._hdo_warned = False
         self.dip_client = DipClient
+        self.profiles = ProfileStore(hass, entry.entry_id)
+        self._profile_task: asyncio.Task[None] | None = None
 
     async def _async_update_data(self) -> CezData:
         if self._grid_cache is None:
@@ -133,7 +136,28 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         self.last_success_time = dt_util.utcnow()
         if data.grid:
             self._schedule_statistics(data)
+            self._schedule_profiles(data)
         return data
+
+    def _schedule_profiles(self, data: CezData) -> None:
+        """Store 15 min values in the background (the first run fills the history)."""
+        if self._profile_task and not self._profile_task.done():
+            return
+        self._profile_task = self.config_entry.async_create_background_task(
+            self.hass, self._async_run_profiles(data), f"{DOMAIN}_profiles"
+        )
+
+    async def _async_run_profiles(self, data: CezData) -> None:
+        today = dt_util.now().date()
+        for spd in data.supply_points.values():
+            sp = spd.supply_point
+            cache = (self._grid_cache or {}).get(sp.place_id)
+            if sp.production or not cache or cache.get("uid") != sp.uid:
+                continue
+            try:
+                await self.profiles.async_update(self.client, sp, cache, today)
+            except Exception:  # never break the integration because of the dashboard data
+                _LOGGER.exception("Storing 15 min data failed")
 
     def _schedule_statistics(self, data: CezData) -> None:
         """Import long-term statistics in the background (backfill may take minutes)."""
