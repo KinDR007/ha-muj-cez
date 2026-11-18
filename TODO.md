@@ -28,4 +28,4 @@
 - [x] Odpověď profile-data rozdělená na víc bloků na hranách období portálu: slučují se všechny
 - [x] Release 1.1.0
 - [x] 15minutová data: jen aktuální měsíc + 12 předchozích (starší se mažou), tlačítko Dnes, rok v indexu i bez změny dat
-- [ ] Release 1.1.1
+- [x] Release 1.1.1
