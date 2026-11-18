@@ -79,6 +79,16 @@ def test_complete_days() -> None:
     dst = grid.parse_profile(_profile(date(2026, 10, 25), 1, 0.25))
     assert len(dst) == 25
     assert len(statistics.complete_days(dst, date(2026, 10, 26))) == 25
+    assert [
+        statistics.expected_hours(date(2026, m, d)) for m, d in ((3, 29), (10, 25), (11, 2))
+    ] == [
+        23,
+        25,
+        24,
+    ]
+    # A spring day short of one hour is incomplete.
+    spring = grid.parse_profile(_profile(date(2026, 3, 29), 1, 0.25, skip_last_hours=1))
+    assert statistics.complete_days(spring, date(2026, 3, 30)) == {}
 
 
 @pytest.fixture
@@ -309,3 +319,57 @@ def test_spot_overview() -> None:
     # Hour 5 over the last 7 days: 5 or 5.5 alternating.
     assert 5.0 <= ov["profile"][5] <= 5.5
     assert statistics.spot_overview({}, today)["profile"] == [None] * 24
+
+
+async def test_missing_hours_imported_again(
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    pv_sp: api.SupplyPoint,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Statistics of older versions with a lost day are filled once, later sums corrected."""
+    await hass.config.async_set_time_zone("Europe/Prague")
+    today = date(2026, 11, 13)
+    freezer.move_to(datetime(2026, 11, 13, 12, 0, tzinfo=grid.TZ))
+    stat_id = statistics.statistic_id("import", pv_sp.place_id)
+    meta = statistics.StatisticMetaData(
+        source=statistics.DOMAIN,
+        statistic_id=stat_id,
+        name="import",
+        unit_of_measurement="kWh",
+        unit_class="energy",
+        has_sum=True,
+        mean_type=statistics.StatisticMeanType.NONE,
+    )
+    hours = sorted(grid.parse_profile(_profile(date(2026, 11, 9), 4, 0.25)))
+    lost = {h for h in hours if h.astimezone(grid.TZ).date() == date(2026, 11, 10)}
+    rows, total = [], 0.0
+    for h in hours:
+        if h not in lost:
+            total += 1.0
+            rows.append(statistics.StatisticData(start=h, state=1.0, sum=total))
+    statistics.async_add_external_statistics(hass, meta, rows)
+    await async_wait_recording_done(hass)
+
+    def handler(path: str, params: dict[str, str]) -> Any:
+        if path.endswith("profile-data") and params["profileReadingRoleId"] == grid.PROFILE_IMPORT:
+            frm = datetime.fromisoformat(
+                params["profileReadingDatetimeFrom"].replace("Z", "+00:00")
+            )
+            day = frm.astimezone(grid.TZ).date()
+            return _profile(day, (today - day).days, 0.25) if day < today else []
+        raise api.CezConnectionError("HTTP 404")
+
+    client = FakeClient(handler)
+    cache = {"uid": pv_sp.uid, "import_from": "2026-11-09", "import": {"2026-11-09": 24.0}}
+    statistics.REQUEST_PAUSE = 0
+    assert await statistics.async_update_statistics(hass, client, [pv_sp], {pv_sp.place_id: cache})
+    await async_wait_recording_done(hass)
+    stats = await _stats(hass, stat_id, {"sum"})
+    assert len(stats) == 96 and stats[-1]["sum"] == pytest.approx(96.0)
+    assert cache["import_gaps_checked"] == statistics.GAPS_CHECK_VERSION
+
+    # Checked once: no history requests on the next run.
+    client.calls.clear()
+    await statistics.async_update_statistics(hass, client, [pv_sp], {pv_sp.place_id: cache})
+    assert not [c for c in client.calls if c[0].endswith("profile-data")]

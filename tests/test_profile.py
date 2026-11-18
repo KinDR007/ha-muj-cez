@@ -193,3 +193,27 @@ async def test_websocket_profile(
         )
         reply = await ws.receive_json()
         assert not reply["success"], eid
+
+
+def test_parse_quarters_split_aggregates() -> None:
+    """Responses across an internal period edge come in several aggregates (later one first)."""
+
+    def aggregate(start: str, values: list[float]) -> dict:
+        t = datetime.fromisoformat(start)
+        rows = [
+            {
+                "profileReadingDatetimeFrom": (t + timedelta(minutes=15 * i)).isoformat(),
+                "profileReadingValue": v,
+            }
+            for i, v in enumerate(values)
+        ]
+        return {"profileReadingRole": {"entryId": "M11"}, "data": rows}
+
+    data = [
+        aggregate("2025-04-01T02:00:00+02:00", [0.1, 0.2]),
+        aggregate("2025-03-31T23:30:00+02:00", [0.3, 0.4]),
+    ]
+    q = grid.parse_quarters(data)
+    assert len(q) == 4
+    assert q[datetime(2025, 3, 31, 21, 30, tzinfo=UTC)] == 0.3
+    assert q[datetime(2025, 4, 1, 0, 0, tzinfo=UTC)] == 0.1

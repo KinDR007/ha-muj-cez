@@ -104,7 +104,11 @@ def parse_daily(data: Any) -> DailyValues:
 
 
 def parse_quarters(data: Any) -> dict[datetime, float]:
-    """15 min kWh (UTC interval start) from a profile-data response."""
+    """15 min kWh (UTC interval start) from a profile-data response.
+
+    The portal splits a response into aggregates at the edges of its internal periods
+    (e.g. 2025-03-31 / 2025-04-01), all of them are needed.
+    """
     quarters: dict[datetime, float] = {}
     for aggregate in data if isinstance(data, list) else []:
         for row in (aggregate or {}).get("data") or []:
@@ -113,9 +117,6 @@ def parse_quarters(data: Any) -> dict[datetime, float]:
             if start is None or not isinstance(value, int | float):
                 continue
             quarters[start.astimezone(UTC).replace(second=0, microsecond=0)] = float(value)
-        # Several aggregates may describe the same meter; the first one is enough.
-        if quarters:
-            break
     return dict(sorted(quarters.items()))
 
 

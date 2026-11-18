@@ -24,5 +24,6 @@
 - [ ] HDO: volba signálu, pokud portál vrací víc signálů (zatím první)
 - [x] 15minutová data elektroměru: úložiště s historií, websocket `muj_cez/profile`, sekce dashboardu (týdny, teplotní mapa, typický den, detail týdne, tooltipy); ověřeno na vzdáleném HA
 - [x] Okna průběhových dat max. 28 dní (portál vrací max. jeden kalendářní měsíc na dotaz)
-- [ ] Hodinové statistiky importované starší verzí mají díry ve dnech za hranou 31denních oken (dovyplnit / reimport)
-- [ ] Release s 15minutovými daty
+- [x] Díry v hodinových statistikách ze starších verzí: jednorázová kontrola a doimport od první díry (ověřeno na vzdáleném HA)
+- [x] Odpověď profile-data rozdělená na víc bloků na hranách období portálu: slučují se všechny
+- [x] Release 1.1.0

@@ -8,7 +8,9 @@ External statistics (selectable in the Energy dashboard):
 
 Data are available with a delay of about one day; only complete local days are
 imported so a later run never leaves holes. Each run continues after the last
-imported hour. The exported energy is valued at spot prices per month (portal prices,
+imported hour. Once per place and direction (and GAPS_CHECK_VERSION) the statistics are checked for
+missing hours (versions before 1.1.0 lost days at the edges of requests) and imported
+again from the first gap, the sums of all later hours included. The exported energy is valued at spot prices per month (portal prices,
 gaps filled from an optional HA spot price sensor) for the payout comparison.
 """
 
@@ -45,6 +47,9 @@ SPOT_STATISTIC_ID = f"{DOMAIN}:spot_price"
 SPOT_UNIT = "CZK/kWh"
 # Pause between portal requests during a backfill.
 REQUEST_PAUSE = 0.5
+# Raised when a fix makes another check for missing hours worthwhile (1.1.0: requests
+# longer than a calendar month, responses split into several aggregates).
+GAPS_CHECK_VERSION = 2
 # Incomplete days younger than this are retried on the next run.
 RECENT_DAYS = 3
 
@@ -67,10 +72,7 @@ def complete_days(hourly: dict[datetime, float], before: date) -> dict[datetime,
             by_day[day][hour] = value
     result: dict[datetime, float] = {}
     for day in sorted(by_day):
-        start = gridlib.local_midnight(day)
-        end = gridlib.local_midnight(day + timedelta(days=1))
-        expected = round((end - start).total_seconds() / 3600)
-        if len(by_day[day]) < expected and day >= before - timedelta(days=RECENT_DAYS):
+        if len(by_day[day]) < expected_hours(day) and day >= before - timedelta(days=RECENT_DAYS):
             break
         result.update(by_day[day])
     return result
@@ -90,8 +92,32 @@ def _start_of(row: dict[str, Any]) -> datetime:
 
 
 def expected_hours(day: date) -> int:
-    start = gridlib.local_midnight(day)
-    return round((gridlib.local_midnight(day + timedelta(days=1)) - start).total_seconds() / 3600)
+    """23, 24 or 25 (in UTC: local times of one zone subtract as wall clock times)."""
+    start = gridlib.local_midnight(day).astimezone(UTC)
+    end = gridlib.local_midnight(day + timedelta(days=1)).astimezone(UTC)
+    return round((end - start).total_seconds() / 3600)
+
+
+async def _before_first_gap(hass: HomeAssistant, stat_id: str) -> dict[str, Any] | None:
+    """Last row before the first missing hour of an hourly statistic, None without gaps."""
+    from homeassistant.components.recorder.statistics import statistics_during_period
+
+    rows = await get_instance(hass).async_add_executor_job(
+        statistics_during_period,
+        hass,
+        datetime(2000, 1, 1, tzinfo=UTC),
+        None,
+        {stat_id},
+        "hour",
+        None,
+        {"sum"},
+    )
+    prev: dict[str, Any] | None = None
+    for row in rows.get(stat_id, []):
+        if prev is not None and _start_of(row) - _start_of(prev) > timedelta(hours=1):
+            return prev
+        prev = row
+    return None
 
 
 async def async_import_spot_prices(
@@ -225,6 +251,18 @@ async def async_import_grid(
             continue
         stat_id = statistic_id(kind, sp.place_id)
         last = await _last(hass, stat_id, {"sum"})
+        gap_key = f"{kind}_gaps_checked"
+        repair = last is not None and cache.get(gap_key) != GAPS_CHECK_VERSION
+        if last is None:  # imported from scratch by this version: no gaps
+            cache[gap_key] = GAPS_CHECK_VERSION
+        elif repair:
+            gap = await _before_first_gap(hass, stat_id)
+            if gap is None:
+                cache[gap_key] = GAPS_CHECK_VERSION
+                repair = False
+            else:
+                _LOGGER.info("Importing %s again after %s (missing hours)", stat_id, _start_of(gap))
+                last = gap
         base = 0.0
         after: datetime | None = None
         start_day = date.fromisoformat(first)
@@ -238,6 +276,8 @@ async def async_import_grid(
         for a, b in gridlib.windows(start_day, today, gridlib.PROFILE_WINDOW_DAYS):
             hourly.update(await client.get_profile(sp, role, a, b))
             await asyncio.sleep(REQUEST_PAUSE)
+        if repair:  # checked once; hours the portal itself lacks stay missing
+            cache[gap_key] = GAPS_CHECK_VERSION
         hours = complete_days(hourly, today)
         if after is not None:
             hours = {h: v for h, v in hours.items() if h > after}
@@ -346,7 +386,9 @@ async def async_update_statistics(
         if firsts:
             changed = bool(await async_import_spot_prices(hass, client, min(firsts), today))
         for sp, cache in places:
+            checked = [cache.get(f"{k}_gaps_checked") for k in ("import", "export")]
             changed |= await async_import_grid(hass, client, sp, cache, today) > 0
+            changed |= checked != [cache.get(f"{k}_gaps_checked") for k in ("import", "export")]
     except CezError as err:
         _LOGGER.warning("Importing statistics failed: %s", err)
     # Let the recorder store the queued imports before reading them back.
