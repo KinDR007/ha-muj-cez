@@ -196,3 +196,27 @@ async def test_no_hdo_section_price_in_contract(
     uid = next(iter(mock_client.fetch_all.return_value.supply_points))
     price = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{uid}_current_price")
     assert price and price in text  # single tariff price row in the contract block
+
+
+@pytest.mark.parametrize("dual", [True, False])
+async def test_meter_reading_rows(
+    hass: HomeAssistant, mock_client: AsyncMock, freezer: FrozenDateTimeFactory, dual: bool
+) -> None:
+    """Dual tariff: the NT row points at the NT sensor; single tariff has no NT entity."""
+    data = mock_client.fetch_all.return_value
+    spd = next(iter(data.supply_points.values()))
+    assert spd.meter_reading
+    spd.meter_reading.value_lt = 13160.0 if dual else None
+    await _setup(hass, freezer, DASHBOARD_NEW)
+    [view] = (await _config(hass, "muj-cez"))["views"]
+    text = json.dumps(view, ensure_ascii=False)
+    _assert_entities_exist(hass, text)
+    registry = er.async_get(hass)
+    vt = registry.async_get_entity_id("sensor", DOMAIN, f"{spd.supply_point.uid}_meter_reading")
+    nt = registry.async_get_entity_id("sensor", DOMAIN, f"{spd.supply_point.uid}_meter_reading_low")
+    assert vt and vt in text
+    assert "Stav elektroměru NT" in text
+    if dual:
+        assert nt and nt in text
+    else:
+        assert nt is None and f"sensor.{dashboard.MISSING}" in text
