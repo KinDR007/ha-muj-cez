@@ -12,7 +12,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
 from .api import CezClient
-from .const import CONF_DASHBOARD, DASHBOARD_OFF, DOMAIN
+from .const import CONF_DASHBOARD, CONF_PARTNER, DASHBOARD_OFF, DOMAIN
 from .coordinator import MujCezConfigEntry, MujCezCoordinator
 from .dashboard import async_update_dashboard
 from .profile import ProfileStore
@@ -34,7 +34,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> bool:
     client = CezClient(
-        async_get_clientsession(hass), entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD]
+        async_get_clientsession(hass),
+        entry.data[CONF_USERNAME],
+        entry.data[CONF_PASSWORD],
+        entry.data.get(CONF_PARTNER),
     )
     coordinator = MujCezCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()

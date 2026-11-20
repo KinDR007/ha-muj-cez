@@ -352,6 +352,16 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
             else {}
         ),
     ),
+    # Dual tariff: low tariff register (the meter reading above is the high tariff one).
+    _energy(
+        "meter_reading_low",
+        lambda d: d.meter_reading and d.meter_reading.value_lt,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        exists_fn=lambda _c, d: bool(d.meter_reading and d.meter_reading.value_lt),
+        attrs_fn=lambda d: (
+            {"reading_date": d.meter_reading.reading_date} if d.meter_reading else {}
+        ),
+    ),
     # Contract and connection
     MujCezSensorDescription(
         key="distribution_rate",

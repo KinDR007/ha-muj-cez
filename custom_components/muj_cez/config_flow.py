@@ -29,6 +29,7 @@ from .const import (
     CONF_DASHBOARD,
     CONF_HDO,
     CONF_INSTALL_CARDS,
+    CONF_PARTNER,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_SPOT_PRICE_SENSOR,
@@ -122,35 +123,66 @@ async def settings_form(
     return schema, suggested
 
 
-async def _validate(hass: HomeAssistant, username: str, password: str) -> dict[str, str]:
-    client = CezClient(async_get_clientsession(hass), username, password)
+async def _validate(
+    hass: HomeAssistant, username: str, password: str, partner: str | None = None
+) -> tuple[dict[str, str], CezClient]:
+    client = CezClient(async_get_clientsession(hass), username, password, partner)
     try:
         await client.authenticate()
         if not await client.get_supply_points():
-            return {"base": "no_supply_points"}
+            return {"base": "no_supply_points"}, client
     except CezAuthError:
-        return {"base": "invalid_auth"}
+        return {"base": "invalid_auth"}, client
     except CezError:
-        return {"base": "cannot_connect"}
+        return {"base": "cannot_connect"}, client
     except Exception:
         _LOGGER.exception("Unexpected error during validation")
-        return {"base": "unknown"}
-    return {}
+        return {"base": "unknown"}, client
+    return {}, client
+
+
+async def _accounts(client: CezClient) -> tuple[dict[str, str], str | None]:
+    """Selectable customer accounts {partner: label} when the ČEZ ID has several.
+
+    Labels show the addresses of the account's supply points; the default account first.
+    """
+    try:
+        partners, default = await client.get_accounts()
+    except CezError as err:
+        _LOGGER.debug("Customer accounts not available: %s", err)
+        return {}, None
+    if len(partners) < 2:
+        return {}, default
+    labels: dict[str, str] = {}
+    for partner in sorted(partners, key=lambda p: p != default):
+        client.partner = partner
+        try:
+            places = {sp.address or sp.name for sp in await client.get_supply_points()}
+        except CezError:
+            places = set()
+        labels[partner] = f"{partner}: {', '.join(sorted(places))}" if places else partner
+    client.partner = None
+    return labels, default
 
 
 class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
     _data: dict[str, Any]
+    _accounts: dict[str, str]
+    _default: str | None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             username = user_input[CONF_USERNAME].strip()
-            await self.async_set_unique_id(username.lower())
-            self._abort_if_unique_id_configured()
-            errors = await _validate(self.hass, username, user_input[CONF_PASSWORD])
+            errors, client = await _validate(self.hass, username, user_input[CONF_PASSWORD])
             if not errors:
                 self._data = {CONF_USERNAME: username, CONF_PASSWORD: user_input[CONF_PASSWORD]}
+                self._accounts, self._default = await _accounts(client)
+                if self._accounts:
+                    return await self.async_step_account()
+                await self.async_set_unique_id(username.lower())
+                self._abort_if_unique_id_configured()
                 return await self.async_step_settings()
         return self.async_show_form(
             step_id="user",
@@ -160,14 +192,43 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_account(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Customer account when the ČEZ ID has several (e.g. shared access)."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            partner = user_input[CONF_PARTNER]
+            username = self._data[CONF_USERNAME]
+            # The default account keeps the plain unique id (entries before accounts existed).
+            uid = username.lower() if partner == self._default else f"{username.lower()}_{partner}"
+            await self.async_set_unique_id(uid)
+            self._abort_if_unique_id_configured()
+            errors, _client = await _validate(
+                self.hass, username, self._data[CONF_PASSWORD], partner
+            )
+            if not errors:
+                self._data[CONF_PARTNER] = partner
+                return await self.async_step_settings()
+        options = [{"value": p, "label": label} for p, label in self._accounts.items()]
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PARTNER, default=options[0]["value"]): SelectSelector(
+                    SelectSelectorConfig(options=options, mode=SelectSelectorMode.LIST)
+                )
+            }
+        )
+        return self.async_show_form(step_id="account", data_schema=schema, errors=errors)
+
     async def async_step_settings(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Update schedule, reference sensors and dashboard (prefilled from Energy)."""
         if user_input is not None:
-            return self.async_create_entry(
-                title=self._data[CONF_USERNAME], data=self._data, options=user_input
-            )
+            title = self._data[CONF_USERNAME]
+            if self._data.get(CONF_PARTNER):
+                title = f"{title} ({self._data[CONF_PARTNER]})"
+            return self.async_create_entry(title=title, data=self._data, options=user_input)
         schema, suggested = await settings_form(self.hass, None)
         return self.async_show_form(
             step_id="settings", data_schema=self.add_suggested_values_to_schema(schema, suggested)
@@ -182,8 +243,11 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
         entry = self._get_reauth_entry()
         errors: dict[str, str] = {}
         if user_input is not None:
-            errors = await _validate(
-                self.hass, entry.data[CONF_USERNAME], user_input[CONF_PASSWORD]
+            errors, _client = await _validate(
+                self.hass,
+                entry.data[CONF_USERNAME],
+                user_input[CONF_PASSWORD],
+                entry.data.get(CONF_PARTNER),
             )
             if not errors:
                 return self.async_update_reload_and_abort(

@@ -14,6 +14,7 @@ CONF_SPOT_PRICE_SENSOR = "spot_price_sensor"
 CONF_DASHBOARD = "dashboard"
 CONF_INSTALL_CARDS = "install_cards"
 # HDO switching times from the ČEZ Distribuce portal (same credentials).
+CONF_PARTNER = "partner"
 CONF_HDO = "hdo"
 
 # Dashboard option values: "none" = off, default dashboard, new dedicated dashboard, or url.

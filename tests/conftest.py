@@ -73,6 +73,7 @@ def mock_client() -> Generator[AsyncMock]:
     client.fetch_all.return_value = sample_data()
     client.get_supply_points.return_value = api.parse_supply_points(load("supply_points.json"))
     client.get_profile_quarters.return_value = {}
+    client.get_accounts.return_value = (["0011111111"], "0011111111")
     with (
         patch("custom_components.muj_cez.CezClient", return_value=client),
         patch("custom_components.muj_cez.config_flow.CezClient", return_value=client),

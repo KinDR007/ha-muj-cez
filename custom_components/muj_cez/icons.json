@@ -37,6 +37,9 @@
       "meter_reading": {
         "default": "mdi:meter-electric"
       },
+      "meter_reading_low": {
+        "default": "mdi:meter-electric-outline"
+      },
       "last_update": {
         "default": "mdi:update"
       },

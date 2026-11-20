@@ -30,6 +30,7 @@ REDIRECT_URI = f"{BASE_URL}/col"
 DEFAULT_AUTHORIZE_URL = "https://auth.cez.cz/oauth2/authorize"
 DEFAULT_TOKEN_URL = "https://api.cez.cz/token"
 DEFAULT_API_URL = f"{BASE_URL}/col-api/prod/1.0"
+PARTNER_HEADER = "X-COL-PARTNER"
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -585,6 +586,15 @@ def parse_consumption_history(data: list[dict[str, Any]]) -> ConsumptionPeriod |
     return periods[-1] if periods else None
 
 
+def parse_accounts(data: Any) -> tuple[list[str], str | None]:
+    """Customer accounts (partner ids) and the default one from /user/token-data."""
+    if not isinstance(data, dict):
+        return [], None
+    partners = [str(p) for p in data.get("partners") or [] if p]
+    default = data.get("defaultPartner")
+    return partners, str(default) if default else None
+
+
 def parse_meter_reading_history(data: list[dict[str, Any]], today: date) -> list[MeterReadingPoint]:
     """Real (non-simulated) readings up to today, one per day, oldest first.
 
@@ -962,8 +972,17 @@ def _pkce_pair() -> tuple[str, str]:
 class CezClient:
     """Async client. `session` is used for API calls; login uses its own cookie jar."""
 
-    def __init__(self, session: aiohttp.ClientSession, username: str, password: str) -> None:
+    def __init__(
+        self,
+        session: aiohttp.ClientSession,
+        username: str,
+        password: str,
+        partner: str | None = None,
+    ) -> None:
         self._session = session
+        # Customer account (business partner) when the ČEZ ID has several (shared access);
+        # sent as X-COL-PARTNER like the web does, None = the portal's default account.
+        self.partner = partner
         self._username = username
         self._password = password
         self._client_id: str | None = None
@@ -1133,6 +1152,7 @@ class CezClient:
                         "User-Agent": USER_AGENT,
                         "Accept": "application/json",
                         "Authorization": f"Bearer {self._access_token}",
+                        **({PARTNER_HEADER: self.partner} if self.partner else {}),
                     },
                     timeout=TIMEOUT,
                 ) as resp:
@@ -1153,6 +1173,29 @@ class CezClient:
     @property
     def session(self) -> aiohttp.ClientSession:
         return self._session
+
+    def with_partner(self, partner: str | None) -> CezClient:
+        """Client for another customer account sharing this login (no new sign-in)."""
+        other = CezClient(self._session, self._username, self._password, partner)
+        for attr in (
+            "_client_id",
+            "_authorize_url",
+            "_token_url",
+            "_api_url",
+            "_access_token",
+            "_refresh_token",
+            "_expires_at",
+        ):
+            setattr(other, attr, getattr(self, attr))
+        return other
+
+    async def get_raw(self, path: str, params: dict[str, str] | None = None) -> Any:
+        """Raw response of a portal endpoint (diagnostics)."""
+        return await self._get(path, params)
+
+    async def get_accounts(self) -> tuple[list[str], str | None]:
+        """Customer accounts of the ČEZ ID and the portal's default one."""
+        return parse_accounts(await self._get("/user/token-data"))
 
     async def get_supply_points(self) -> list[SupplyPoint]:
         return parse_supply_points(await self._get("/supply-points/RetrieveSupplyPoints"))

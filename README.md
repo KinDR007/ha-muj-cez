@@ -24,7 +24,8 @@ Návod k instalaci a nastavení v češtině: [Instalace a nastavení](#instalac
 | Next advance payment date / amount | date / CZK | |
 | Unpaid advance payments | CZK | overdue unpaid amount |
 | Last period consumption / cost | kWh / CZK | last closed billing period |
-| Meter reading | kWh | latest real reading (VT), `total_increasing` |
+| Meter reading | kWh | latest real reading (VT), `total_increasing`, attribute `low_tariff` |
+| Meter reading (low tariff) | kWh | dual tariff only: NT register of the latest reading |
 | Last invoice | CZK | negative = refund; attributes number, issue/due date |
 | Last payment | CZK | attributes date |
 | Overdue amount | CZK | unpaid documents after due date, attribute `open_amount` |
@@ -96,6 +97,23 @@ The schedule (about 7 days ahead) is loaded at start, with regular updates and d
 00:20, and stored, so the tariff switches on time without the portal and survives
 outages of a few days. Supply points without HDO (single tariff, other distributors)
 get no HDO entities; a failing portal only logs a warning.
+
+## Several customer accounts (shared access)
+
+When the ČEZ ID gives access to several customer accounts (e.g. another person shared
+their account with you), the setup asks which account to load. The integration then
+sends the chosen account with every request (header `X-COL-PARTNER`, as the portal web
+does). Add another account as another instance of the integration with the same login.
+Entries created before 1.2.0 load the portal's default account.
+
+## Diagnostics for issue reports
+
+**Settings → Devices & services → Můj ČEZ → ⋮ → Download diagnostics** contains, besides
+the redacted parsed data, pseudonymized raw portal responses of every customer account
+of the login (account list, supply points, latest meter readings). Names, addresses,
+contacts and every identifier are replaced by placeholders that stay the same across
+the responses; dates, kWh and codebook values are kept. Please check the file before
+attaching it to an issue.
 
 ## Dashboard
 
@@ -315,7 +333,8 @@ Hlavní senzory odběrného místa:
 | Splatnost a výše příští zálohy | atributy obsahují variabilní symbol a číslo účtu |
 | Nezaplacené zálohy, Částka po splatnosti | dlužné částky |
 | Poslední faktura / platba | poslední doklady |
-| Stav elektroměru | poslední odečet |
+| Stav elektroměru | poslední odečet (u dvoutarifu VT, NT v atributu `low_tariff`) |
+| Stav elektroměru NT | jen dvoutarif: nízký tarif posledního odečtu |
 | Spotřeba a náklady za minulé období | uzavřené zúčtovací období |
 | Distribuční sazba, Hlavní jistič, Konec smlouvy, Datum změny ceny | údaje ze smlouvy |
 | Plánované odstávky | odstávky distribuce, seznam v atributu `outages` |
@@ -339,6 +358,10 @@ v atributech dnešní a zítřejší časy NT), **Příští přepnutí tarifu**
 (Kč/kWh s DPH za aktuální tarif podle poslední simulace vyúčtování, bez stálých plateb).
 Rozpis se ukládá asi na týden dopředu, tarif se tedy přepíná včas i bez spojení s portálem.
 Odběrná místa bez HDO (jednotarif, jiný distributor) tyto senzory nedostanou, cenu ano.
+
+**Víc zákaznických účtů:** pokud máte pod jedním ČEZ ID přístup k více účtům (např.
+sdílený účet jiné osoby), integrace se při přidání zeptá, který účet načíst. Další účet
+přidáte jako další instanci integrace se stejným přihlášením.
 
 Kalendář **Doklady** obsahuje všechny doklady všech smluv na účtu (faktury, zálohy,
 platby, poplatky). Doklady lze vypsat i akcí `muj_cez.get_documents` s filtry

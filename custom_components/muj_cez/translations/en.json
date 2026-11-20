@@ -9,6 +9,13 @@
           "password": "Password"
         }
       },
+      "account": {
+        "title": "Customer account",
+        "description": "This ČEZ ID has several customer accounts (e.g. shared access of another person). Choose the account to load. Add another account as another instance of the integration with the same login.",
+        "data": {
+          "partner": "Customer account"
+        }
+      },
       "reauth_confirm": {
         "title": "Re-authenticate Můj ČEZ",
         "description": "Enter the current password for {username}.",
@@ -125,6 +132,9 @@
       },
       "meter_reading": {
         "name": "Meter reading"
+      },
+      "meter_reading_low": {
+        "name": "Meter reading (low tariff)"
       },
       "last_update": {
         "name": "Last update"

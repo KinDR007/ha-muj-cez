@@ -29,3 +29,5 @@
 - [x] Release 1.1.0
 - [x] 15minutová data: jen aktuální měsíc + 12 předchozích (starší se mažou), tlačítko Dnes, rok v indexu i bez změny dat
 - [x] Release 1.1.1
+- [x] Issue #1: senzor Stav elektroměru NT, výběr zákaznického účtu (X-COL-PARTNER), anonymizovaná surová data v diagnostice (+ redakce e-mailu, kódu OM a adres v diagnostice)
+- [ ] Issue #1: ověření výběru účtu autorem (nemáme účet s více zákaznickými čísly)

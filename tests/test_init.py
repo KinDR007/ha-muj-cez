@@ -285,3 +285,29 @@ async def test_chart_unit_select(
         "select", "select_option", {"entity_id": entity_id, "option": "czk"}, blocking=True
     )
     assert hass.states.get(entity_id).state == "czk"
+
+
+async def test_low_tariff_meter_reading(
+    hass: HomeAssistant, entry: MockConfigEntry, mock_client: AsyncMock
+) -> None:
+    """Dual tariff: NT register as its own sensor; single tariff points do not get it."""
+    from .conftest import sample_data
+
+    data = sample_data()
+    reading = next(iter(data.supply_points.values())).meter_reading
+    assert reading and reading.value_lt is None
+    reading.value_lt = 13160.0
+    mock_client.fetch_all.return_value = data
+    await _setup(hass, entry)
+    assert _state(hass, "meter_reading_low") == "13160.0"
+    entity_id = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{UID}_meter_reading_low")
+    assert hass.states.get(entity_id).attributes["reading_date"] == reading.reading_date
+
+
+async def test_no_low_tariff_sensor_single_tariff(
+    hass: HomeAssistant, entry: MockConfigEntry, mock_client: AsyncMock
+) -> None:
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+    assert registry.async_get_entity_id("sensor", DOMAIN, f"{UID}_meter_reading") is not None
+    assert registry.async_get_entity_id("sensor", DOMAIN, f"{UID}_meter_reading_low") is None

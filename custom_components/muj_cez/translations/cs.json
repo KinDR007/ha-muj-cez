@@ -9,6 +9,13 @@
           "password": "Heslo"
         }
       },
+      "account": {
+        "title": "Zákaznický účet",
+        "description": "Pod tímto ČEZ ID je víc zákaznických účtů (např. sdílený přístup jiné osoby). Vyberte, který účet načíst. Další účet přidáte jako další instanci integrace se stejným přihlášením.",
+        "data": {
+          "partner": "Zákaznický účet"
+        }
+      },
       "reauth_confirm": {
         "title": "Znovu přihlásit Můj ČEZ",
         "description": "Zadejte aktuální heslo pro {username}.",
@@ -125,6 +132,9 @@
       },
       "meter_reading": {
         "name": "Stav elektroměru"
+      },
+      "meter_reading_low": {
+        "name": "Stav elektroměru NT"
       },
       "last_update": {
         "name": "Poslední aktualizace"
