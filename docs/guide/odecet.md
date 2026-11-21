@@ -33,6 +33,7 @@ otevře tuto stránku.
 7. **Nízký tarif (T2)**: jen u dvoutarifové sazby.
 8. **Poznámka pro vás**: volitelný text do 160 znaků, uloží se k odečtu na portálu.
 9. **Zkontrolovat a odeslat**: aktivní, jakmile jsou hodnoty v pořádku.
+10. **?**: otevře tuto stránku příručky.
 
 ## Kontrola hodnot
 

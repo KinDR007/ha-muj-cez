@@ -43,6 +43,11 @@
         [
           9,
           "Zkontrolovat a odeslat"
+        ],
+        [
+          10,
+          "?",
+          "left"
         ]
       ]
     },

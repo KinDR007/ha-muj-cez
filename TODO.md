@@ -61,5 +61,5 @@
 - [x] Kapitoly: instalace, nastavení, entity, dashboard ČEZ, cenový rozpad, odečet, akce, potíže
 - [x] Snímky `tools/docs/shots.mjs` (tmavý režim, výstřižky, anonymizace + kontrola úniků, štítky)
 - [x] Napojení: manifest `documentation`, odkazy v config/options flow a opravách, ikona ? na kartě Odečet, README s absolutními odkazy (HACS)
-- [ ] Po vydání přegenerovat snímky odečtu (ikona ? na kartě)
-- [ ] Ověřit zobrazení v HACS a v Marketplace HA
+- [x] Po vydání přegenerovat snímky odečtu (ikona ? na kartě)
+- [x] Ověřeno: odkaz Dokumentace a ? v dialozích HA, ? na kartě, README s náhledy v HACS (2026.10) i v Marketplace (2026.11)
