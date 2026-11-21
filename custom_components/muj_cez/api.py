@@ -707,6 +707,33 @@ def parse_meter_reading_history(data: list[dict[str, Any]], today: date) -> list
     return [by_day[d] for d in sorted(by_day)]
 
 
+def parse_register_readings(
+    data: list[dict[str, Any]], today: date
+) -> tuple[dict[str, list[tuple[date, float]]], str | None]:
+    """Real readings per register ({"vt": [(day, kWh)], "nt": [...]}, oldest first) of the
+    current meter and its number. Readings of a replaced meter are left out, as is a
+    register whose latest reading is 0 (NT of a single tariff meter)."""
+    rows: list[tuple[str, date, float, str]] = []
+    for row in data if isinstance(data, list) else []:
+        if not isinstance(row, dict) or _val(row.get("meterReadingType")) == SIMULATED_READING_TYPE:
+            continue
+        tariff = str(_val(row.get("meterReadingTariff")) or "")
+        register = "vt" if "VT" in tariff else "nt" if "NT" in tariff else None
+        day = _date(row.get("meterReadingRegisterDate"))
+        value = _float(row.get("meterReadingValue"))
+        if register is None or day is None or day > today or value is None:
+            continue
+        rows.append((register, day, value, (row.get("meterReadingDeviceNumber") or "").lstrip("0")))
+    device = max(((d, dev) for _r, d, _v, dev in rows if dev), default=(None, None))[1]
+    out: dict[str, dict[date, float]] = {}
+    for register, day, value, dev in rows:
+        if dev and dev != device:
+            continue
+        values = out.setdefault(register, {})
+        values[day] = max(values.get(day, 0.0), value)
+    return {reg: sorted(v.items()) for reg, v in out.items() if v[max(v)] > 0}, device
+
+
 def parse_meter_readings(data: list[dict[str, Any]], today: date) -> MeterReading | None:
     """Return the latest real (non-simulated) reading not later than today.
 
@@ -1398,6 +1425,81 @@ class CezClient:
     ) -> tuple[MeterReading | None, list[MeterReadingPoint]]:
         data = await self._get(f"/supply-points/{sp.uid}/ReadMeterReading")
         return parse_meter_readings(data, today), parse_meter_reading_history(data, today)
+
+    async def get_register_readings(
+        self, sp: SupplyPoint, today: date
+    ) -> tuple[dict[str, list[tuple[date, float]]], str | None]:
+        """Real readings per register and the meter number (meter reading form)."""
+        data = await self._get(f"/supply-points/{sp.uid}/ReadMeterReading")
+        return parse_register_readings(data, today)
+
+    async def get_self_readings(self, sp: SupplyPoint) -> Any:
+        """Customer readings with reason and status (one reading per day check)."""
+        return await self._get("/self-meter-reading", {"supplyPointCode": sp.ean})
+
+    async def get_reading_consumption(self, sp: SupplyPoint) -> Any:
+        """Last billing period consumption and yearly reading limits."""
+        return await self._get("/meter-reading-consumption-vals", {"supplyPointCode": sp.ean})
+
+    async def get_reading_types(self, sp: SupplyPoint) -> Any:
+        """Reading types (reasons) the customer may choose now."""
+        return await self._get("/meter-reading-requests-advanced", {"supplyPointCode": sp.ean})
+
+    async def get_reading_form_config(self, sp: SupplyPoint, reason: str) -> Any:
+        """Allowed date range of a reading type (meterReadingMinDate / MaxDate)."""
+        return await self._get(
+            "/self-meter-reading/form-config",
+            {"meterReadingReasonId": reason, "supplyPointCode": sp.ean, "supplyPointUid": sp.uid},
+        )
+
+    async def submit_meter_reading(self, body: dict[str, Any]) -> Any:
+        """Send a customer meter reading (body from reading.build_request).
+
+        multipart/form-data with the JSON part `selfMeterReadingRequestBody` (photos of
+        the display would be the optional parts contentHighTariff / contentLowTariff).
+        Returns {activityId, meterReadingImplausible, isAttachmentNeeded}.
+        """
+        await self._ensure_token()
+        path = "/self-meter-reading"
+        for attempt in range(2):
+            form = aiohttp.FormData()
+            form.add_field(
+                "selfMeterReadingRequestBody",
+                json.dumps(body, ensure_ascii=False),
+                content_type="application/json",
+                filename="blob",
+            )
+            try:
+                async with self._session.post(
+                    f"{self._api_url}{path}",
+                    data=form,
+                    headers={
+                        "User-Agent": USER_AGENT,
+                        "Accept": "application/json",
+                        "Authorization": f"Bearer {self._access_token}",
+                        **({PARTNER_HEADER: self.partner} if self.partner else {}),
+                    },
+                    timeout=TIMEOUT,
+                ) as resp:
+                    if resp.status == 401 and attempt == 0:
+                        await self._ensure_token(force=True)
+                        continue
+                    text = await resp.text()
+                    _LOGGER.debug(
+                        "POST %s (partner %s) body %s -> HTTP %s headers %s response %s",
+                        path,
+                        self.partner,
+                        json.dumps(body, ensure_ascii=False),
+                        resp.status,
+                        {k: v for k, v in resp.headers.items() if k.lower() != "set-cookie"},
+                        text,
+                    )
+                    if resp.status not in (200, 201):
+                        raise CezConnectionError(f"POST {path}: HTTP {resp.status} {text}")
+                    return json.loads(text) if text else None
+            except (aiohttp.ClientError, TimeoutError, ValueError) as err:
+                raise CezConnectionError(f"POST {path} failed: {err}") from err
+        raise CezAuthError("Unauthorized")
 
     async def get_contract_info(
         self, sp: SupplyPoint, annual_consumption: float | None

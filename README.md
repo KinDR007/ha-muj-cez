@@ -148,6 +148,20 @@ settlements: the later document applies to the days it covers. The view
 loads the data through the websocket command `muj_cez/prices`. PDF invoices need `pypdf`
 (installed by Home Assistant from the integration requirements).
 
+**Meter reading** (tab `cez-odecet`, icon `mdi:counter`): the integration's own card
+`custom:muj-cez-reading-card` (served by the integration, no HACS needed; optional card
+options `entry_id`, `ean`, `title`) for entering a customer meter reading (samoodečet) like on
+the portal: supply point (all electricity points of the account), reading type (control
+reading for the distributor, diary, extraordinary billing, billing information), date, VT and
+NT (dual tariff only) in whole kWh and a note (max. 160 characters). The values are checked
+as you type, with the portal's rules: lower than the previous reading is an error, unusually
+high (more than 1.5× the usual consumption since the previous reading) a warning, one reading
+of a limited type per day, control readings only while the yearly limit allows. Before sending
+a summary with the consumption since the previous reading is shown, then the reading is sent to
+the portal (only Home Assistant administrators can send). Websocket commands `muj_cez/reading_form`,
+`muj_cez/reading_check`, `muj_cez/reading_submit`; portal API in
+[docs/api/self-meter-reading.md](docs/api/self-meter-reading.md).
+
 ## Comparison with a Home Assistant energy sensor
 
 Set **Reference energy sensor** in the integration options (an energy sensor measuring
@@ -410,6 +424,15 @@ jednou), běžné období ze simulace ČEZ rozdělené podle cen poslední faktu
 faktura účtuje za delší období, jsou do měsíců rozpočtené (≈). V novém cenovém roce, než přijde
 faktura s novými cenami, se běžné měsíce rozdělí podle ceníku produktu z portálu (sloupec vaší
 distribuční sazby a jističe); měsíc se rozdělí jen tehdy, když ceny vysvětlí částky simulace.
+
+Záložka **Odečet** (ikona počítadla) slouží k zadání samoodečtu elektroměru jako na portálu:
+odběrné místo, typ odečtu (kontrolní pro distributora, deníčkový, pro mimořádné vyúčtování,
+pro informace o vyúčtování), datum, stav VT a u dvoutarifu NT v celých kWh a poznámka
+(max. 160 znaků). Hodnoty se kontrolují už při psaní podle pravidel portálu: nižší než předchozí
+stav je chyba, nezvykle vysoká hodnota (víc než 1,5× obvyklá spotřeba od minulého odečtu) jen
+varování; jeden odečet daného typu za den, kontrolní odečty jen do ročního limitu. Před
+odesláním se zobrazí souhrn se spotřebou od minulého stavu, po potvrzení se odečet odešle na
+portál. Odesílat mohou jen administrátoři Home Assistantu.
 Opravné faktury nahrazují původní za dny, které pokrývají.
 
 Sekce **Průběh po 15 minutách** (jen s průběhovými daty elektroměru) ukazuje čtvrthodinové

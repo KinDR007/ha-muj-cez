@@ -10,6 +10,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import async_get_integration
 
 from .api import CezClient
 from .const import (
@@ -21,6 +22,7 @@ from .const import (
 )
 from .coordinator import MujCezConfigEntry, MujCezCoordinator
 from .dashboard import async_update_dashboard
+from .frontend import async_register_frontend
 from .pricing import InvoiceStore
 from .profile import ProfileStore
 from .services import async_setup_services
@@ -36,6 +38,8 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_setup_services(hass)
     async_setup_websocket(hass)
+    integration = await async_get_integration(hass, DOMAIN)
+    await async_register_frontend(hass, str(integration.version))
     return True
 
 

@@ -3,6 +3,8 @@
   "name": "Můj ČEZ",
   "after_dependencies": [
     "energy",
+    "frontend",
+    "http",
     "lovelace",
     "recorder",
     "repairs"

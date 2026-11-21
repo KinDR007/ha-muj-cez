@@ -49,6 +49,7 @@ MARKER = re.compile(r"\b(sensor|select|calendar)\.mujcez_([cgvas])_([a-z0-9_]+)"
 MISSING = "muj_cez_unavailable"
 VIEW_PATH = "cez"
 PRICES_PATH = "cez-ceny"
+READING_PATH = "cez-odecet"
 ACCOUNT_UNIQUE = {
     "chart_unit": "{entry}_chart_unit",
     "documents": "{entry}_documents",
@@ -210,6 +211,7 @@ def build_views(
     spot_today: str | None = None,
     spot_tomorrow: str | None = None,
     prices: bool = True,
+    reading: bool = True,
 ) -> list[dict[str, Any]]:
     """One view per consumption supply point, sections fitting the existing entities."""
     template = load_template()
@@ -283,12 +285,31 @@ def build_views(
             if len(consumption) > 1:
                 prices["title"] = f"{prices['title']} {sp.name}"
             views.append(prices)
+    if reading and consumption:
+        views.append(reading_view(entry_id))
     return views
+
+
+def reading_view(entry_id: str) -> dict[str, Any]:
+    """Meter reading tab: the integration's own card for all points of the account."""
+    card = {
+        "type": "custom:muj-cez-reading-card",
+        "entry_id": entry_id,
+        "grid_options": {"columns": "full"},
+    }
+    return {
+        "title": "Odečet",
+        "path": READING_PATH,
+        "icon": "mdi:counter",
+        "type": "sections",
+        "max_columns": 1,
+        "sections": [{"type": "grid", "cards": [card]}],
+    }
 
 
 def _is_ours(path: Any) -> bool:
     return isinstance(path, str) and bool(
-        re.fullmatch(rf"({VIEW_PATH}|{PRICES_PATH})(-\d+)?", path)
+        re.fullmatch(rf"({VIEW_PATH}|{PRICES_PATH}|{READING_PATH})(-\d+)?", path)
     )
 
 

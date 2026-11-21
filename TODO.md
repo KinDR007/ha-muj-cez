@@ -46,3 +46,13 @@
 - [x] Nový cenový rok bez faktury: rozpad z ceníku produktu (PDF CEN), i kombinace s poslední fakturou; ověřeno na vzdáleném HA (2026 celý rozložen)
 - [x] Opravné faktury a překryvy: pozdější doklad platí pro své dny (ořez), rozdílová oprava se přičítá; nasazeno na obě HA (zatím bez reálné opravné faktury v datech)
 - [x] Ověření na HA (pypdf z requirements se nainstaloval)
+
+## Samoodečet elektroměru (branch feature/meter-reading, jen lokálně)
+- [x] Rešerše API portálu z JS bundlu: `docs/api/` (README + skupiny endpointů, samoodečet podrobně)
+- [x] Validace jako portál (`reading.py`): celé kWh, nižší než předchozí = chyba, nezvykle vysoká (×1,5) = varování, jeden odečet za den, roční limit kontrolních odečtů, poznámka 160 znaků
+- [x] Backend `meter_reading.py`, websocket `reading_form` / `reading_check` / `reading_submit`, multipart `POST /self-meter-reading` (ověřeno proti lokálnímu serveru)
+- [x] Vlastní karta `custom:muj-cez-reading-card` (servíruje integrace), záložka `cez-odecet`
+- [x] Sonda `tools/probe/probe_reading.py` na obou loginech: tvary ověřeny (kWh, dny), validace odpovídá screenshotům portálu; nabízené typy z `requests-advanced`, rozsah data z `form-config`
+- [x] Ostrý test odeslání (2026-11-21, jednotarif, deníčkový odečet s poznámkou): HTTP 200, odečet hned na portálu; zkušební režim a volba „Odesílat odečty“ odebrány
+- [ ] Ostrý test na dvoutarifu (vzdálené HA) až bude stav VT/NT
+- [x] Nasazeno na lokální HA (záložka přes Dashboard Editor) i vzdálené HA (generovaný dashboard), karta se znovu registruje (polyfill scoped registry ztrácel brzkou definici)

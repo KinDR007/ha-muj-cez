@@ -65,7 +65,7 @@ async def main(cmd: str, args: list[str]) -> int:
                 for p in COMPONENT.rglob("*")
                 if p.is_file()
                 and "__pycache__" not in p.parts
-                and p.suffix in (".py", ".json", ".yaml")
+                and p.suffix in (".py", ".json", ".yaml", ".js")
             )
             pairs = [(str(COMPONENT / n), f"{REMOTE_COMPONENT}/{n}") for n in names]
         elif cmd == "put" and args and len(args) % 2 == 0:

@@ -82,8 +82,12 @@ async def test_new_dashboard_without_pv(
 ) -> None:
     await _setup(hass, freezer, DASHBOARD_NEW)
     config = await _config(hass, "muj-cez")
-    view, prices = config["views"]
+    view, prices, reading = config["views"]
     assert view["path"] == "cez"
+    assert reading["path"] == "cez-odecet" and reading["icon"] == "mdi:counter"
+    card = reading["sections"][0]["cards"][0]
+    assert card["type"] == "custom:muj-cez-reading-card"
+    assert card["entry_id"] == hass.config_entries.async_entries("muj_cez")[0].entry_id
     assert prices["path"] == "cez-ceny" and prices["icon"] == "mdi:cash-multiple"
     assert not prices.get("subview")  # own tab
     prices_text = json.dumps(prices, ensure_ascii=False)
@@ -127,7 +131,7 @@ async def test_pv_dashboard_into_existing(
     )
     await _setup(hass, freezer, "my-home")
     config = await _config(hass, "my-home")
-    assert [v["path"] for v in config["views"]] == ["home", "cez", "cez-ceny"]
+    assert [v["path"] for v in config["views"]] == ["home", "cez", "cez-ceny", "cez-odecet"]
     assert config["views"][0] == {"path": "home", "title": "Home"}
     assert "mine" in config["button_card_templates"]
     text = json.dumps(config["views"][1], ensure_ascii=False)
@@ -182,7 +186,7 @@ async def test_hdo_section(
     fake_dip.signals_data = {"*": load("dip_signals.json")}
     freezer.move_to(datetime(2026, 11, 17, 9, 30, tzinfo=TZ))
     await _setup(hass, freezer, DASHBOARD_NEW, now=datetime(2026, 11, 17, 9, 30, tzinfo=TZ))
-    view, _prices = (await _config(hass, "muj-cez"))["views"]
+    view, _prices, _reading = (await _config(hass, "muj-cez"))["views"]
     text = json.dumps(view, ensure_ascii=False)
     assert "Tarif HDO a cena" in text
     ids = _assert_entities_exist(hass, text)
@@ -196,7 +200,7 @@ async def test_no_hdo_section_price_in_contract(
     hass: HomeAssistant, mock_client: AsyncMock, freezer: FrozenDateTimeFactory
 ) -> None:
     await _setup(hass, freezer, DASHBOARD_NEW)
-    view, _prices = (await _config(hass, "muj-cez"))["views"]
+    view, _prices, _reading = (await _config(hass, "muj-cez"))["views"]
     text = json.dumps(view, ensure_ascii=False)
     assert "Tarif HDO a cena" not in text
     uid = next(iter(mock_client.fetch_all.return_value.supply_points))
@@ -214,7 +218,7 @@ async def test_meter_reading_rows(
     assert spd.meter_reading
     spd.meter_reading.value_lt = 13160.0 if dual else None
     await _setup(hass, freezer, DASHBOARD_NEW)
-    view, _prices = (await _config(hass, "muj-cez"))["views"]
+    view, _prices, _reading = (await _config(hass, "muj-cez"))["views"]
     text = json.dumps(view, ensure_ascii=False)
     _assert_entities_exist(hass, text)
     registry = er.async_get(hass)
@@ -229,7 +233,9 @@ async def test_meter_reading_rows(
 
 
 def test_is_ours() -> None:
-    assert all(dashboard._is_ours(p) for p in ("cez", "cez-2", "cez-ceny", "cez-ceny-3"))
+    assert all(
+        dashboard._is_ours(p) for p in ("cez", "cez-2", "cez-ceny", "cez-ceny-3", "cez-odecet")
+    )
     assert not any(dashboard._is_ours(p) for p in ("home", "cez-x", "cezceny", None, "cez-ceny-"))
 
 
@@ -241,5 +247,5 @@ async def test_second_point_own_price_tab(
     spd = next(iter(coordinator.data.supply_points.values()))
     data = dataclasses.replace(coordinator.data, supply_points={"a": spd, "b": spd})
     views = dashboard.build_views(hass, coordinator.config_entry.entry_id, data)
-    assert [v["path"] for v in views] == ["cez", "cez-ceny", "cez-2", "cez-ceny-2"]
+    assert [v["path"] for v in views] == ["cez", "cez-ceny", "cez-2", "cez-ceny-2", "cez-odecet"]
     assert "muj_cez/prices" in json.dumps(views[3], ensure_ascii=False)

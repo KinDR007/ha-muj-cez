@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
-from . import invoice, pricelist
+from . import invoice, meter_reading, pricelist
 from .const import DOMAIN, price_breakdown_enabled
 
 # The dashboard section identifies the place by a sensor of it.
@@ -21,6 +21,9 @@ PLACE_SENSOR_KEY = "grid_data_date"
 def async_setup_websocket(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_profile)
     websocket_api.async_register_command(hass, ws_prices)
+    websocket_api.async_register_command(hass, ws_reading_form)
+    websocket_api.async_register_command(hass, ws_reading_check)
+    websocket_api.async_register_command(hass, ws_reading_submit)
 
 
 @websocket_api.websocket_command(
@@ -108,3 +111,63 @@ async def ws_prices(
         sources,
     )
     connection.send_result(msg["id"], {"supply_point": sp.name, "ean": sp.ean, **report})
+
+
+READING_FIELDS = {
+    vol.Required("entry_id"): str,
+    vol.Required("ean"): str,
+    vol.Optional("reading_type"): vol.Any(str, None),
+    vol.Optional("date"): vol.Any(str, None),
+    vol.Optional("vt"): vol.Any(str, int, float, None),
+    vol.Optional("nt"): vol.Any(str, int, float, None),
+    vol.Optional("note"): vol.Any(str, None),
+}
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/reading_form", vol.Optional("entry_id"): str}
+)
+@websocket_api.async_response
+async def ws_reading_form(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Supply points with their previous readings for the meter reading card."""
+    try:
+        result = await meter_reading.async_form(hass, msg.get("entry_id"))
+    except meter_reading.ReadingError as err:
+        connection.send_error(msg["id"], err.code, str(err))
+        return
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/reading_check", **READING_FIELDS}
+)
+@websocket_api.async_response
+async def ws_reading_check(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Validate the entered reading (errors block sending, warnings do not)."""
+    try:
+        result, _state = await meter_reading.async_check(hass, msg)
+    except meter_reading.ReadingError as err:
+        connection.send_error(msg["id"], err.code, str(err))
+        return
+    connection.send_result(msg["id"], result.as_dict())
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/reading_submit", **READING_FIELDS}
+)
+@websocket_api.async_response
+async def ws_reading_submit(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Send the reading to the portal."""
+    try:
+        result = await meter_reading.async_submit(hass, msg)
+    except meter_reading.ReadingError as err:
+        connection.send_error(msg["id"], err.code, str(err))
+        return
+    connection.send_result(msg["id"], result)
