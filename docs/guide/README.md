@@ -5,7 +5,7 @@ Podrobný popis instalace, nastavení a všech funkcí integrace
 Home Assistantu, osobní údaje (adresa, e-mail, EAN, čísla smlouvy, zákazníka, elektroměru
 a dokladů) jsou nahrazené smyšlenými hodnotami.
 
-![Odečet elektroměru a cenový rozpad](img/odecet-souhrn.png)
+![Dashboard ČEZ](img/readme-dashboard.png)
 
 ## Obsah
 
@@ -21,7 +21,8 @@ a dokladů) jsou nahrazené smyšlenými hodnotami.
    faktury, opravné faktury, ceníky
 6. [Odečet elektroměru](odecet.md): zadání samoodečtu s kontrolou hodnot
 7. [Akce a automatizace](akce.md): načtení dokladů, aktualizace dashboardu, příklady
-8. [Řešení potíží](potize.md): opravy, přihlášení, diagnostika
+8. [Řešení potíží](potize.md): opravy, přihlášení, diagnostika, ladicí log
+9. [Pro pokročilé](pokrocile.md): atributy senzorů, statistiky, HDO, porovnání s HA, websocket příkazy
 
 Snímky se generují nástrojem `tools/docs/shots.mjs` (viz `tools/docs/shots.json`).
 

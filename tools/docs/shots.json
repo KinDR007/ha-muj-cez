@@ -399,6 +399,50 @@
       "target": {
         "dialog": true
       }
+    },
+    {
+      "id": "readme-dashboard",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "clip": [
+          16,
+          64,
+          1368,
+          1047
+        ]
+      }
+    },
+    {
+      "id": "readme-ceny",
+      "host": "remote",
+      "path": "/muj-cez/cez-ceny",
+      "target": {
+        "section": "Platby podle položek"
+      }
+    },
+    {
+      "id": "readme-odecet",
+      "host": "remote",
+      "path": "/muj-cez/cez-odecet",
+      "actions": [
+        {
+          "fill": "muj-cez-reading-card >> #vt",
+          "value": 1690
+        },
+        {
+          "fill": "muj-cez-reading-card >> #nt",
+          "value": 13300
+        },
+        {
+          "fill": "muj-cez-reading-card >> #note",
+          "value": "deníčkový odečet",
+          "wait": 1500
+        }
+      ],
+      "target": {
+        "section": "Odečet elektroměru"
+      }
     }
   ]
 }
