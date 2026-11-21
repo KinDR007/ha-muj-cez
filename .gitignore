@@ -15,3 +15,5 @@ zadani.md
 .snapshot/
 config.md
 logs/
+node_modules/
+*.local.json

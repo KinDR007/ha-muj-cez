@@ -20,7 +20,7 @@ from homeassistant.util import dt as dt_util
 
 from . import reading
 from .api import CezError, SupplyPoint
-from .const import DOMAIN
+from .const import DOMAIN, docs_url
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -165,6 +165,7 @@ async def async_form(hass: HomeAssistant, entry_id: str | None = None) -> dict[s
         "types": list(reading.TYPES),
         "distributor_types": list(reading.DISTRIBUTOR_TYPES),
         "note_max": reading.NOTE_MAX,
+        "docs_url": docs_url("odecet"),
     }
 
 

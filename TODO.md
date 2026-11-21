@@ -56,3 +56,10 @@
 - [x] Ostrý test odeslání (2026-11-21, jednotarif, deníčkový odečet s poznámkou): HTTP 200, odečet hned na portálu; zkušební režim a volba „Odesílat odečty“ odebrány
 - [ ] Ostrý test na dvoutarifu (vzdálené HA) až bude stav VT/NT
 - [x] Nasazeno na lokální HA (záložka přes Dashboard Editor) i vzdálené HA (generovaný dashboard), karta se znovu registruje (polyfill scoped registry ztrácel brzkou definici)
+
+## Uživatelská příručka (docs/guide)
+- [x] Kapitoly: instalace, nastavení, entity, dashboard ČEZ, cenový rozpad, odečet, akce, potíže
+- [x] Snímky `tools/docs/shots.mjs` (tmavý režim, výstřižky, anonymizace + kontrola úniků, štítky)
+- [x] Napojení: manifest `documentation`, odkazy v config/options flow a opravách, ikona ? na kartě Odečet, README s absolutními odkazy (HACS)
+- [ ] Po vydání přegenerovat snímky odečtu (ikona ? na kartě)
+- [ ] Ověřit zobrazení v HACS a v Marketplace HA

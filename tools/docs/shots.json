@@ -1,0 +1,399 @@
+{
+  "shots": [
+    {
+      "id": "odecet-formular",
+      "host": "remote",
+      "path": "/muj-cez/cez-odecet",
+      "target": {
+        "section": "Odečet elektroměru"
+      },
+      "callouts": [
+        [
+          1,
+          "Odběrné místo"
+        ],
+        [
+          2,
+          "Typ odečtu"
+        ],
+        [
+          3,
+          "Stav ke dni"
+        ],
+        [
+          4,
+          "Číslo elektroměru"
+        ],
+        [
+          5,
+          "Poslední stav"
+        ],
+        [
+          6,
+          "Vysoký tarif (T1)"
+        ],
+        [
+          7,
+          "Nízký tarif (T2)"
+        ],
+        [
+          8,
+          "Poznámka pro vás"
+        ],
+        [
+          9,
+          "Zkontrolovat a odeslat"
+        ]
+      ]
+    },
+    {
+      "id": "odecet-kontrola",
+      "host": "remote",
+      "path": "/muj-cez/cez-odecet",
+      "actions": [
+        {
+          "fill": "muj-cez-reading-card >> #vt",
+          "value": 1500
+        },
+        {
+          "fill": "muj-cez-reading-card >> #nt",
+          "value": 20000
+        },
+        {
+          "fill": "muj-cez-reading-card >> #note",
+          "value": "deníčkový odečet",
+          "wait": 1500
+        }
+      ],
+      "target": {
+        "section": "Odečet elektroměru"
+      }
+    },
+    {
+      "id": "odecet-souhrn",
+      "host": "remote",
+      "path": "/muj-cez/cez-odecet",
+      "actions": [
+        {
+          "fill": "muj-cez-reading-card >> #vt",
+          "value": 1690
+        },
+        {
+          "fill": "muj-cez-reading-card >> #nt",
+          "value": 13300
+        },
+        {
+          "fill": "muj-cez-reading-card >> #note",
+          "value": "deníčkový odečet",
+          "wait": 1500
+        },
+        {
+          "click": "muj-cez-reading-card >> #submit",
+          "wait": 1000
+        }
+      ],
+      "target": {
+        "section": "Odečet elektroměru"
+      }
+    },
+    {
+      "id": "ceny-mesic",
+      "host": "remote",
+      "path": "/muj-cez/cez-ceny",
+      "target": {
+        "section": "Platby podle položek"
+      },
+      "callouts": [
+        [
+          1,
+          "Měsíc",
+          "above"
+        ],
+        [
+          2,
+          "‹",
+          "above"
+        ],
+        [
+          3,
+          "bez DPH",
+          "above"
+        ],
+        [
+          4,
+          "simulace ČEZ",
+          "left"
+        ],
+        [
+          5,
+          "Obchodní část (dodavatel)"
+        ],
+        [
+          6,
+          "Spotřeba / nízký tarif (NT/T2)"
+        ],
+        [
+          7,
+          "Průměrná cena za kWh"
+        ]
+      ]
+    },
+    {
+      "id": "cez-smlouva",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Smlouva a odběrné místo"
+      }
+    },
+    {
+      "id": "cez-vyuctovani",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Predikce vyúčtování"
+      }
+    },
+    {
+      "id": "cez-zalohy",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Příští záloha"
+      }
+    },
+    {
+      "id": "cez-hdo",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Tarif HDO a cena"
+      }
+    },
+    {
+      "id": "cez-elektromer",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Přetoky do sítě"
+      }
+    },
+    {
+      "id": "cez-vykup",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Výkup přetoků"
+      }
+    },
+    {
+      "id": "cez-ha-vs-cez",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "HA vs elektroměr ČEZ"
+      }
+    },
+    {
+      "id": "cez-odber-mesice",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Odběr a přetoky po měsících"
+      }
+    },
+    {
+      "id": "cez-vykup-mesice",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Výkup po měsících"
+      }
+    },
+    {
+      "id": "cez-15min",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Průběh po 15 minutách"
+      }
+    },
+    {
+      "id": "cez-spot-dnes",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Spotová cena dnes a zítra"
+      }
+    },
+    {
+      "id": "cez-spot-mesice",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Spotová cena po měsících"
+      }
+    },
+    {
+      "id": "cez-spotreba-mesice",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Spotřeba po měsících"
+      }
+    },
+    {
+      "id": "cez-mezirocni",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Meziroční porovnání"
+      }
+    },
+    {
+      "id": "cez-obdobi-celkem",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Zúčtovací období celkem"
+      }
+    },
+    {
+      "id": "cez-obdobi",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Průměrná cena"
+      }
+    },
+    {
+      "id": "cez-doklady",
+      "host": "remote",
+      "path": "/muj-cez/cez",
+      "target": {
+        "section": "Doklady"
+      }
+    },
+    {
+      "id": "ceny-kvartal",
+      "host": "remote",
+      "path": "/muj-cez/cez-ceny",
+      "actions": [
+        {
+          "click": "text=Kvartál",
+          "wait": 1500
+        }
+      ],
+      "target": {
+        "section": "Platby podle položek"
+      }
+    },
+    {
+      "id": "ceny-rok",
+      "host": "remote",
+      "path": "/muj-cez/cez-ceny",
+      "actions": [
+        {
+          "click": "text=Rok",
+          "wait": 1500
+        }
+      ],
+      "target": {
+        "section": "Platby podle položek"
+      }
+    },
+    {
+      "id": "ceny-rok-minuly",
+      "host": "remote",
+      "path": "/muj-cez/cez-ceny",
+      "actions": [
+        {
+          "click": "text=Rok",
+          "wait": 1000
+        },
+        {
+          "click": "text=‹",
+          "wait": 1500
+        }
+      ],
+      "target": {
+        "section": "Platby podle položek"
+      }
+    },
+    {
+      "id": "nastaveni-integrace",
+      "host": "remote",
+      "path": "/config/integrations/integration/muj_cez",
+      "viewport": {
+        "width": 1400,
+        "height": 700
+      },
+      "target": {
+        "clip": [
+          190,
+          70,
+          1020,
+          530
+        ]
+      },
+      "callouts": [
+        [
+          1,
+          "jan.novak@example.cz"
+        ],
+        [
+          2,
+          "ČEZ Ukázková 123, Praha"
+        ],
+        [
+          3,
+          "Můj ČEZ"
+        ],
+        [
+          4,
+          "Přidat službu",
+          "above"
+        ]
+      ]
+    },
+    {
+      "id": "nastaveni-volby",
+      "host": "remote",
+      "path": "/config/integrations/integration/muj_cez",
+      "viewport": {
+        "width": 1400,
+        "height": 1400
+      },
+      "actions": [
+        {
+          "clickLabel": "Nastavit",
+          "wait": 4000
+        }
+      ],
+      "target": {
+        "dialog": true
+      }
+    },
+    {
+      "id": "instalace-prihlaseni",
+      "host": "remote",
+      "path": "/config/integrations/dashboard/add?domain=muj_cez",
+      "viewport": {
+        "width": 1400,
+        "height": 1000
+      },
+      "actions": [
+        {
+          "wait": 4000
+        },
+        {
+          "click": "text=OK",
+          "wait": 4000
+        }
+      ],
+      "target": {
+        "dialog": true
+      }
+    }
+  ]
+}

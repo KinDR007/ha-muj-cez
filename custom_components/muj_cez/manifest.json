@@ -13,7 +13,7 @@
     "@KinDR007"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/KinDR007/ha-muj-cez",
+  "documentation": "https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/README.md",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/KinDR007/ha-muj-cez/issues",

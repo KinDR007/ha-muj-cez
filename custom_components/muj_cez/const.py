@@ -7,6 +7,13 @@ from typing import Any
 DOMAIN = "muj_cez"
 MANUFACTURER = "ČEZ"
 PORTAL_URL = "https://muj.cez.cz"
+# User guide (docs/guide in the repository), chapters linked from the UI.
+DOCS_URL = "https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/"
+
+
+def docs_url(chapter: str = "README") -> str:
+    return f"{DOCS_URL}{chapter}.md"
+
 
 CONF_UPDATE_PERIOD = "update_period"
 CONF_UPDATE_TIME = "update_time"

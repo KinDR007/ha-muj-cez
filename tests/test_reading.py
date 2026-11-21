@@ -199,6 +199,7 @@ async def test_websocket_form_check_submit(
     today = form["today"]
     assert today == dt_util.now().date().isoformat()
     assert form["types"] == ["control", "diary", "extraordinary", "info"]
+    assert form["docs_url"].endswith("/docs/guide/odecet.md")
     (point,) = form["points"]
     assert point["entry_id"] == entry_id and not point["dual_tariff"]
     assert point["previous"] == {"date": "2026-02-17", "vt": 11598.0}

@@ -39,6 +39,7 @@ from .const import (
     DASHBOARD_NEW_URL,
     DASHBOARD_OFF,
     DOMAIN,
+    docs_url,
     price_breakdown_enabled,
 )
 
@@ -370,6 +371,7 @@ async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
             severity=ir.IssueSeverity.WARNING,
             translation_key=ISSUE_FAILED,
             translation_placeholders={"error": str(err)},
+            learn_more_url=docs_url("potize"),
         )
         return None
     ir.async_delete_issue(hass, DOMAIN, ISSUE_FAILED)
@@ -386,6 +388,7 @@ async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
             severity=ir.IssueSeverity.WARNING,
             translation_key=ISSUE_CARDS,
             translation_placeholders={"cards": ", ".join(missing)},
+            learn_more_url=docs_url("potize"),
         )
     else:
         ir.async_delete_issue(hass, DOMAIN, ISSUE_CARDS)

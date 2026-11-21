@@ -31,6 +31,7 @@ from .conftest import PASSWORD, USERNAME
 async def test_user_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None:
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     assert result["type"] is FlowResultType.FORM
+    assert result["description_placeholders"]["docs_url"].endswith("/docs/guide/instalace.md")
     with patch(
         "custom_components.muj_cez.config_flow.async_energy_grid_sensors",
         AsyncMock(return_value=("sensor.import_energy", "sensor.export_energy")),

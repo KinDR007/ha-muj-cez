@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Můj ČEZ",
-        "description": "Sign in with your muj.cez.cz account.",
+        "description": "Sign in with your muj.cez.cz account. Installation guide (Czech): [guide]({docs_url}).",
         "data": {
           "username": "E-mail",
           "password": "Password"
@@ -25,7 +25,7 @@
       },
       "settings": {
         "title": "Settings",
-        "description": "Update schedule, reference sensors and dashboard. Grid import/export sensors are prefilled from the Energy dashboard, the spot price sensor from cz_energy_spot_prices (when installed); everything can be changed.",
+        "description": "Update schedule, reference sensors and dashboard. Grid import/export sensors are prefilled from the Energy dashboard, the spot price sensor from cz_energy_spot_prices (when installed); everything can be changed. All options explained (Czech): [guide]({docs_url}).",
         "data": {
           "update_period": "Update period",
           "update_time": "Update time",
@@ -86,7 +86,8 @@
           "install_cards": "Installs cards missing for the dashboard via Marketplace / HACS (when present), otherwise downloads the latest release from GitHub.",
           "hdo": "Loads the low/high tariff switching times (HDO) from the ČEZ Distribuce portal with the same credentials. Adds the current tariff, next switch and current price per kWh. Skipped silently when the portal has no HDO for the supply point.",
           "price_breakdown": "Downloads the settlements (CSV data file or PDF) and product price lists of the account and adds the \"Cenový rozpad\" dashboard tab: what each item costs per month, quarter and year (supplier part, distribution, taxes, PV payout). Off: nothing of this is downloaded and the tab is not created; turning it off deletes the downloaded invoices."
-        }
+        },
+        "description": "All options explained (Czech): [guide]({docs_url})."
       }
     }
   },

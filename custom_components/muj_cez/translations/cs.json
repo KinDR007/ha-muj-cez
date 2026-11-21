@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Můj ČEZ",
-        "description": "Přihlaste se účtem z muj.cez.cz.",
+        "description": "Přihlaste se účtem z muj.cez.cz. Návod k instalaci: [příručka]({docs_url}).",
         "data": {
           "username": "E-mail",
           "password": "Heslo"
@@ -25,7 +25,7 @@
       },
       "settings": {
         "title": "Nastavení",
-        "description": "Plán aktualizace, referenční senzory a dashboard. Senzory odběru a exportu jsou předvyplněné z panelu Energie, senzor spotové ceny z integrace cz_energy_spot_prices (pokud je nainstalovaná); vše lze změnit.",
+        "description": "Plán aktualizace, referenční senzory a dashboard. Senzory odběru a exportu jsou předvyplněné z panelu Energie, senzor spotové ceny z integrace cz_energy_spot_prices (pokud je nainstalovaná); vše lze změnit. Popis všech voleb: [příručka]({docs_url}).",
         "data": {
           "update_period": "Perioda aktualizace",
           "update_time": "Čas aktualizace",
@@ -86,7 +86,8 @@
           "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu.",
           "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá.",
           "price_breakdown": "Stáhne vyúčtování (datový soubor CSV nebo PDF) a ceníky produktu a přidá do dashboardu záložku „Cenový rozpad“: kolik stojí jednotlivé položky po měsících, čtvrtletích a letech (obchodní část, distribuce, daně, výkup přetoků). Vypnuto: nic z toho se nestahuje a záložka se nevytvoří; vypnutím se stažené faktury smažou."
-        }
+        },
+        "description": "Popis všech voleb: [příručka]({docs_url})."
       }
     }
   },

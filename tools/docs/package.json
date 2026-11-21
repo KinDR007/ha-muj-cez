@@ -1,0 +1,9 @@
+{
+  "name": "muj-cez-docs-screenshots",
+  "private": true,
+  "type": "module",
+  "description": "Anonymized dark mode screenshots of the integration for docs/guide",
+  "dependencies": {
+    "playwright-core": "1.49.1"
+  }
+}

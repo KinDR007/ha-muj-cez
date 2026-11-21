@@ -2,11 +2,12 @@
 // Served by the integration, validation and sending are done by the backend
 // (websocket muj_cez/reading_form, muj_cez/reading_check, muj_cez/reading_submit).
 
-const VERSION = "4";
+const VERSION = "5";
 
 const STRINGS = {
   cs: {
     title: "Odečet elektroměru",
+    help: "Nápověda",
     point: "Odběrné místo",
     type: "Typ odečtu",
     date: "Stav ke dni",
@@ -54,6 +55,7 @@ const STRINGS = {
   },
   en: {
     title: "Meter reading",
+    help: "Help",
     point: "Supply point",
     type: "Reading type",
     date: "Reading date",
@@ -251,9 +253,13 @@ class MujCezReadingCard extends HTMLElement {
     else if (s.phase === "sending") body = `<p class="muted">${t.loading}</p>`;
     else if (s.phase === "done") body = this._doneHtml();
     else body = this._formHtml();
+    const url = this._data?.docs_url;
+    const help = url
+      ? `<a class="help" href="${esc(url)}" target="_blank" rel="noreferrer" title="${t.help}" aria-label="${t.help}">?</a>`
+      : "";
     root.innerHTML = `<style>${CSS}</style>
       <ha-card>
-        <div class="head"><span>${esc(this._config.title || t.title)}</span></div>
+        <div class="head"><span>${esc(this._config.title || t.title)}</span>${help}</div>
         <div class="body">${body}</div>
       </ha-card>`;
     this._bind();
@@ -391,6 +397,9 @@ class MujCezReadingCard extends HTMLElement {
 const CSS = `
   ha-card { overflow: hidden; }
   .head { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 0; font-size: 1.25em; font-weight: 500; }
+  .help { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--secondary-text-color);
+    color: var(--secondary-text-color); font-size: 0.6em; line-height: 24px; text-align: center; text-decoration: none; }
+  .help:hover { color: var(--primary-color); border-color: var(--primary-color); }
   .body { padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

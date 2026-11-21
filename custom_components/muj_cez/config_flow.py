@@ -42,6 +42,7 @@ from .const import (
     DEFAULT_UPDATE_TIME,
     DOMAIN,
     UPDATE_PERIODS,
+    docs_url,
     price_breakdown_enabled,
 )
 from .coordinator import MujCezConfigEntry
@@ -194,6 +195,7 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
                 USER_SCHEMA, {CONF_USERNAME: (user_input or {}).get(CONF_USERNAME)}
             ),
             errors=errors,
+            description_placeholders={"docs_url": docs_url("instalace")},
         )
 
     async def async_step_account(
@@ -235,7 +237,9 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title=title, data=self._data, options=user_input)
         schema, suggested = await settings_form(self.hass, None)
         return self.async_show_form(
-            step_id="settings", data_schema=self.add_suggested_values_to_schema(schema, suggested)
+            step_id="settings",
+            data_schema=self.add_suggested_values_to_schema(schema, suggested),
+            description_placeholders={"docs_url": docs_url("nastaveni")},
         )
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
@@ -278,4 +282,5 @@ class MujCezOptionsFlow(OptionsFlowWithReload):
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(schema, suggested),
+            description_placeholders={"docs_url": docs_url("nastaveni")},
         )

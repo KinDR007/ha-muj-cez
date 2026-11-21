@@ -9,7 +9,13 @@ The portal has no official API. The integration uses the same JSON API as the we
 frontend and signs in with plain HTTP (OAuth2 + PKCE, no browser needed). It can break
 when ČEZ changes the portal.
 
-Návod k instalaci a nastavení v češtině: [Instalace a nastavení](#instalace-a-nastavení).
+**User guide / Uživatelská příručka** (česky, se snímky obrazovky): [docs/guide](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/README.md): instalace,
+nastavení, entity, dashboard, cenový rozpad, odečet elektroměru, akce, řešení potíží.
+
+<a href="https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/README.md"><img src="https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/guide/img/odecet-formular.png" width="300" alt="Odečet elektroměru"></a>
+<a href="https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/README.md"><img src="https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/guide/img/cez-smlouva.png" width="300" alt="Smlouva a odběrné místo"></a>
+
+Stručný návod v češtině: [Instalace a nastavení](#instalace-a-nastavení).
 
 ## Entities (per supply point)
 
@@ -160,7 +166,7 @@ of a limited type per day, control readings only while the yearly limit allows. 
 a summary with the consumption since the previous reading is shown, then the reading is sent to
 the portal (only Home Assistant administrators can send). Websocket commands `muj_cez/reading_form`,
 `muj_cez/reading_check`, `muj_cez/reading_submit`; portal API in
-[docs/api/self-meter-reading.md](docs/api/self-meter-reading.md).
+[docs/api/self-meter-reading.md](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/api/self-meter-reading.md).
 
 ## Comparison with a Home Assistant energy sensor
 
@@ -186,7 +192,7 @@ or period (cost incl. fixed fees / kWh).
 `muj_cez.get_documents` returns documents (newest first) with optional filters
 `date_from`, `date_to`, `document_type`, `contract`, `unpaid_only`, `limit` (max 1000).
 
-See [docs/dashboard.md](docs/dashboard.md) for a billing periods table card, the calendar
+See [docs/dashboard.md](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/dashboard.md) for a billing periods table card, the calendar
 card and an automation example.
 
 The next advance payment date sensor also carries `variable_symbol` and `bank_account`
@@ -259,7 +265,7 @@ HA_TOKEN=... HA_WS=ws://<ha>:8123/api/websocket \
 `tools/offline.py` provides `OfflineCezClient` and `load_ha_daily()` for experiments.
 
 `tools/probe/` contains scripts used to explore the portal API. See
-[docs/analyza-proveditelnosti.md](docs/analyza-proveditelnosti.md) for the API analysis (Czech).
+[docs/analyza-proveditelnosti.md](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/analyza-proveditelnosti.md) for the API analysis (Czech).
 
 Never commit credentials or files from `tools/probe/probe_out/` (personal data, tokens).
 
@@ -297,12 +303,12 @@ Aktualizace se dělá stejně: nahraďte složku `muj_cez` novou verzí a restar
 
 1. **Nastavení → Zařízení a služby → Přidat integraci** a vyhledejte „ČEZ“.
 
-   ![Výběr integrace Můj ČEZ](docs/img/instalace/01-pridat-integraci.png)
+   ![Výběr integrace Můj ČEZ](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/instalace/01-pridat-integraci.png)
 
 2. Zadejte e-mail a heslo, kterými se přihlašujete na muj.cez.cz, a klikněte na
    **Odeslat**. Integrace se hned přihlásí a načte data, trvá to několik sekund.
 
-   ![Přihlášení účtem Můj ČEZ](docs/img/instalace/02-prihlaseni.png)
+   ![Přihlášení účtem Můj ČEZ](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/instalace/02-prihlaseni.png)
 
    Možné chyby:
    - **Neplatný e-mail nebo heslo**: zkontrolujte, že se stejnými údaji přihlásíte na webu.
@@ -315,13 +321,13 @@ Aktualizace se dělá stejně: nahraďte složku `muj_cez` novou verzí a restar
    - **Můj ČEZ**: kalendář **Doklady**, počet nepřečtených zpráv a přepínač jednotky grafů
      (kWh / Kč).
 
-   ![Integrace po přidání](docs/img/instalace/03-integrace.png)
+   ![Integrace po přidání](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/instalace/03-integrace.png)
 
 ### 3. Nastavení
 
 Při instalaci (krok **Nastavení** po přihlášení) i později přes ozubené kolo u účtu:
 
-![Nastavení integrace](docs/img/instalace/04-nastaveni.png)
+![Nastavení integrace](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/instalace/04-nastaveni.png)
 
 - **Perioda aktualizace**: denně, týdně (v pondělí) nebo měsíčně (1. den v měsíci).
   Data na portálu se mění zřídka, týdenní perioda většinou stačí.
@@ -359,7 +365,7 @@ k novému přihlášení; stačí zadat nové heslo.
 
 ### 4. Entity
 
-![Zařízení odběrného místa](docs/img/instalace/05-zarizeni.png)
+![Zařízení odběrného místa](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/instalace/05-zarizeni.png)
 
 Hlavní senzory odběrného místa:
 
@@ -445,40 +451,40 @@ historie po instalaci trvá několik minut.
 Ukázka pohledu ČEZ bez FVE s predikcí, měsíčními a meziročními grafy (přepínání kWh / Kč)
 a porovnáním s měřením HA:
 
-![Dashboard ČEZ, horní část](docs/img/instalace/06-dashboard-1.png)
+![Dashboard ČEZ, horní část](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/instalace/06-dashboard-1.png)
 
-![Dashboard ČEZ, zúčtovací období](docs/img/instalace/07-dashboard-2.png)
+![Dashboard ČEZ, zúčtovací období](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/instalace/07-dashboard-2.png)
 
 #### Ukázka s fotovoltaikou
 
 Souhrny elektroměru, výkupu přetoků a porovnání HA s elektroměrem ČEZ po měsících:
 
-![Dashboard s FVE – přehled](docs/img/fve/01-prehled.png)
+![Dashboard s FVE – přehled](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/fve/01-prehled.png)
 
 Odběr ze sítě a přetoky po měsících, vyplacený výkup proti hodnotě přetoků za spotovou cenu:
 
-![Dashboard s FVE – odběr, přetoky a výkup](docs/img/fve/02-odber-pretoky-vykup.png)
+![Dashboard s FVE – odběr, přetoky a výkup](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/fve/02-odber-pretoky-vykup.png)
 
 Spotová cena dnes a zítra (před zveřejněním zítřka odhad podle posledních 7 dní) a po
 měsících: průměr spotu, spot vážený přetoky a vyplacená výkupní cena:
 
-![Dashboard s FVE – spotové ceny](docs/img/fve/03-spot.png)
+![Dashboard s FVE – spotové ceny](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/fve/03-spot.png)
 
 Tarif HDO z portálu ČEZ Distribuce: aktuální tarif a cena, časová osa NT/VT pro dnešek
 a zítřek s vyznačeným aktuálním časem (sekce se zobrazí jen u odběrných míst s HDO):
 
-![Dashboard – tarif HDO a cena](docs/img/fve/05-hdo.png)
+![Dashboard – tarif HDO a cena](https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/fve/05-hdo.png)
 
 Na mobilu (grafy mají tooltipy, řádky otevírají detail entity, přepínač kWh / Kč funguje i na dotyk):
 
-<img src="docs/img/fve/04-mobil-spot.png" width="360" alt="Dashboard s FVE na mobilu">
+<img src="https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/fve/04-mobil-spot.png" width="360" alt="Dashboard s FVE na mobilu">
 
 Údaje na snímcích (EAN, čísla smluv a elektroměru, adresa) jsou anonymizované.
 
 Pohled používá vlastní karty z HACS (button-card, stack-in-card, mini-graph-card;
 card-mod je volitelný). Šablona pochází ze skriptu `tools/dashboard/build_cez_view.py`.
 Jednodušší karty bez dalších závislostí (tabulka zúčtovacích období, kalendář dokladů,
-automatizace upozornění na nezaplacené doklady) jsou v [docs/dashboard.md](docs/dashboard.md).
+automatizace upozornění na nezaplacené doklady) jsou v [docs/dashboard.md](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/dashboard.md).
 
 ### Soukromí
 
