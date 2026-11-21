@@ -24,3 +24,20 @@ a dokladů) jsou nahrazené smyšlenými hodnotami.
 8. [Řešení potíží](potize.md): opravy, přihlášení, diagnostika
 
 Snímky se generují nástrojem `tools/docs/shots.mjs` (viz `tools/docs/shots.json`).
+
+## Podpořte vývoj
+
+Integrace je zdarma a vyvíjím ji ve volném čase. Portál ČEZ se průběžně mění a každá jeho
+změna může integraci rozbít. Udržet ji funkční, opravovat chyby po změnách portálu, testovat
+nové verze Home Assistantu a přidávat funkce jako cenový rozpad nebo odečet elektroměru stojí
+desítky hodin práce.
+
+Pokud vám integrace šetří čas nebo peníze, budu rád za příspěvek na další vývoj, ať už
+jednorázově, nebo třeba jednou za rok. Částku zadáte v bankovní aplikaci podle sebe.
+
+<img src="../img/qr-platba.png" width="220" alt="QR platba: podpora projektu ha-muj-cez">
+
+QR platba (CZK) nebo [PayPal](https://paypal.me/KinDR007)
+
+Pomůže i hvězdička na GitHubu, nahlášení chyby nebo nápad v
+[Issues](https://github.com/KinDR007/ha-muj-cez/issues). Děkuji!

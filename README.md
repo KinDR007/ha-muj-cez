@@ -230,13 +230,16 @@ Data is also loaded at Home Assistant start. A failed scheduled update is retrie
 6× every 30 minutes; entities keep their last values meanwhile. Invalid credentials
 trigger the re-authentication flow.
 
-## Support
+## Support the project
 
-The integration is developed in my free time and is free to use. If it saves you time
-or money, you can support further development (new features, keeping up with portal
-changes, testing on new Home Assistant releases) with a donation via
-[PayPal](https://paypal.me/KinDR007). Bug reports and ideas in
-[Issues](https://github.com/KinDR007/ha-muj-cez/issues) help just as much. Thank you.
+<img src="https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/qr-platba.png" width="220" alt="QR platba: podpora projektu ha-muj-cez">
+
+The integration is free and developed in my spare time. The ČEZ portal changes over time and
+every change can break it; keeping it working, fixing it after portal changes, testing new
+Home Assistant versions and adding features takes many hours. If it saves you time or money,
+a contribution to further development is appreciated: [PayPal](https://paypal.me/KinDR007) or
+the Czech QR payment above (CZK, any amount). A GitHub star, a bug report or an idea in
+[Issues](https://github.com/KinDR007/ha-muj-cez/issues) helps too. Thank you!
 
 ## License
 
@@ -494,10 +497,19 @@ Jen u účtů s průběhovým měřením stahuje navíc veřejné spotové ceny 
 z ČNB; posílá se jen datum, žádné osobní údaje. Se zapnutým HDO se stejné přihlašovací
 údaje používají i pro portál ČEZ Distribuce (dip.cezdistribuce.cz, přihlášení mepas.cez.cz).
 
-### Podpora projektu
+### Podpořte vývoj
 
-Integraci vyvíjím ve volném čase a je zdarma. Pokud vám šetří čas nebo peníze, můžete
-podpořit další vývoj (nové funkce, úpravy po změnách portálu ČEZ, testování na nových
-verzích Home Assistantu) příspěvkem přes [PayPal](https://paypal.me/KinDR007).
-Stejně tak pomůže nahlášení chyby nebo nápad v
-[Issues](https://github.com/KinDR007/ha-muj-cez/issues). Děkuji.
+Integrace je zdarma a vyvíjím ji ve volném čase. Portál ČEZ se průběžně mění a každá jeho
+změna může integraci rozbít. Udržet ji funkční, opravovat chyby po změnách portálu, testovat
+nové verze Home Assistantu a přidávat funkce jako cenový rozpad nebo odečet elektroměru stojí
+desítky hodin práce.
+
+Pokud vám integrace šetří čas nebo peníze, budu rád za příspěvek na další vývoj, ať už
+jednorázově, nebo třeba jednou za rok. Částku zadáte v bankovní aplikaci podle sebe.
+
+<img src="https://raw.githubusercontent.com/KinDR007/ha-muj-cez/main/docs/img/qr-platba.png" width="220" alt="QR platba: podpora projektu ha-muj-cez">
+
+QR platba (CZK) nebo [PayPal](https://paypal.me/KinDR007)
+
+Pomůže i hvězdička na GitHubu, nahlášení chyby nebo nápad v
+[Issues](https://github.com/KinDR007/ha-muj-cez/issues). Děkuji!
