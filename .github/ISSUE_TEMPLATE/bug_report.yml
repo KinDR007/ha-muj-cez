@@ -1,0 +1,110 @@
+name: Chyba / Bug report
+description: Něco nefunguje, jak má. Something does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Děkuji za nahlášení. Než začnete, zkuste prosím [Řešení potíží](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/potize.md) a ověřte, že máte nejnovější verzi.
+        *Thank you for the report. Please check the troubleshooting page and the latest version first. English is fine.*
+
+        ⚠️ **Osobní údaje / Personal data:** issues jsou veřejné. Z logů, diagnostiky a snímků odstraňte nebo začerněte adresu, EAN, čísla smlouvy, zákazníka, elektroměru a dokladů, e-mail a hesla. Diagnostická data integrace je už anonymizuje sama.
+  - type: input
+    id: version
+    attributes:
+      label: Verze integrace / Integration version
+      description: Nastavení → Zařízení a služby → Můj ČEZ (verze je pod názvem).
+      placeholder: "1.4.1"
+    validations:
+      required: true
+  - type: input
+    id: ha_version
+    attributes:
+      label: Verze Home Assistantu / Home Assistant version
+      description: Nastavení → O aplikaci.
+      placeholder: "2026.11.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Způsob instalace / Installation
+      options:
+        - HACS
+        - Marketplace (Home Assistant)
+        - Ručně / Manual
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Oblast / Area
+      options:
+        - Přihlášení a nastavení / Sign-in and settings
+        - Senzory a data / Sensors and data
+        - Dashboard ČEZ
+        - Cenový rozpad / Price breakdown
+        - Odečet elektroměru / Meter reading
+        - HDO a aktuální cena / HDO and current price
+        - Průběhová a 15minutová data, FVE / Interval data, PV
+        - Doklady a akce / Documents and actions
+        - Jiné / Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Co se stalo / What happened
+      description: Popis chyby, případně přesné znění chybové hlášky.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Co jste čekali / Expected behaviour
+      description: Například jakou hodnotu ukazuje portál muj.cez.cz.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Kroky k zopakování / Steps to reproduce
+      placeholder: |
+        1. Otevřít záložku …
+        2. Kliknout na …
+        3. …
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logy / Logs
+      description: |
+        **Jak získat logy:**
+        1. Nastavení → Zařízení a služby → Můj ČEZ → menu ⋮ vpravo nahoře → **Povolit protokolování ladících informací**.
+        2. Zopakujte chybu (u chyb při načítání dat: menu ⋮ u účtu → **Nově načíst**).
+        3. Stejnou položkou ladění vypněte; prohlížeč stáhne soubor s logem.
+        4. Vložte sem řádky obsahující `muj_cez` (nebo celý soubor přetáhněte do pole níže).
+
+        Bez ladění: Nastavení → Systém → Protokoly → **Zobrazit nezpracované protokoly**, vyhledejte `muj_cez`.
+        *Enable debug logging in the integration's ⋮ menu, reproduce, disable it and paste the `muj_cez` lines.*
+      render: shell
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Diagnostika a snímky / Diagnostics and screenshots
+      description: |
+        **Diagnostika:** menu ⋮ u účtu → **Stáhnout diagnostická data**, soubor přetáhněte sem (je anonymizovaný, přesto ho zkontrolujte).
+
+        **Co nasnímat:**
+        - celou kartu nebo sekci dashboardu, kde je chyba, včetně hlášky,
+        - u karty s hláškou „Chyba nastavení“ nebo prázdné karty i konzoli prohlížeče (F12 → Console),
+        - u nesouladu s portálem stejný údaj na muj.cez.cz pro srovnání,
+        - u chyby v nastavení dialog s vyplněnými volbami.
+
+        Osobní údaje na snímcích začerněte. *Drag files here; black out personal data.*
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Osobní údaje / Personal data
+      options:
+        - label: Zkontroloval(a) jsem, že logy, diagnostika ani snímky neobsahují osobní údaje (adresa, EAN, čísla smluv a elektroměru, e-mail, hesla). / I removed personal data.
+          required: true

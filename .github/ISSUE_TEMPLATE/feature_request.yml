@@ -1,0 +1,56 @@
+name: Požadavek na funkci / Feature request
+description: Nápad na novou funkci nebo vylepšení. Idea for a new feature or improvement.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Děkuji za nápad. Podívejte se prosím do [příručky](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/README.md), jestli funkce už neexistuje, a do otevřených issues, jestli ho už někdo nenavrhl.
+        *Thank you for the idea. Please check the user guide and open issues first. English is fine.*
+  - type: dropdown
+    id: area
+    attributes:
+      label: Oblast / Area
+      options:
+        - Senzory a data / Sensors and data
+        - Dashboard ČEZ
+        - Cenový rozpad / Price breakdown
+        - Odečet elektroměru / Meter reading
+        - HDO a aktuální cena / HDO and current price
+        - Průběhová a 15minutová data, FVE / Interval data, PV
+        - Doklady a akce / Documents and actions
+        - Nastavení / Settings
+        - Jiné / Other
+    validations:
+      required: true
+  - type: textarea
+    id: need
+    attributes:
+      label: Co potřebujete a proč / What do you need and why
+      description: Popište situaci a k čemu by vám funkce pomohla (např. automatizace, přehled, úspora).
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Navrhované řešení / Proposed solution
+      description: "Jak by to podle vás mělo fungovat: nový senzor, atribut, sekce dashboardu, volba v nastavení, akce …"
+  - type: textarea
+    id: portal
+    attributes:
+      label: Jak to vypadá na portálu Můj ČEZ / How it looks on the portal
+      description: |
+        Pokud data nebo funkci ukazuje web muj.cez.cz, přidejte snímek té stránky a cestu k ní (např. Elektřina → Odečty). Pomůže to najít data v rozhraní portálu.
+        Osobní údaje na snímku začerněte (adresa, EAN, čísla smluv a elektroměru).
+        *A screenshot of the portal page with the data helps. Black out personal data.*
+  - type: textarea
+    id: context
+    attributes:
+      label: Další informace / Additional context
+      description: Distribuční sazba (např. D02d, D57d), jednotarif / dvoutarif, FVE, více odběrných míst nebo účtů, verze integrace …
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Spolupráce / Collaboration
+      options:
+        - label: Můžu pomoct s testováním na svém účtu. / I can help with testing on my account.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Uživatelská příručka / User guide
+    url: https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/README.md
+    about: Instalace, nastavení a popis všech funkcí (česky). Installation, settings and features (Czech).
+  - name: Řešení potíží / Troubleshooting
+    url: https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/potize.md
+    about: Nejčastější potíže a jak je vyřešit, než založíte chybu. Common problems before reporting a bug.

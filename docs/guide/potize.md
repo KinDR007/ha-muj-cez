@@ -19,7 +19,7 @@ přihlásíte na muj.cez.cz; portál může být dočasně nedostupný.
 
 - Data se načítají podle zvolené periody a při startu Home Assistantu. Neúspěšná
   aktualizace se zkouší znovu 6× po 30 minutách.
-- Ručně: **Nastavení → Zařízení a služby → Můj ČEZ → ⋮ → Znovu načíst**.
+- Ručně: **Nastavení → Zařízení a služby → Můj ČEZ → ⋮ u účtu → Nově načíst**.
 - Průběhová data elektroměru jsou na portálu den zpětně.
 
 ## Karta se nezobrazuje nebo hlásí „Chyba nastavení“
@@ -35,13 +35,23 @@ Home Assistant v mobilu), aby se načetly nové karty.
 
 ## Diagnostika pro nahlášení chyby
 
-**Nastavení → Zařízení a služby → Můj ČEZ → ⋮ → Stáhnout diagnostiku** vytvoří soubor
+**Nastavení → Zařízení a služby → Můj ČEZ → ⋮ u účtu → Stáhnout diagnostická data** vytvoří soubor
 s daty integrace a odpověďmi portálu. Jména, adresy, kontakty a všechny identifikátory
 jsou nahrazené zástupnými hodnotami; data, kWh a číselníkové hodnoty zůstávají. Před
 přiložením k chybě v [Issues](https://github.com/KinDR007/ha-muj-cez/issues) soubor
-zkontrolujte.
+zkontrolujte. Šablona [nahlášení chyby](https://github.com/KinDR007/ha-muj-cez/issues/new/choose)
+provede vším potřebným.
 
-Podrobnější log zapnete v `configuration.yaml`:
+## Ladicí log
+
+1. **Nastavení → Zařízení a služby → Můj ČEZ → menu ⋮ vpravo nahoře → Povolit protokolování
+   ladících informací.**
+2. Zopakujte chybu (u chyb při načítání dat: menu ⋮ u účtu → **Nově načíst**).
+3. Stejnou položkou ladění vypněte; prohlížeč stáhne soubor s logem. Do hlášení vložte řádky
+   s `muj_cez` a zkontrolujte, že neobsahují osobní údaje.
+
+Bez ladění jsou logy v **Nastavení → Systém → Protokoly → Zobrazit nezpracované protokoly**.
+Trvale zapnutý podrobný log jde nastavit v `configuration.yaml`:
 
 ```yaml
 logger:
