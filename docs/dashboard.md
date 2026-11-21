@@ -99,6 +99,11 @@ period): monthly ČEZ vs HA for the current period with estimate to the end, yea
 billing-period month, period totals and the meter reading check. The kWh/Kč pills switch
 `select.muj_cez_jednotka_grafu`; hovering (or tapping on mobile) a column shows its values.
 
+With a second output file (`build_cez_view.py view.json prices.json`) the builder also writes the
+price breakdown view (`cez-ceny`, own tab with icon); push it with `push_to_editor.py prices.json
+--after cez`. Set `CEZ_NT=0` on a single tariff HA without the NT meter reading sensor (the editor
+check rejects references to missing entities).
+
 Set `CEZ_HDO=1` when the HA has the HDO sensors (adds the "Tarif HDO a cena" section; without
 it the current price is a row of the contract block). The editor check rejects references to
 entities that do not exist, so the builder only references what the HA has.

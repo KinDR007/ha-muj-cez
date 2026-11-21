@@ -163,6 +163,8 @@ advances = {
 # Explicit build: CEZ_HDO=1 when the HA has the HDO sensors (the editor check rejects
 # references to missing entities). Export: decided at runtime by the integration.
 HDO_ON = os.environ.get("CEZ_HDO") == "1"
+# Single tariff HA without the NT meter sensor: CEZ_NT=0 (the editor check rejects missing ids).
+NT_ON = EXPORT or os.environ.get("CEZ_NT") != "0"
 # Single tariff / no HDO: the price per kWh lives in the contract block (else in HDO).
 PRICE_ROW = (
     "(st('aktualni_cena')&&!st('tarif_hdo')?row('aktualni_cena','Aktuální cena',num('aktualni_cena',2)+' Kč/kWh'):'')"
@@ -190,11 +192,17 @@ contract = {
                 "+row('produkt','Produkt',st('produkt')?.state||'–')"
                 "+row('konec_smlouvy','Konec smlouvy',dt(st('konec_smlouvy')?.state))"
                 "+row('datum_zmeny_ceny','Změna ceny',dt(st('datum_zmeny_ceny')?.state))"
-                "+row('stav_elektromeru',st('stav_elektromeru_nt')?'Stav elektroměru VT':'Stav elektroměru',"
-                "num('stav_elektromeru')+' kWh · '+dt(at('stav_elektromeru','reading_date')))"
-                # Dual tariff only: the NT sensor exists.
-                "+(st('stav_elektromeru_nt')?row('stav_elektromeru_nt','Stav elektroměru NT',"
-                "num('stav_elektromeru_nt')+' kWh · '+dt(at('stav_elektromeru_nt','reading_date'))):'')"
+                + (
+                    "+row('stav_elektromeru',st('stav_elektromeru_nt')?'Stav elektroměru VT':'Stav elektroměru',"
+                    "num('stav_elektromeru')+' kWh · '+dt(at('stav_elektromeru','reading_date')))"
+                    # Dual tariff only: the NT sensor exists.
+                    "+(st('stav_elektromeru_nt')?row('stav_elektromeru_nt','Stav elektroměru NT',"
+                    "num('stav_elektromeru_nt')+' kWh · '+dt(at('stav_elektromeru_nt','reading_date'))):'')"
+                    if NT_ON
+                    else "+row('stav_elektromeru','Stav elektroměru',"
+                    "num('stav_elektromeru')+' kWh · '+dt(at('stav_elektromeru','reading_date')))"
+                )
+                + ""
                 "+row('spotreba_za_minule_obdobi','Minulé období',num('spotreba_za_minule_obdobi')+' kWh · '+num('naklady_za_minule_obdobi')+' Kč')"
                 "+row('planovane_odstavky','Plánované odstávky',st('planovane_odstavky')?.state??'–')"
                 "+" + PRICE_ROW + ""
@@ -1048,6 +1056,151 @@ def profile_section() -> dict:
     }
 
 
+# --- Price breakdown view, own tab (websocket muj_cez/prices) --------------------------------
+PRICES_PATH = "cez-ceny"
+PRICE_ENTITY = P + "zuctovaci_obdobi"
+# Shared state, data load and the selected period (month / quarter / year, index, VAT).
+RJS = (
+    "const RE='" + PRICE_ENTITY + "';"
+    "const RC=globalThis.__cezPr=globalThis.__cezPr||{d:{},s:{},ld:{},cards:new Set()};RC.cards.add(this);"
+    "globalThis.cezPrR=()=>globalThis.__cezPr.cards.forEach(c=>{if(!c.isConnected){globalThis.__cezPr.cards.delete(c);return}"
+    "try{c._config&&c.setConfig?c.setConfig(c._config):c.requestUpdate()}catch(e){}});"
+    "globalThis.cezPrGo=(ev,el)=>{ev.stopPropagation();const C=globalThis.__cezPr,ds=el.dataset,S=C.s[ds.e]=C.s[ds.e]||{};"
+    "if(ds.mode){S.mode=ds.mode;S.i=null}if(ds.i)S.i=+ds.i;if(ds.vat)S.vat=ds.vat==='1';globalThis.cezPrR()};"
+    "globalThis.cezPrTe=(ev,el)=>{const t=ev.changedTouches[0],s=globalThis.__cezT||[1e9,1e9];"
+    "if(Math.abs(t.clientX-s[0])+Math.abs(t.clientY-s[1])<10){ev.preventDefault();globalThis.cezPrGo(ev,el)}};"
+    "const RLOAD=()=>{const o=RC.d[RE];if(RC.ld[RE]||(o&&Date.now()-o.ts<6e5))return;RC.ld[RE]=1;"
+    "hass.callWS({type:'muj_cez/prices',entity_id:RE}).then(r=>{RC.d[RE]={r,ts:Date.now()}})"
+    ".catch(e=>{RC.d[RE]={err:String((e&&e.message)||e),code:e&&e.code,ts:Date.now()}}).finally(()=>{delete RC.ld[RE];globalThis.cezPrR()})};"
+    "RLOAD();const RO=RC.d[RE],RD=RO&&RO.r,RS=RC.s[RE]=RC.s[RE]||{};const MODE=RS.mode||'m',VAT=RS.vat!==false;"
+    "const MNL=['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];"
+    "const MNS=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];"
+    "const pkey=(ym)=>MODE==='y'?ym.slice(0,4):MODE==='q'?ym.slice(0,4)+'-Q'+(Math.floor((+ym.slice(5)-1)/3)+1):ym;"
+    "const plab=(k)=>MODE==='y'?'rok '+k:MODE==='q'?k.slice(6)+'. čtvrtletí '+k.slice(0,4):MNL[+k.slice(5)-1]+' '+k.slice(0,4);"
+    "const psh=(k)=>MODE==='y'?k:MODE==='q'?k.slice(5)+'/'+k.slice(2,4):MNS[+k.slice(5)-1]+(k.slice(5)==='01'?' '+k.slice(2,4):'');"
+    # Periods: items of the months merged by kind; flags of the months.
+    "const RP=(()=>{if(!RD)return null;const ps={};const add=(m,pay)=>{const k=pkey(m.month);"
+    "const p=ps[k]=ps[k]||{k,it:{},pay:{},src:new Set(),pred:false,mis:false,pl:false};"
+    "if(!pay){p.src.add(m.source);p.pred=p.pred||!!m.predicted;p.mis=p.mis||m.matched===false;p.pl=p.pl||(m.prices||[]).some(x=>x!=='invoice')}"
+    "m.items.forEach(i=>{const t=pay?p.pay:p.it;const x=t[i.kind]=t[i.kind]||{kind:i.kind,group:i.group,name:i.name,unit:i.unit,q:0,a:0,v:0,est:false};"
+    "x.q+=i.quantity;x.a+=i.amount;x.v+=i.vat;x.est=x.est||i.estimated})};"
+    "RD.months.forEach(m=>add(m,false));(RD.payout||[]).forEach(m=>add(m,true));"
+    "return Object.values(ps).filter(p=>Object.keys(p.it).length||Object.keys(p.pay).length).sort((a,b)=>a.k<b.k?-1:1)})();"
+    "const NOWK=pkey(new Date().toISOString().slice(0,7));"
+    "let SI=RS.i;if(RP&&RP.length&&(SI==null||SI>=RP.length)){SI=RP.findIndex(p=>p.k===NOWK);if(SI<0)SI=RP.length-1}"
+    "const SP=RP&&RP.length?RP[SI]:null;"
+    "const val=(x)=>VAT?x.a+x.v:x.a;const tot=(p)=>Object.values(p.it).reduce((s0,x)=>s0+val(x),0);"
+    "const GRP={supplier:['Obchodní část (dodavatel)','#3b82f6'],distribution:['Distribuční část (regulované ceny)','#f4b400'],"
+    "tax:['Daň z elektřiny','#a855f7'],simulation:['Souhrn ze simulace (bez rozpadu)','#8e8e93'],other:['Ostatní','#8e8e93']};"
+    "const GORD=['supplier','distribution','tax','simulation','other'];"
+)
+
+
+def prices_body() -> str:
+    return (
+        RJS
+        + "const msg=(t)=>`<div style='padding:12px 0;color:var(--secondary-text-color);white-space:normal'>${t}</div>`;"
+        "if(RO&&RO.code==='disabled')return msg('Cenový rozpad je vypnutý v nastavení integrace (Nastavení → Zařízení a služby → Můj ČEZ → Konfigurovat).');"
+        "if(RO&&RO.err)return msg('Cenový rozpad není dostupný: '+RO.err);"
+        "if(!RD)return msg('Načítám cenový rozpad…');"
+        "if(!SP)return msg('Faktury se stahují z portálu ČEZ. První načtení historie trvá několik minut, pak se sekce naplní.');"
+        "const tap=(a,inner,sty)=>`<span ${a} data-e='${RE}' onclick='cezPrGo(event,this)' ontouchstart='cezTs(event)' "
+        "ontouchend='cezPrTe(event,this)' style='pointer-events:auto;cursor:pointer;${sty||''}'>${inner}</span>`;"
+        "const pill=(a,t,on)=>tap(a,t,'padding:2px 12px;border-radius:10px;font-size:13px;border:1px solid var(--divider-color);'"
+        "+(on?'background:var(--primary-color);color:var(--text-primary-color,#fff);border-color:var(--primary-color)':''));"
+        "const arrow=(i,t)=>i>=0&&i<RP.length?tap(`data-i='${i}'`,t,'padding:2px 12px;border-radius:10px;border:1px solid var(--divider-color)')"
+        ":`<span style='padding:2px 12px;opacity:.3'>${t}</span>`;"
+        "const ctl=`<div style='display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:4px 0 10px'>"
+        "<div style='display:flex;gap:4px'>${pill(`data-mode='m'`,'Měsíc',MODE==='m')}${pill(`data-mode='q'`,'Kvartál',MODE==='q')}"
+        "${pill(`data-mode='y'`,'Rok',MODE==='y')}</div><div style='display:flex;align-items:center;gap:8px'>${arrow(SI-1,'‹')}"
+        "<span style='min-width:150px;text-align:center;font-weight:500;font-size:15px'>${plab(SP.k)}</span>${arrow(SI+1,'›')}</div>"
+        "<div style='display:flex;gap:4px'>${pill(`data-vat='0'`,'bez DPH',!VAT)}${pill(`data-vat='1'`,'s DPH',VAT)}</div></div>`;"
+        "const chip=(t,c)=>`<span style='font-size:11px;padding:1px 8px;border-radius:8px;border:1px solid ${c};color:${c};white-space:nowrap'>${t}</span>`;"
+        "const IT=Object.values(SP.it);const src=SP.src;"
+        "const chips=[src.has('invoice')||src.has('mixed')?chip('vyúčtováno','#22c55e'):'',"
+        "src.has('simulation')||src.has('mixed')?chip('simulace ČEZ','#3b82f6'):'',SP.pred?chip('predikce','#f4b400'):'',"
+        "IT.some(x=>x.est)?chip('≈ rozpočteno do období','#8e8e93'):'',SP.pl?chip('ceny z ceníku produktu','#a855f7'):'',SP.mis?chip('ceny nesouhlasí, bez rozpadu','#ef4444'):'']"
+        ".filter(Boolean).join(' ');"
+        "const dot=(c)=>`<span style='display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;background:${c}'></span>`;"
+        # History columns (12 periods around the selected one), click selects.
+        "const W0=Math.max(0,Math.min(SI-8,RP.length-12)),win=RP.slice(W0,W0+12);const mx=Math.max(...win.map(tot),1);"
+        "const cols=win.map((p,j)=>{const i=W0+j,g={};Object.values(p.it).forEach(x=>{g[x.group]=(g[x.group]||0)+val(x)});"
+        "const sg=GORD.filter(k=>g[k]>0).map(k=>`<div style='height:${g[k]/mx*100}%;background:${GRP[k][1]}'></div>`).reverse().join('');"
+        "return tap(`data-i='${i}'`,`<div style='height:110px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:3px;"
+        "overflow:hidden;${p.pred?'opacity:.55;':''}${i===SI?'box-shadow:0 0 0 2px var(--primary-text-color);':''}'>${sg}</div>"
+        "<div style='font-size:10px;text-align:center;color:var(--secondary-text-color);margin-top:4px;white-space:nowrap;overflow:hidden'>${psh(p.k)}</div>`,"
+        "'flex:1;min-width:0;display:block')}).join('');"
+        "const leg=GORD.filter(k=>RP.some(p=>Object.values(p.it).some(x=>x.group===k))).map(k=>`<span>${dot(GRP[k][1])}${GRP[k][0]}</span>`).join('');"
+        "const chart=`<div style='display:flex;gap:4px;align-items:flex-end;margin:4px 0'>${cols}</div>"
+        "<div style='display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--secondary-text-color);margin-bottom:8px'>${leg}</div>`;"
+        # Items table by group.
+        "const T=tot(SP),gs={};IT.forEach(x=>{gs[x.group]=(gs[x.group]||0)+val(x)});"
+        "const qty=(x)=>x.unit==='MWh'?f(x.q*1000,0)+' kWh':f(x.q,2)+' měs.';"
+        "const up=(x,a)=>!x.q?'–':x.unit==='MWh'?f(a/(x.q*1000),3)+' Kč/kWh':f(a/x.q,2)+' Kč/měs.';"
+        "const TC='display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr);gap:6px;align-items:baseline;padding:5px 0;font-size:12px;text-align:left';"
+        "const cell=(v)=>`<div style='text-align:right;white-space:nowrap'>${v}</div>`;"
+        "const line=(x,a)=>`<div style='${TC};border-top:1px solid var(--divider-color)'><div style='white-space:normal;overflow-wrap:anywhere'>${x.name}${x.unit==='month'?"
+        "` <span style='font-size:10px;color:var(--secondary-text-color)'>stálá</span>`:''}${x.est?` <span style='color:var(--secondary-text-color)'>≈</span>`:''}</div>"
+        "${cell(qty(x))}${cell(up(x,a))}${cell(f(a,2)+' Kč')}</div>`;"
+        "const hdr=`<div style='${TC};color:var(--secondary-text-color);font-size:11px'><div>Položka</div>${cell('Množství')}"
+        "${cell('Jedn. cena '+(VAT?'s DPH':'bez DPH'))}${cell('Částka')}</div>`;"
+        "const groups=GORD.filter(g=>IT.some(x=>x.group===g)).map(g=>{const xs=IT.filter(x=>x.group===g)"
+        ".sort((a,b)=>(a.unit===b.unit?0:a.unit==='MWh'?-1:1));"
+        "return `<div style='display:flex;justify-content:space-between;gap:8px;margin-top:12px;font-weight:500;font-size:13px'>"
+        "<span>${dot(GRP[g][1])}${GRP[g][0]}</span><span>${f(gs[g],2)} Kč · ${!T?0:gs[g]/T<.01?'<1':f(gs[g]/T*100,0)} %</span></div>"
+        "${xs.map(x=>line(x,val(x))).join('')}`}).join('');"
+        "const sbar=`<div style='display:flex;height:8px;border-radius:4px;overflow:hidden;margin:10px 0 2px'>"
+        "${GORD.filter(g=>gs[g]>0).map(g=>`<div style='width:${gs[g]/T*100}%;background:${GRP[g][1]}'></div>`).join('')}</div>`;"
+        # Totals: fixed vs consumption, average price, VAT.
+        "const r2=(l,v)=>`<div class='r'><span class='l'>${l}</span><span>${v}</span></div>`;"
+        "const fixd=IT.filter(x=>x.unit==='month').reduce((s0,x)=>s0+val(x),0);"
+        "const kwhs=IT.filter(x=>/^(energy|sim_vt|sim_nt)/.test(x.kind)).reduce((s0,x)=>s0+x.q*1000,0);"
+        "const A=IT.reduce((s0,x)=>s0+x.a,0),V=IT.reduce((s0,x)=>s0+x.v,0);"
+        "const sums=`<div style='margin-top:14px'>${r2('Spotřeba',f(kwhs,0)+' kWh')}"
+        "${r2('Platby za spotřebu',f(T-fixd,2)+' Kč')}${r2('Stálé platby (nezávislé na spotřebě)',f(fixd,2)+' Kč')}"
+        "${r2('Průměrná cena za kWh vč. stálých plateb',kwhs?f(T/kwhs,2)+' Kč/kWh':'–')}"
+        "${r2('Celkem bez DPH',f(A,2)+' Kč')}${r2('DPH',f(V,2)+' Kč')}${r2('<b>Celkem s DPH</b>','<b>'+f(A+V,2)+' Kč</b>')}</div>`;"
+        # Payout (production point).
+        "const PY=Object.values(SP.pay);const pay=PY.length?`<div style='display:flex;justify-content:space-between;margin-top:14px;font-weight:500;font-size:13px'>"
+        "<span>${dot('#22c55e')}Výkup elektřiny (přetoky)</span><span>${f(PY.reduce((s0,x)=>s0+x.a+x.v,0),2)} Kč</span></div>"
+        "${PY.map(x=>line(x,x.a+x.v)).join('')}`:'';"
+        # Documents of the period.
+        "const pr=(k)=>{if(MODE==='y')return[k+'-01-01',k+'-12-31'];if(MODE==='q'){const q=+k.slice(6),y=k.slice(0,4);"
+        "return[y+'-'+String(q*3-2).padStart(2,'0')+'-01',y+'-'+String(q*3).padStart(2,'0')+'-31']}return[k+'-01',k+'-31']};"
+        "const [p0,p1]=pr(SP.k);const inv=(RD.invoices||[]).filter(x=>x.period_from&&x.period_from<=p1&&x.period_to>=p0);"
+        "const SRC={csv:'datový soubor',pdf:'PDF',payout:'výkup'};"
+        "const docs=inv.length?`<div style='margin-top:12px;font-size:11px;color:var(--secondary-text-color);white-space:normal'>Doklady: "
+        "${inv.map(x=>`<span style='${x.replaced_by&&!x.partial?'text-decoration:line-through;opacity:.6':''}'>${x.number} (${dt(x.period_from)} – ${dt(x.period_to)}, ${SRC[x.source]||x.source}${x.corrective?', opravná':''}${x.replaced_by?(x.partial?', část nahrazena ':', nahrazena ')+x.replaced_by:''})</span>`).join(' · ')}</div>`:'';"
+        "const note=`<div style='margin-top:8px;font-size:11px;color:var(--secondary-text-color);white-space:normal'>Položky a jednotkové ceny "
+        "z vyúčtování ČEZ; běžné období ze simulace ČEZ rozdělené podle cen poslední faktury, v novém cenovém roce podle ceníku produktu. ≈ = položku faktura účtuje za delší období, "
+        "do měsíců je rozpočtena (stálé platby podle dnů, spotřeba podle odečtů).</div>`;"
+        "return ctl+(chips?`<div style='display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:8px'>${chips}</div>`:'')"
+        "+chart+sbar+hdr+groups+pay+sums+docs+note;"
+    )
+
+
+def prices_sections() -> list[dict]:
+    return [
+        {
+            "type": "grid",
+            "column_span": 2,
+            "cards": [
+                heading("Cenový rozpad", "mdi:cash-multiple"),
+                stack(
+                    head(
+                        PRICE_ENTITY,
+                        "mdi:cash-multiple",
+                        "Platby podle položek",
+                        RJS + "return SP?plab(SP.k)+' · '+(VAT?'s DPH':'bez DPH'):'';",
+                        RJS + "return SP?u(f(tot(SP),0),'Kč'):'–';",
+                    ),
+                    details(prices_body()),
+                ),
+            ],
+        }
+    ]
+
+
 def _tag(section: dict, *requires: str) -> dict:
     return {**section, "_requires": list(requires)} if requires else section
 
@@ -1067,6 +1220,7 @@ SECTIONS = [
     periods,
     documents,
 ]
+PRICE_SECTIONS = prices_sections()
 if not EXPORT:
     SECTIONS = [{k: v for k, v in sec.items() if not k.startswith("_")} for sec in SECTIONS]
 
@@ -1078,7 +1232,18 @@ view = {
     "max_columns": 3,
     "sections": SECTIONS,
 }
+prices_view = {  # own tab of the dashboard (icon in the view bar)
+    "title": "Cenový rozpad",
+    "path": PRICES_PATH,
+    "icon": "mdi:cash-multiple",
+    "type": "sections",
+    "max_columns": 2,
+    "sections": PRICE_SECTIONS,
+}
 
 with open(sys.argv[1], "w") as fh:
     json.dump(view, fh, ensure_ascii=False, indent=1)
+if len(sys.argv) > 2:  # optional second file: the price breakdown view
+    with open(sys.argv[2], "w") as fh:
+        json.dump(prices_view, fh, ensure_ascii=False, indent=1)
 print("ok")

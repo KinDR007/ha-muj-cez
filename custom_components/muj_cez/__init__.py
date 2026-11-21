@@ -12,9 +12,16 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
 from .api import CezClient
-from .const import CONF_DASHBOARD, CONF_PARTNER, DASHBOARD_OFF, DOMAIN
+from .const import (
+    CONF_DASHBOARD,
+    CONF_PARTNER,
+    DASHBOARD_OFF,
+    DOMAIN,
+    price_breakdown_enabled,
+)
 from .coordinator import MujCezConfigEntry, MujCezCoordinator
 from .dashboard import async_update_dashboard
+from .pricing import InvoiceStore
 from .profile import ProfileStore
 from .services import async_setup_services
 from .websocket import async_setup_websocket
@@ -40,6 +47,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> bo
         entry.data.get(CONF_PARTNER),
     )
     coordinator = MujCezCoordinator(hass, entry, client)
+    if not price_breakdown_enabled(entry.options):
+        # Turned off: drop the downloaded invoices and price lists.
+        await coordinator.invoices.async_remove()
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     entry.async_on_unload(coordinator.async_setup_schedule())
@@ -67,5 +77,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> b
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> None:
-    """Delete the stored 15 min data of the entry."""
+    """Delete the stored 15 min data, invoices and price lists of the entry."""
     await ProfileStore(hass, entry.entry_id).async_remove()
+    await InvoiceStore(hass, entry.entry_id).async_remove()

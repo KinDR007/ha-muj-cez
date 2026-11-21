@@ -40,8 +40,10 @@ from .const import (
     RETRY_COUNT,
     RETRY_DELAY,
     STORAGE_VERSION,
+    price_breakdown_enabled,
 )
 from .distribuce import DipClient, DipError, merge, parse_signals, prune
+from .pricing import InvoiceStore
 from .profile import ProfileStore
 from .statistics import async_update_statistics, statistic_id
 
@@ -119,6 +121,8 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         self.dip_client = DipClient
         self.profiles = ProfileStore(hass, entry.entry_id)
         self._profile_task: asyncio.Task[None] | None = None
+        self.invoices = InvoiceStore(hass, entry.entry_id)
+        self._invoice_task: asyncio.Task[None] | None = None
 
     async def _async_update_data(self) -> CezData:
         if self._grid_cache is None:
@@ -137,7 +141,25 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         if data.grid:
             self._schedule_statistics(data)
             self._schedule_profiles(data)
+        if price_breakdown_enabled(self.config_entry.options):
+            self._schedule_invoices(data)
         return data
+
+    def _schedule_invoices(self, data: CezData) -> None:
+        """Download new settlements for the price breakdown in the background."""
+        if self._invoice_task and not self._invoice_task.done():
+            return
+        self._invoice_task = self.config_entry.async_create_background_task(
+            self.hass, self._async_run_invoices(data), f"{DOMAIN}_invoices"
+        )
+
+    async def _async_run_invoices(self, data: CezData) -> None:
+        try:
+            added = await self.invoices.async_update(self.client, data, dt_util.now().date())
+            if added:
+                _LOGGER.debug("Stored %s new invoices", added)
+        except Exception:  # never break the integration because of the dashboard data
+            _LOGGER.exception("Storing invoices failed")
 
     def _schedule_profiles(self, data: CezData) -> None:
         """Store 15 min values in the background (the first run fills the history)."""

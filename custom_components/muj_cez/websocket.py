@@ -10,7 +10,8 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN
+from . import invoice, pricelist
+from .const import DOMAIN, price_breakdown_enabled
 
 # The dashboard section identifies the place by a sensor of it.
 PLACE_SENSOR_KEY = "grid_data_date"
@@ -19,6 +20,7 @@ PLACE_SENSOR_KEY = "grid_data_date"
 @callback
 def async_setup_websocket(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_profile)
+    websocket_api.async_register_command(hass, ws_prices)
 
 
 @websocket_api.websocket_command(
@@ -56,3 +58,53 @@ async def ws_profile(
         return
     result = await coordinator.profiles.async_month(spd.supply_point.place_id, msg.get("month"))
     connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/prices", vol.Required("entity_id"): str}
+)
+@websocket_api.async_response
+async def ws_prices(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Price breakdown per month of the supply point of a sensor (with its production point)."""
+    entity = er.async_get(hass).async_get(msg["entity_id"])
+    entry = (
+        hass.config_entries.async_get_entry(entity.config_entry_id)
+        if entity and entity.platform == DOMAIN and entity.config_entry_id
+        else None
+    )
+    if entity is None or entry is None or entry.state is not ConfigEntryState.LOADED:
+        connection.send_error(msg["id"], "not_found", "Unknown sensor")
+        return
+    if not price_breakdown_enabled(entry.options):
+        connection.send_error(msg["id"], "disabled", "Price breakdown is turned off")
+        return
+    coordinator = entry.runtime_data
+    points = coordinator.data.supply_points if coordinator.data else {}
+    spd = next((s for uid, s in points.items() if entity.unique_id.startswith(f"{uid}_")), None)
+    if spd is None or spd.supply_point.production:
+        connection.send_error(msg["id"], "not_found", "Unknown consumption supply point")
+        return
+    sp = spd.supply_point
+    agreements = {sp.agreement_id} | {
+        s.supply_point.agreement_id
+        for s in points.values()
+        if s.supply_point.production and s.supply_point.place_id == sp.place_id
+    }
+    invoices = await coordinator.invoices.async_invoices(agreements)
+    contract = spd.contract
+    sources = pricelist.price_sources(
+        await coordinator.invoices.async_pricelists(sp.ean),
+        contract.tariff_code if contract else None,
+        contract.circuit_breaker if contract else None,
+        contract.phase if contract else None,
+    )
+    report = invoice.build_report(
+        invoices,
+        spd.sim_items,
+        spd.simulation.measured_until if spd.simulation else None,
+        invoice.weights_from_readings(spd.readings or []),
+        sources,
+    )
+    connection.send_result(msg["id"], {"supply_point": sp.name, "ean": sp.ean, **report})

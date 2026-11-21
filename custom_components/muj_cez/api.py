@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import json
 import logging
 import re
 import secrets
@@ -275,6 +276,18 @@ class MonthValue:
 
 
 @dataclass
+class SimulationItem:
+    """One simulation invoice item: energy VT / NT (MWh) or fixed monthly charges."""
+
+    date_from: date
+    date_to: date
+    kind: str  # "vt", "nt" or "fixed"
+    mwh: float
+    amount: float  # without VAT
+    amount_with_tax: float
+
+
+@dataclass
 class MeterReadingPoint:
     reading_date: date
     value: float
@@ -310,6 +323,8 @@ class SupplyPointData:
     months: list[MonthValue] | None = None
     readings: list[MeterReadingPoint] | None = None
     payouts: list[Payout] | None = None
+    # Simulation invoice items of the current billing period (price breakdown).
+    sim_items: list[SimulationItem] | None = None
 
 
 @dataclass
@@ -493,6 +508,60 @@ def parse_unit_prices(items: list[dict[str, Any]]) -> dict[str, float]:
 
 ENERGY_ITEM_PREFIX = "Zúčtování spotřeby"
 UNIT_FACTORS = {"Megawatthodina": 1000.0, "Kilowatthodina": 1.0}
+
+
+# Settlement document types: consumption invoice, payout self-billing (production point).
+INVOICE_TYPES = ("INV", "SLF")
+
+
+def invoice_filter(row: dict[str, Any]) -> dict[str, Any]:
+    """Document filter of a settlement as the portal builds it (billings/extended row).
+
+    Header and snapshot ids of a document change over time, so the row must be fresh.
+    """
+    rtt = row.get("billingSourceSystem") == "RTT"
+    params = [
+        ("PARTNER_ID_CRM", row.get("partnerIdCrm")),
+        ("HEADER_ID", str(row.get("billingAccountingDocumentHeaderId"))),
+        ("ACCOUNT_DOCUMENT_NUMBER", row.get("billingReceivablesAndPayablesAccountDocumentNumber")),
+        ("SNAPSHOT_ID", row.get("billingBalanceSnapshotId")),
+        ("CONTRACT_ID_ISU", row.get("agreementIdIsu")),
+        ("SOURCE_SYSTEM", "SAP_R3_RT130" if rtt else "SAP_R3_RQ140"),
+    ]
+    return {
+        "documentDomain": "INVOICES",
+        "documentParams": [{"key": k, "value": v} for k, v in params],
+    }
+
+
+SIM_ITEM_KINDS = {"ZUCT_SPOTR_VT": "vt", "ZUCT_SPOTR_NT": "nt", "ZUCT_STAL_PLAT_EE": "fixed"}
+
+
+def parse_simulation_items(data: Any) -> list[SimulationItem]:
+    """Simulation items with amounts (zero "other items" rows are left out)."""
+    if not isinstance(data, dict):
+        return []
+    items = []
+    for item in data.get("invoiceSimulationInvoiceItem") or []:
+        code = item.get("invoiceItemType")
+        kind = SIM_ITEM_KINDS.get(code.get("entryId", "") if isinstance(code, dict) else "")
+        start = _date(item.get("invoiceItemPeriodFrom"))
+        end = _date(item.get("invoiceItemPeriodTo"))
+        if not kind or not start or not end:
+            continue
+        unit = _val(item.get("invoiceItemInvoiceQuantityUnit")) or "Megawatthodina"
+        qty = (_float(item.get("invoiceItemConsumption")) or 0.0) * UNIT_FACTORS.get(unit, 1000.0)
+        items.append(
+            SimulationItem(
+                date_from=start,
+                date_to=end,
+                kind=kind,
+                mwh=round(qty / 1000, 6),
+                amount=_float(item.get("invoiceItemAmountWithoutTax")) or 0.0,
+                amount_with_tax=_float(item.get("invoiceItemAmountWithTax")) or 0.0,
+            )
+        )
+    return sorted(items, key=lambda i: (i.date_from, i.kind))
 
 
 def parse_simulation_months(data: dict[str, Any]) -> list[MonthValue]:
@@ -1170,6 +1239,111 @@ class CezClient:
                 raise CezConnectionError(f"GET {path} failed: {err}") from err
         raise CezAuthError("Unauthorized")
 
+    async def _send(self, method: str, path: str, body: Any = None, raw: bool = False) -> Any:
+        """POST/GET with JSON body; raw=True returns the response bytes. None on HTTP 404."""
+        await self._ensure_token()
+        for attempt in range(2):
+            try:
+                async with self._session.request(
+                    method,
+                    f"{self._api_url}{path}",
+                    json=body,
+                    headers={
+                        "User-Agent": USER_AGENT,
+                        "Accept": "*/*" if raw else "application/json",
+                        "Authorization": f"Bearer {self._access_token}",
+                        **({PARTNER_HEADER: self.partner} if self.partner else {}),
+                    },
+                    timeout=TIMEOUT,
+                ) as resp:
+                    if resp.status == 401 and attempt == 0:
+                        await self._ensure_token(force=True)
+                        continue
+                    if resp.status == 404:
+                        return None
+                    if resp.status != 200:
+                        text = await resp.text()
+                        raise CezConnectionError(
+                            f"{method} {path}: HTTP {resp.status} {text[:200]}"
+                        )
+                    data = await resp.read()
+                    if raw:
+                        return data
+                    return json.loads(data) if data else None
+            except (aiohttp.ClientError, TimeoutError, ValueError) as err:
+                raise CezConnectionError(f"{method} {path} failed: {err}") from err
+        raise CezAuthError("Unauthorized")
+
+    async def get_invoice_rows(self, since: date) -> list[dict[str, Any]]:
+        """Settlement documents (consumption INV, payout SLF) with current document ids."""
+        data = await self._get("/billings/extended", {"dateFrom": since.isoformat()})
+        return [
+            row
+            for row in data or []
+            if isinstance(row, dict)
+            and row.get("billingAccountingDocumentType2") in INVOICE_TYPES
+            and row.get("billingReceivablesAndPayablesAccountDocumentNumber")
+        ]
+
+    async def get_invoice_csv(self, row: dict[str, Any]) -> str | None:
+        """Data file of a settlement ("Datový soubor.csv"), None when it has none."""
+        prepared = await self._send(
+            "POST", "/documents/attachment?withRetry=false&force=false", invoice_filter(row)
+        )
+        key = prepared.get("attachmentKey") if isinstance(prepared, dict) else None
+        if not key:
+            return None
+        data = await self._send("GET", f"/documents/{key}/attachment", raw=True)
+        return data.decode("utf-8-sig") if data else None
+
+    async def get_invoice_pdf(self, row: dict[str, Any]) -> bytes | None:
+        """PDF of a settlement document, None when the archive has none."""
+        docs = await self._send("POST", "/documents", invoice_filter(row))
+        guid = next(
+            (d.get("documentGuidCol") for d in docs or [] if d.get("documentGuidCol")), None
+        )
+        return await self.get_document_pdf(guid) if guid else None
+
+    async def get_document_pdf(self, guid: str) -> bytes | None:
+        """Download one archived document (PDF) by its documentGuidCol."""
+        prepared = await self._send("POST", f"/documents/{guid}/attachment")
+        key = prepared.get("attachmentKey") if isinstance(prepared, dict) else None
+        if not key:
+            return None
+        data = await self._send("GET", f"/documents/{key}/attachment", raw=True)
+        return data if data and data[:4] == b"%PDF" else None
+
+    async def get_price_lists(self, sp: SupplyPoint) -> list[dict[str, Any]]:
+        """Product price lists of a supply point ("Ceník ..." documents, type CEN).
+
+        Items: {"doc_id", "guid", "name", "valid_from", "valid_to"}.
+        """
+        docs = await self._send(
+            "POST",
+            "/documents",
+            {
+                "documentDomain": "SUPPLY_POINT",
+                "documentParams": [
+                    {"key": "SUPPLY_POINT_ID", "value": sp.place_id},
+                    {"key": "CONSUMPTION_PLACE_ID", "value": sp.ean},
+                ],
+            },
+        )
+        out = []
+        for doc in docs or []:
+            params = {p.get("key"): p.get("value") for p in doc.get("documentParams") or []}
+            if params.get("DOC_TYPE") == "CEN" and doc.get("documentGuidCol"):
+                out.append(
+                    {
+                        "doc_id": params.get("DOC_ID") or doc["documentGuidCol"],
+                        "guid": doc["documentGuidCol"],
+                        "name": params.get("DOCUMENT_DESCRIPTION"),
+                        "valid_from": (params.get("VALID_FROM") or "")[:10] or None,
+                        "valid_to": (params.get("VALID_TO") or "")[:10] or None,
+                    }
+                )
+        return out
+
     @property
     def session(self) -> aiohttp.ClientSession:
         return self._session
@@ -1202,9 +1376,9 @@ class CezClient:
 
     async def get_simulation(
         self, sp: SupplyPoint
-    ) -> tuple[InvoiceSimulation | None, list[MonthValue]]:
+    ) -> tuple[InvoiceSimulation | None, list[MonthValue], list[SimulationItem]]:
         data = await self._get(f"/simulations/invoices/{sp.ean}", {"supplyPointUid": sp.uid})
-        return parse_simulation(data), parse_simulation_months(data)
+        return parse_simulation(data), parse_simulation_months(data), parse_simulation_items(data)
 
     async def get_advance_plan(self, sp: SupplyPoint, today: date) -> AdvancePlan | None:
         return parse_advance_plan(
@@ -1435,9 +1609,9 @@ class CezClient:
                 if place.get("uid") in (None, sp.uid):
                     place["uid"] = sp.uid
                     await self.update_grid_cache(sp, place, today)
-            spd.simulation, spd.months = await self._optional(
+            spd.simulation, spd.months, spd.sim_items = await self._optional(
                 f"simulation {sp.ean}", self.get_simulation(sp)
-            ) or (None, None)
+            ) or (None, None, None)
             spd.advance_plan = await self._optional(
                 f"advance plan {sp.ean}", self.get_advance_plan(sp, today)
             )

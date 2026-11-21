@@ -84,3 +84,41 @@ class OfflineCezClient(api.CezClient):
         if entry["file"] is None:
             return None
         return json.loads((self._dir / entry["file"]).read_text())
+
+    # Invoices captured by tools/probe/probe_documents.py into <snapshot>/docs/.
+    def _doc(self, row: dict[str, Any], suffix: str) -> Path | None:
+        path = (
+            self._dir
+            / "docs"
+            / (row["billingReceivablesAndPayablesAccountDocumentNumber"] + suffix)
+        )
+        return path if path.exists() else None
+
+    async def get_invoice_rows(self, since: Any) -> list[dict[str, Any]]:
+        path = self._dir / "docs" / "billings_extended.json"
+        if not path.exists():
+            raise api.CezConnectionError("Not in snapshot: billings/extended")
+        rows = json.loads(path.read_text())
+        return [r for r in rows if r.get("billingAccountingDocumentType2") in api.INVOICE_TYPES]
+
+    async def get_invoice_csv(self, row: dict[str, Any]) -> str | None:
+        path = self._doc(row, "_csv.bin")
+        return path.read_text(encoding="utf-8-sig") if path else None
+
+    async def get_invoice_pdf(self, row: dict[str, Any]) -> bytes | None:
+        path = self._doc(row, "_pdf0.pdf")
+        return path.read_bytes() if path else None
+
+    async def get_price_lists(self, sp: Any) -> list[dict[str, Any]]:
+        return [
+            {"doc_id": path.stem, "guid": str(path), "name": path.stem, "valid_from": None}
+            for path in sorted((self._dir / "docs").glob(f"cenik_{sp.ean}_*.pdf"))
+        ]
+
+    @staticmethod
+    def _read(path: str) -> bytes | None:
+        file = Path(path)
+        return file.read_bytes() if file.exists() else None
+
+    async def get_document_pdf(self, guid: str) -> bytes | None:
+        return self._read(guid)  # offline: guid is the local file

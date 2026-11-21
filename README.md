@@ -132,6 +132,22 @@ or installing fails, a repair issue offers a **Fix** button that installs them.
 The grid import/export reference sensors are prefilled from the Energy dashboard and the spot
 price sensor from cz_energy_spot_prices when installed.
 
+**Price breakdown** (option **Price breakdown**; own tab `cez-ceny` of the ČEZ dashboard, icon next to the ČEZ view): what each item costs per
+month, quarter or year, with or without VAT: supplier part (energy, fixed fee), distribution
+part (regulated prices: distribution, circuit breaker, system services, POZE, infrastructure),
+electricity tax and the PV payout. History comes from the settlements (the CSV data file of the
+invoice, or its PDF when the portal has no CSV; each invoice is downloaded once, the first run
+fetches 4 years), the current billing period from the ČEZ simulation split with the unit
+prices of the last invoice; in a new price year (before an invoice with the new prices) with the
+product price list from the portal (PDF "Ceník", column of the supply point's distribution tariff
+and circuit breaker), also combined with the last invoice (old product with new distribution
+prices). A month is split only when these prices explain the simulated amounts, otherwise it shows
+the simulation totals. Items an invoice charges for a longer period are split into months (fixed
+fees by days, consumption by meter readings) and marked with ≈. Corrective or overlapping
+settlements: the later document applies to the days it covers. The view
+loads the data through the websocket command `muj_cez/prices`. PDF invoices need `pypdf`
+(installed by Home Assistant from the integration requirements).
+
 ## Comparison with a Home Assistant energy sensor
 
 Set **Reference energy sensor** in the integration options (an energy sensor measuring
@@ -185,6 +201,10 @@ muj.cez.cz e-mail and password.
   CZK/MWh, e.g. `sensor.current_spot_electricity_price` of cz_energy_spot_prices); fills
   spot prices for the export valuation where the portal has none
 - **HDO from ČEZ Distribuce** (default on): tariff switching times, see above
+- **Price breakdown** (default off; on for installations from before the option): downloads
+  the settlements and product price lists and adds the "Cenový rozpad" tab, see Dashboard. Off:
+  none of this is downloaded, the tab is not created and turning it off deletes the downloaded
+  invoices. `pypdf` (PDF invoices) is installed only when the option is on.
 
 Data is also loaded at Home Assistant start. A failed scheduled update is retried
 6× every 30 minutes; entities keep their last values meanwhile. Invalid credentials
@@ -310,6 +330,10 @@ Při instalaci (krok **Nastavení** po přihlášení) i později přes ozubené
   přes **Market** (HA od 2026.11) nebo **HACS**, které je pak samy aktualizují; bez nich
   stáhne poslední vydání z GitHubu. Když je volba vypnutá nebo instalace selže, objeví se
   v **Nastavení → Opravy** oznámení s tlačítkem **Opravit**. Po instalaci obnovte stránku.
+- **Cenový rozpad** (výchozí vypnuto, u instalací z doby před touto volbou zapnuto): stáhne
+  vyúčtování a ceníky produktu a přidá do dashboardu záložku **Cenový rozpad**. Když je
+  vypnutý, nic z toho se nestahuje ani nezpracovává, záložka se nevytvoří a vypnutím se
+  stažené faktury smažou. Knihovnu `pypdf` pro PDF faktury HA doinstaluje až při zapnutí.
 
 Senzory odběru a exportu se při instalaci předvyplní podle panelu Energie a senzor spotové
 ceny podle integrace cz_energy_spot_prices; vše lze změnit.
@@ -375,6 +399,18 @@ fotovoltaiky obsahuje vyúčtování, zálohy, smlouvu, spotřebu po měsících
 porovnání, zúčtovací období a doklady. Pokud portál eviduje průběhová data elektroměru
 (typicky FVE), přibudou sekce elektroměru, výkupu přetoků a spotových cen. Potřebné karty
 (button-card, stack-in-card, mini-graph-card) integrace doinstaluje sama.
+
+Se zapnutou volbou **Cenový rozpad** (výchozí vypnuto; vypnutím se stažené faktury smažou a
+záložka zmizí) přibude záložka **Cenový rozpad** (ikona vedle záložky ČEZ) s rozpisem plateb po položkách za měsíc, čtvrtletí
+nebo rok (šipkami se listuje, přepínač s DPH / bez DPH): obchodní část (silová elektřina, stálá
+platba), distribuční část (distribuce VT/NT, jistič, systémové služby, POZE, provoz nesíťové
+infrastruktury), daň z elektřiny a výkup přetoků, s množstvím, jednotkovou cenou a podílem.
+Minulá období jsou z vyúčtování (datový soubor CSV, jinak PDF faktury; každá se stáhne jen
+jednou), běžné období ze simulace ČEZ rozdělené podle cen poslední faktury. Položky, které
+faktura účtuje za delší období, jsou do měsíců rozpočtené (≈). V novém cenovém roce, než přijde
+faktura s novými cenami, se běžné měsíce rozdělí podle ceníku produktu z portálu (sloupec vaší
+distribuční sazby a jističe); měsíc se rozdělí jen tehdy, když ceny vysvětlí částky simulace.
+Opravné faktury nahrazují původní za dny, které pokrývají.
 
 Sekce **Průběh po 15 minutách** (jen s průběhovými daty elektroměru) ukazuje čtvrthodinové
 hodnoty odběru a přetoků po kalendářních měsících za aktuální měsíc a 12 předchozích

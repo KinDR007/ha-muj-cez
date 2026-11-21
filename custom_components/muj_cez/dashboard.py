@@ -39,6 +39,7 @@ from .const import (
     DASHBOARD_NEW_URL,
     DASHBOARD_OFF,
     DOMAIN,
+    price_breakdown_enabled,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ TEMPLATE_FILE = Path(__file__).parent / "dashboard_template.json"
 MARKER = re.compile(r"\b(sensor|select|calendar)\.mujcez_([cgvas])_([a-z0-9_]+)")
 MISSING = "muj_cez_unavailable"
 VIEW_PATH = "cez"
+PRICES_PATH = "cez-ceny"
 ACCOUNT_UNIQUE = {
     "chart_unit": "{entry}_chart_unit",
     "documents": "{entry}_documents",
@@ -207,6 +209,7 @@ def build_views(
     data: CezData,
     spot_today: str | None = None,
     spot_tomorrow: str | None = None,
+    prices: bool = True,
 ) -> list[dict[str, Any]]:
     """One view per consumption supply point, sections fitting the existing entities."""
     template = load_template()
@@ -266,17 +269,27 @@ def build_views(
             if not production and "span_without_production" in item:
                 section["column_span"] = item["span_without_production"]
             sections.append(section)
+        suffix = f"-{index + 1}" if index else ""
         view = dict(template["view"], sections=sections)
         if index:
-            view["path"] = f"{VIEW_PATH}-{index + 1}"
+            view["path"] = f"{VIEW_PATH}{suffix}"
         if len(consumption) > 1:
             view["title"] = f"ČEZ {sp.name}"
         views.append(view)
+        if prices and (sub := template.get("subview")):
+            # Price breakdown: own tab next to the ČEZ view.
+            text = MARKER.sub(resolve, json.dumps(sub["sections"], ensure_ascii=False))
+            prices = dict(sub["view"], sections=json.loads(text), path=f"{PRICES_PATH}{suffix}")
+            if len(consumption) > 1:
+                prices["title"] = f"{prices['title']} {sp.name}"
+            views.append(prices)
     return views
 
 
 def _is_ours(path: Any) -> bool:
-    return isinstance(path, str) and (path == VIEW_PATH or re.fullmatch(rf"{VIEW_PATH}-\d+", path))
+    return isinstance(path, str) and bool(
+        re.fullmatch(rf"({VIEW_PATH}|{PRICES_PATH})(-\d+)?", path)
+    )
 
 
 async def async_write_dashboard(hass: HomeAssistant, url: str, views: list[dict[str, Any]]) -> None:
@@ -314,7 +327,14 @@ async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
     if coordinator.data is None:
         return None
     today, tomorrow = detect_spot_sensors(hass)
-    views = build_views(hass, entry.entry_id, coordinator.data, today, tomorrow)
+    views = build_views(
+        hass,
+        entry.entry_id,
+        coordinator.data,
+        today,
+        tomorrow,
+        prices=price_breakdown_enabled(entry.options),
+    )
     try:
         if url == DASHBOARD_NEW:
             url = await async_ensure_new_dashboard(hass)

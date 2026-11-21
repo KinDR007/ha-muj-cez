@@ -1,0 +1,28 @@
+VYÚČTOVÁNÍ ZA ELEKTŘINU
+Daňový přehled Základ daně Sazba DPH DPH Celkem s DPH
+Cena za spotřebovanou elektřinu a služby 1 470,80 Kč 21 % 308,87 Kč 1 779,67 Kč
+Přijaté platby -1 000,00 Kč 21 % -210,00 Kč -1 210,00 Kč
+Vysoký tarif (VT/T1) 531,00 kWh 4,07 Kč/kWh 2 158,98 Kč 2 612,37 Kč
+Podrobné vyúčtování
+1. 1. 2025 - 31. 1. 2025 1 000,00 kWh 1 100,00 kWh
+Spotřebovaná elektřina (obchodní část)
+1. 1. 2025 - 28. 2. 2025 Produkt Elektřina pro soláry
+Množství Jednotková cena Celkem bez DPH
+Spotřeba / nízký tarif (NT/T2) 0,21800 MWh 2 690,00 Kč 586,42 Kč
+Sleva za přetoky do sítě dle podmínek produktu 0,00662 MWh -2 690,00 Kč -17,81 Kč
+Celková platba za spotřebu bez DPH
+s DPH
+568,61 Kč
+Ostatní vyúčtované položky (obchodní část)
+1. 1. 2025 - 28. 2. 2025
+Množství Jednotková cena Celkem bez DPH
+Stálá platba 2,00000 měs. 165,00 Kč 330,00 Kč
+strana 3/9
+S:597, L:299, D:63
+Distribuce elektřiny (distribuční část)
+1. 1. 2025 - 31. 1. 2025 Sazba D57D
+Množství Jednotková cena Celkem bez DPH
+Platba za jistič 1,00000 měs. 469,00 Kč 469,00 Kč
+Distribuce / vysoký tarif (VT/T1) 0,12800 MWh 721,45 Kč 92,35 Kč
+Provoz nesíťové infrastruktury 1,00000 měs. 10,84 Kč 10,84 Kč
+Pro výpočet se používají dva způsoby, automaticky zvolíme podle spotřeby 187,61 Kč

@@ -34,7 +34,8 @@
           "spot_price_sensor": "HA spot price sensor",
           "dashboard": "Dashboard",
           "install_cards": "Install missing cards",
-          "hdo": "HDO from ČEZ Distribuce"
+          "hdo": "HDO from ČEZ Distribuce",
+          "price_breakdown": "Price breakdown"
         },
         "data_description": {
           "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
@@ -44,7 +45,8 @@
           "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025).",
           "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV).",
           "install_cards": "Installs cards missing for the dashboard via Marketplace / HACS (when present), otherwise downloads the latest release from GitHub.",
-          "hdo": "Loads the low/high tariff switching times (HDO) from the ČEZ Distribuce portal with the same credentials. Adds the current tariff, next switch and current price per kWh. Skipped silently when the portal has no HDO for the supply point."
+          "hdo": "Loads the low/high tariff switching times (HDO) from the ČEZ Distribuce portal with the same credentials. Adds the current tariff, next switch and current price per kWh. Skipped silently when the portal has no HDO for the supply point.",
+          "price_breakdown": "Downloads the settlements (CSV data file or PDF) and product price lists of the account and adds the \"Cenový rozpad\" dashboard tab: what each item costs per month, quarter and year (supplier part, distribution, taxes, PV payout). Off: nothing of this is downloaded and the tab is not created; turning it off deletes the downloaded invoices."
         }
       }
     },
@@ -71,7 +73,8 @@
           "spot_price_sensor": "HA spot price sensor",
           "dashboard": "Dashboard",
           "install_cards": "Install missing cards",
-          "hdo": "HDO from ČEZ Distribuce"
+          "hdo": "HDO from ČEZ Distribuce",
+          "price_breakdown": "Price breakdown"
         },
         "data_description": {
           "update_period": "Weekly updates run on Mondays, monthly on the 1st day of the month.",
@@ -81,7 +84,8 @@
           "spot_price_sensor": "Optional. Current spot price sensor (CZK/kWh or CZK/MWh, with long-term statistics), e.g. from cz_energy_spot_prices. Fills prices for valuing the export where the ČEZ portal has none (since October 2025).",
           "dashboard": "Where to add the ČEZ view with charts (generated from the entities of this HA, with or without PV).",
           "install_cards": "Installs cards missing for the dashboard via Marketplace / HACS (when present), otherwise downloads the latest release from GitHub.",
-          "hdo": "Loads the low/high tariff switching times (HDO) from the ČEZ Distribuce portal with the same credentials. Adds the current tariff, next switch and current price per kWh. Skipped silently when the portal has no HDO for the supply point."
+          "hdo": "Loads the low/high tariff switching times (HDO) from the ČEZ Distribuce portal with the same credentials. Adds the current tariff, next switch and current price per kWh. Skipped silently when the portal has no HDO for the supply point.",
+          "price_breakdown": "Downloads the settlements (CSV data file or PDF) and product price lists of the account and adds the \"Cenový rozpad\" dashboard tab: what each item costs per month, quarter and year (supplier part, distribution, taxes, PV payout). Off: nothing of this is downloaded and the tab is not created; turning it off deletes the downloaded invoices."
         }
       }
     }

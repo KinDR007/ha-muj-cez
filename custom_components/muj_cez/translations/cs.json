@@ -34,7 +34,8 @@
           "spot_price_sensor": "Senzor spotové ceny v HA",
           "dashboard": "Dashboard",
           "install_cards": "Nainstalovat chybějící karty",
-          "hdo": "HDO z ČEZ Distribuce"
+          "hdo": "HDO z ČEZ Distribuce",
+          "price_breakdown": "Cenový rozpad"
         },
         "data_description": {
           "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
@@ -44,7 +45,8 @@
           "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
           "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní).",
           "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu.",
-          "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá."
+          "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá.",
+          "price_breakdown": "Stáhne vyúčtování (datový soubor CSV nebo PDF) a ceníky produktu a přidá do dashboardu záložku „Cenový rozpad“: kolik stojí jednotlivé položky po měsících, čtvrtletích a letech (obchodní část, distribuce, daně, výkup přetoků). Vypnuto: nic z toho se nestahuje a záložka se nevytvoří; vypnutím se stažené faktury smažou."
         }
       }
     },
@@ -71,7 +73,8 @@
           "spot_price_sensor": "Senzor spotové ceny v HA",
           "dashboard": "Dashboard",
           "install_cards": "Nainstalovat chybějící karty",
-          "hdo": "HDO z ČEZ Distribuce"
+          "hdo": "HDO z ČEZ Distribuce",
+          "price_breakdown": "Cenový rozpad"
         },
         "data_description": {
           "update_period": "Týdenní aktualizace probíhá v pondělí, měsíční 1. den v měsíci.",
@@ -81,7 +84,8 @@
           "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
           "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní).",
           "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu.",
-          "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá."
+          "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá.",
+          "price_breakdown": "Stáhne vyúčtování (datový soubor CSV nebo PDF) a ceníky produktu a přidá do dashboardu záložku „Cenový rozpad“: kolik stojí jednotlivé položky po měsících, čtvrtletích a letech (obchodní část, distribuce, daně, výkup přetoků). Vypnuto: nic z toho se nestahuje a záložka se nevytvoří; vypnutím se stažené faktury smažou."
         }
       }
     }

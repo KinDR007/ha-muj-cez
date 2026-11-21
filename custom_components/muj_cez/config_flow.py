@@ -30,6 +30,7 @@ from .const import (
     CONF_HDO,
     CONF_INSTALL_CARDS,
     CONF_PARTNER,
+    CONF_PRICE_BREAKDOWN,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_SPOT_PRICE_SENSOR,
@@ -41,6 +42,7 @@ from .const import (
     DEFAULT_UPDATE_TIME,
     DOMAIN,
     UPDATE_PERIODS,
+    price_breakdown_enabled,
 )
 from .coordinator import MujCezConfigEntry
 from .dashboard import async_dashboard_choices, async_energy_grid_sensors, suggested_options
@@ -110,6 +112,7 @@ async def settings_form(
             ),
             vol.Optional(CONF_INSTALL_CARDS, default=True): BooleanSelector(),
             vol.Optional(CONF_HDO, default=True): BooleanSelector(),
+            vol.Optional(CONF_PRICE_BREAKDOWN, default=False): BooleanSelector(),
         }
     )
     if current is None:
@@ -117,6 +120,7 @@ async def settings_form(
         suggested[CONF_DASHBOARD] = DASHBOARD_NEW
     else:
         suggested = dict(current)
+        suggested[CONF_PRICE_BREAKDOWN] = price_breakdown_enabled(current)
     valid = {d["value"] for d in dashboards}
     if suggested.get(CONF_DASHBOARD) not in valid:
         suggested[CONF_DASHBOARD] = DASHBOARD_OFF

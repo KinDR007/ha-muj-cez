@@ -14,6 +14,7 @@ from custom_components.muj_cez.const import (
     CONF_DASHBOARD,
     CONF_HDO,
     CONF_INSTALL_CARDS,
+    CONF_PRICE_BREAKDOWN,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_UPDATE_PERIOD,
@@ -45,6 +46,7 @@ async def test_user_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None:
     assert suggested[CONF_REFERENCE_SENSOR] == "sensor.import_energy"
     assert suggested[CONF_REFERENCE_EXPORT_SENSOR] == "sensor.export_energy"
     assert suggested[CONF_DASHBOARD] == DASHBOARD_NEW
+    assert suggested[CONF_PRICE_BREAKDOWN] is None  # new entry: schema default off
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
@@ -57,6 +59,7 @@ async def test_user_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None:
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == USERNAME
     assert result["options"][CONF_REFERENCE_SENSOR] == "sensor.import_energy"
+    assert result["options"][CONF_PRICE_BREAKDOWN] is False
     assert result["data"] == {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
     assert result["result"].unique_id == USERNAME
 
@@ -137,6 +140,9 @@ async def test_options_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.FORM
+    # Entry from before the option existed: price breakdown suggested on.
+    key = next(k for k in result["data_schema"].schema if k == CONF_PRICE_BREAKDOWN)
+    assert key.description == {"suggested_value": True}
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {CONF_UPDATE_PERIOD: "weekly", CONF_UPDATE_TIME: "03:15:00"}
     )
@@ -147,6 +153,7 @@ async def test_options_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None
         CONF_DASHBOARD: DASHBOARD_OFF,
         CONF_INSTALL_CARDS: True,
         CONF_HDO: True,
+        CONF_PRICE_BREAKDOWN: False,
     }
 
 

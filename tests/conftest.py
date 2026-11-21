@@ -51,6 +51,7 @@ def sample_data(today: date = TODAY) -> api.CezData:
             api.parse_advance_plan(load("advance_plan.json"), today),
         ),
         months=api.parse_simulation_months(load("simulation.json")),
+        sim_items=api.parse_simulation_items(load("simulation.json")),
         readings=api.parse_meter_reading_history(load("meter_readings.json"), today),
         outages=api.parse_outages(load("outages.json"), sp.ean),
     )

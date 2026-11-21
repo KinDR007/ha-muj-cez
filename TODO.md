@@ -31,3 +31,18 @@
 - [x] Release 1.1.1
 - [x] Issue #1: senzor Stav elektroměru NT, výběr zákaznického účtu (X-COL-PARTNER), anonymizovaná surová data v diagnostice (+ redakce e-mailu, kódu OM a adres v diagnostice)
 - [ ] Issue #1: ověření výběru účtu autorem (nemáme účet s více zákaznickými čísly)
+
+## Cenový rozpad (branch feature/price-breakdown, jen lokálně)
+- [x] Analýza zdrojů: simulace (3 agregáty/měsíc), invoice-detail (souhrn), DIP (sazba, jistič)
+- [x] Dokumenty: CSV `POST /documents/attachment` + `GET /documents/{key}/attachment`, PDF `POST /documents` + `/documents/{guid}/attachment`; parametry dokladu vždy z čerstvého `/billings/extended` (header/snapshot id se mění)
+- [x] Sonda `tools/probe/probe_documents.py` na obou loginech (CSV jen u části faktur, PDF u všech; výkup = SLF jen množství a částka)
+- [x] Parser CSV / PDF / výkup (`invoice.py`), součty sedí na základ daně u všech faktur
+- [x] Rozpad simulace podle posledních jednotkových cen (přesně, když ceny sedí; jinak souhrn ze simulace)
+- [x] Úložiště faktur (`pricing.py`, stažení jednou, retry 7 dní), websocket `muj_cez/prices`, offline `tools/prices_offline.py`
+- [x] Záložka `cez-ceny` (vlastní tab s ikonou) s listováním měsíc/kvartál/rok, s/bez DPH, graf historie, výkup
+- [x] Nasazeno a ověřeno na lokálním HA (editor, 5 faktur CSV/PDF) i vzdáleném HA (generovaný dashboard, 6 PDF + 19 výkupů, součty sedí)
+- [x] Volba „Cenový rozpad“ (nové vypnuto, stávající zapnuto; vypnutí smaže faktury, bez záložky a bez stahování; pypdf až při zapnutí), ověřeno vyp/zap na lokálním HA
+- [ ] Váhy pro rozpočet spotřeby do měsíců: průběhová data / HA statistiky místo dnů
+- [x] Nový cenový rok bez faktury: rozpad z ceníku produktu (PDF CEN), i kombinace s poslední fakturou; ověřeno na vzdáleném HA (2026 celý rozložen)
+- [x] Opravné faktury a překryvy: pozdější doklad platí pro své dny (ořez), rozdílová oprava se přičítá; nasazeno na obě HA (zatím bez reálné opravné faktury v datech)
+- [x] Ověření na HA (pypdf z requirements se nainstaloval)

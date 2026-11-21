@@ -8,6 +8,7 @@ writes custom_components/muj_cez/dashboard_template.json:
 
   {"view": {...view without sections...}, "templates": {...},
    "sections": [{"requires": [...], "span_without_production": n, "config": {...}}],
+   "subview": {"view": {...price breakdown view (own tab)...}, "sections": [...]},
    "keys": {"c:predikce_vyuctovani": "invoice_balance", ...}}
 
 Markers: sensor.mujcez_c_<slug> (consumption point), sensor.mujcez_g_<slug> (smart meter
@@ -52,6 +53,7 @@ def main() -> int:
         print("Set EDITOR_DIR", file=sys.stderr)
         return 2
     tmp = Path(tempfile.mkdtemp()) / "view.json"
+    tmp_prices = tmp.with_name("prices.json")
     env = dict(
         os.environ,
         CEZ_EXPORT="1",
@@ -65,29 +67,45 @@ def main() -> int:
         CEZ_MESSAGES="sensor.mujcez_a_neprectene_zpravy",
     )
     subprocess.run(
-        [sys.executable, str(ROOT / "tools/dashboard/build_cez_view.py"), str(tmp)],
+        [
+            sys.executable,
+            str(ROOT / "tools/dashboard/build_cez_view.py"),
+            str(tmp),
+            str(tmp_prices),
+        ],
         env=env,
         check=True,
     )
     view = json.loads(tmp.read_text())
+    prices = json.loads(tmp_prices.read_text())
     meta = [{k: sec.pop(k) for k in list(sec) if k.startswith("_")} for sec in view["sections"]]
+    for sec in prices["sections"]:
+        for k in [k for k in sec if k.startswith("_")]:
+            sec.pop(k)
 
     sys.path[:0] = [f"{editor}/model", f"{editor}/app"]
     import dashmodel
     from checks import published_model, schema_errors
 
-    model = {"dashboard": "muj-cez", "title": "ČEZ", "views": [view]}
+    model = {"dashboard": "muj-cez", "title": "ČEZ", "views": [view, prices]}
     errs = schema_errors(model)
     if errs:
         print("Schema errors:", errs, file=sys.stderr)
         return 1
     rendered = dashmodel.render(published_model(model))
     sections = rendered["views"][0]["sections"]
+    price_sections = rendered["views"][1]["sections"]
     if len(sections) != len(meta):
         print("Section count changed while rendering", file=sys.stderr)
         return 1
 
-    text = json.dumps({"sections": sections, "templates": rendered["button_card_templates"]})
+    text = json.dumps(
+        {
+            "sections": sections,
+            "prices": price_sections,
+            "templates": rendered["button_card_templates"],
+        }
+    )
     for old, new in TEMPLATE_NAMES.items():
         text = text.replace(f'"{old}"', f'"{new}"')
     data = json.loads(text)
@@ -124,6 +142,10 @@ def main() -> int:
             }
             for m, sec in zip(meta, data["sections"], strict=True)
         ],
+        "subview": {
+            "view": {k: v for k, v in prices.items() if k != "sections"},
+            "sections": data["prices"],
+        },
         "keys": dict(sorted(keys.items())),
     }
     OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
