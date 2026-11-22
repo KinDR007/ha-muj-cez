@@ -1099,6 +1099,14 @@ def _pkce_pair() -> tuple[str, str]:
     return verifier, challenge
 
 
+def normalize_username(username: str) -> str:
+    """E-mail login in lower case. The login accepts any case, but the self meter reading
+    then fails with SAP_ZCOL-352 ("Chyba při načítání odběrného místa") for a login with
+    upper case letters, while all other requests work."""
+    username = username.strip()
+    return username.lower() if "@" in username else username
+
+
 class CezClient:
     """Async client. `session` is used for API calls; login uses its own cookie jar."""
 
@@ -1113,7 +1121,7 @@ class CezClient:
         # Customer account (business partner) when the ČEZ ID has several (shared access);
         # sent as X-COL-PARTNER like the web does, None = the portal's default account.
         self.partner = partner
-        self._username = username
+        self._username = normalize_username(username)
         self._password = password
         self._client_id: str | None = None
         self._authorize_url = DEFAULT_AUTHORIZE_URL

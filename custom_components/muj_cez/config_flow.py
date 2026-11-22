@@ -24,7 +24,14 @@ from homeassistant.helpers.selector import (
     TimeSelector,
 )
 
-from .api import CezAuthError, CezClient, CezError, InvoiceSimulation, SupplyPoint
+from .api import (
+    CezAuthError,
+    CezClient,
+    CezError,
+    InvoiceSimulation,
+    SupplyPoint,
+    normalize_username,
+)
 from .const import (
     CONF_DASHBOARD,
     CONF_HDO,
@@ -244,7 +251,7 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            username = user_input[CONF_USERNAME].strip()
+            username = normalize_username(user_input[CONF_USERNAME])
             errors, client = await _validate(self.hass, username, user_input[CONF_PASSWORD])
             if not errors:
                 self._client = client

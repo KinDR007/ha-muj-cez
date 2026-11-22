@@ -255,3 +255,11 @@ def test_billing_periods_unequal_advances() -> None:
     assert current.advances_remaining == 3050
     assert current.advances_remaining_count == 2
     assert current.advances_installment is None
+
+
+def test_login_e_mail_in_lower_case() -> None:
+    """The self meter reading fails (SAP_ZCOL-352) for a login with upper case letters."""
+    assert api.normalize_username(" Jan.Novak@Example.CZ ") == "jan.novak@example.cz"
+    assert api.normalize_username("Customer01") == "Customer01"  # not an e-mail: as typed
+    client = api.CezClient(None, "User@Example.com", "x")  # type: ignore[arg-type]
+    assert client._username == "user@example.com"

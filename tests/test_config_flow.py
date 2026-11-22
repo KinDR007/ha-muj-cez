@@ -39,7 +39,9 @@ async def test_user_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None:
         AsyncMock(return_value=("sensor.import_energy", "sensor.export_energy")),
     ):
         result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_USERNAME: f" {USERNAME} ", CONF_PASSWORD: PASSWORD}
+            # Upper case e-mail (phone keyboards): stored and used in lower case.
+            result["flow_id"],
+            {CONF_USERNAME: f" {USERNAME.capitalize()} ", CONF_PASSWORD: PASSWORD},
         )
     # Settings prefilled from the Energy dashboard, new dashboard suggested.
     assert result["step_id"] == "settings"
