@@ -10,8 +10,13 @@ integrace znovu načte.
 
 - **Perioda aktualizace**: denně, týdně (v pondělí) nebo měsíčně (1. den v měsíci).
   Data na portálu se mění zřídka, týdenní perioda většinou stačí.
-- **Čas aktualizace**: místní čas načtení dat. Data se načtou i při každém startu
-  Home Assistantu.
+- **Čas aktualizace**: místní čas načtení dat.
+
+Po restartu Home Assistantu se použijí naposledy stažená data, pokud od jejich stažení
+neproběhl naplánovaný čas aktualizace; portál se znovu nevolá a entity jsou hned k
+dispozici. Starší data se zobrazí hned a nová se stáhnou na pozadí. Okamžité stažení:
+**Nastavení → Zařízení a služby → Můj ČEZ → ⋮ → Znovu načíst**. Uložená data se nepoužijí
+po aktualizaci integrace na novou verzi.
 
 Když aktualizace selže, zkouší se znovu 6× po 30 minutách a entity mezitím drží poslední
 hodnoty.

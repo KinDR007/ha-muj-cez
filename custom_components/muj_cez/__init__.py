@@ -13,6 +13,7 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
 from .api import CezClient
+from .cache import DataCache
 from .const import (
     CONF_DASHBOARD,
     CONF_PARTNER,
@@ -50,7 +51,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> bo
         entry.data[CONF_PASSWORD],
         entry.data.get(CONF_PARTNER),
     )
-    coordinator = MujCezCoordinator(hass, entry, client)
+    integration = await async_get_integration(hass, DOMAIN)
+    coordinator = MujCezCoordinator(hass, entry, client, str(integration.version))
     if not price_breakdown_enabled(entry.options):
         # Turned off: drop the downloaded invoices and price lists.
         await coordinator.invoices.async_remove()
@@ -58,6 +60,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> bo
     entry.runtime_data = coordinator
     entry.async_on_unload(coordinator.async_setup_schedule())
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    if coordinator.refresh_after_start:
+        coordinator.refresh_after_start = False
+        entry.async_create_background_task(
+            hass, coordinator.async_scheduled_refresh(), f"{DOMAIN}_refresh_after_start"
+        )
     if entry.options.get(CONF_DASHBOARD) not in (None, "", DASHBOARD_OFF):
         entry.async_create_background_task(
             hass, _async_dashboard_after_setup(hass, entry), f"{DOMAIN}_dashboard"
@@ -83,4 +90,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> b
 async def async_remove_entry(hass: HomeAssistant, entry: MujCezConfigEntry) -> None:
     """Delete the stored 15 min data, invoices and price lists of the entry."""
     await ProfileStore(hass, entry.entry_id).async_remove()
+    await DataCache(hass, entry.entry_id, {}).async_remove()
     await InvoiceStore(hass, entry.entry_id).async_remove()

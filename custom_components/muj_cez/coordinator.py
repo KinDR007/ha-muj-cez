@@ -22,10 +22,12 @@ from homeassistant.util import dt as dt_util
 
 from . import grid as gridlib
 from .api import CezAuthError, CezClient, CezData, CezError
+from .cache import DataCache, last_scheduled_run
 from .compare import DailyEnergy, build_comparison
 from .const import (
     CONF_HDO,
     CONF_INVOICE_PERIODS,
+    CONF_PARTNER,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_SPOT_PRICE_SENSOR,
@@ -116,7 +118,13 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
 
     config_entry: MujCezConfigEntry
 
-    def __init__(self, hass: HomeAssistant, entry: MujCezConfigEntry, client: CezClient) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: MujCezConfigEntry,
+        client: CezClient,
+        version: str = "",
+    ) -> None:
         super().__init__(hass, _LOGGER, config_entry=entry, name=DOMAIN, update_interval=None)
         self.client = client
         self.last_success_time: datetime | None = None
@@ -142,10 +150,58 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         self._force_invoices = hass.is_running
         # Per consumption point uid: when its invoices were last checked (price card).
         self.invoices_updated: dict[str, str] = {}
+        identity = {
+            "version": version,
+            "username": entry.data[CONF_USERNAME],
+            "partner": entry.data.get(CONF_PARTNER),
+        }
+        self.cache = DataCache(hass, entry.entry_id, identity)
+        # HA start uses the cached data (see cache.py); a reload of the entry downloads.
+        self._use_cache = not hass.is_running
+        # Cached data older than the last scheduled update: refresh after the setup.
+        self.refresh_after_start = False
+
+    def _fresh(self, fetched: datetime) -> bool:
+        """No scheduled update time has passed since the data were downloaded."""
+        options = self.config_entry.options
+        period = options.get(CONF_UPDATE_PERIOD, DEFAULT_UPDATE_PERIOD)
+        time = parse_time(options.get(CONF_UPDATE_TIME, DEFAULT_UPDATE_TIME))
+        last = last_scheduled_run(dt_util.now(), time, partial(is_update_day, period))
+        return last is None or fetched >= last
 
     async def _async_update_data(self) -> CezData:
         if self._grid_cache is None:
             self._grid_cache = await self._grid_store.async_load() or {}
+        cached = None
+        if self._use_cache:  # first refresh after the HA start only
+            self._use_cache = False
+            cached = await self.cache.async_get_data()
+        data: CezData | None = None
+        downloaded = False
+        if cached and self._fresh(cached[1]):
+            data, fetched = cached
+            _LOGGER.debug("Using data downloaded at %s", fetched)
+        elif cached:
+            # Show the stored values now, download in the background after the setup.
+            data, fetched = cached
+            self.refresh_after_start = True
+        else:
+            data = await self._async_fetch()
+            fetched = dt_util.utcnow()
+            downloaded = True
+        await self._async_add_comparison(data)
+        await self._async_add_grid(data)
+        await self.async_update_hdo(data)
+        self.last_success_time = fetched
+        if data.grid:
+            self._schedule_statistics(data)
+            if downloaded:  # the recent 15 min days are fetched again with new data only
+                self._schedule_profiles(data)
+        if price_breakdown_enabled(self.config_entry.options):
+            self._schedule_invoices(data)
+        return data
+
+    async def _async_fetch(self) -> CezData:
         try:
             data = await self.client.fetch_all(dt_util.now().date(), self._grid_cache)
         except CezAuthError as err:
@@ -153,15 +209,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         except CezError as err:
             raise UpdateFailed(str(err)) from err
         await self._grid_store.async_save(self._grid_cache)
-        await self._async_add_comparison(data)
-        await self._async_add_grid(data)
-        await self.async_update_hdo(data)
-        self.last_success_time = dt_util.utcnow()
-        if data.grid:
-            self._schedule_statistics(data)
-            self._schedule_profiles(data)
-        if price_breakdown_enabled(self.config_entry.options):
-            self._schedule_invoices(data)
+        await self.cache.async_save_data(data, dt_util.utcnow())
         return data
 
     def _schedule_invoices(self, data: CezData) -> None:
@@ -313,6 +361,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
             return
         if self._hdo is None:
             self._hdo = await self._hdo_store.async_load() or {}
+            self._hdo_fetched = await self.cache.async_get_hdo_fetched()
         eans = [
             spd.supply_point.ean
             for spd in data.supply_points.values()
@@ -354,6 +403,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
             return
         self._hdo_fetched = dt_util.utcnow()
         self._hdo_warned = False
+        await self.cache.async_save_hdo_fetched(self._hdo_fetched)
 
     async def _async_refresh_hdo(self) -> None:
         if self.data is None:
@@ -415,6 +465,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         )
         await self._async_add_comparison(updated)
         self.async_set_updated_data(updated)
+        await self.cache.async_save_data(updated, self.last_success_time or dt_util.utcnow())
 
     async def async_scheduled_refresh(self) -> None:
         """Refresh and schedule a retry on failure."""
