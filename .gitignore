@@ -17,3 +17,7 @@ config.md
 logs/
 node_modules/
 *.local.json
+# Local notes, not published
+TODO.md
+docs/analyza-proveditelnosti.md
+.memory/
