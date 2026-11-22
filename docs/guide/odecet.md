@@ -1,13 +1,13 @@
 # Odečet elektroměru
 
-Záložka **Odečet** (ikona počítadla vedle záložky ČEZ) slouží k zadání samoodečtu
+Vnitřní záložka **Odečet** (ikona počítadla) u odběrného místa slouží k zadání samoodečtu
 elektroměru přímo z Home Assistantu, stejně jako na portálu Můj ČEZ. Hodnoty se
 kontrolují už při psaní podle stejných pravidel jako na portálu, takže se včas ukáže
 překlep nebo přehozená čísla.
 
 Kartu dodává integrace sama, není potřeba nic doinstalovat. Na vlastní dashboard ji
 lze přidat jako kartu typu `custom:muj-cez-reading-card` (volitelně `entry_id` pro
-konkrétní účet, `ean` pro výchozí odběrné místo a `title`). Ikona **?** v záhlaví karty
+konkrétní účet, `ean` jen pro jedno odběrné místo a `title`). Ikona **?** v záhlaví karty
 otevře tuto stránku.
 
 ## Formulář
@@ -55,7 +55,10 @@ Po kliknutí na **Zkontrolovat a odeslat** se zobrazí souhrn se spotřebou od p
 stavu. Teprve **Odeslat odečet** pošle odečet na portál, **Zpět** vrátí formulář.
 U typů, které se předávají distributorovi, je v souhrnu upozornění.
 
-Po odeslání karta potvrdí výsledek a načte nový poslední stav. Pokud portál hodnoty
+Po odeslání karta potvrdí výsledek a načte nový poslední stav. Integrace hned na pozadí
+načte odečty, simulaci vyúčtování a zálohy tohoto odběrného místa, takže senzory (stav
+elektroměru VT a NT, predikce vyúčtování) se aktualizují bez restartu; za 10 minut ještě
+jednou, protože portál simulaci přepočítá se zpožděním. Pokud portál hodnoty
 označí jako neobvyklé nebo je distributor zamítne, karta to oznámí; zamítnutý odečet
 je potřeba zadat znovu na portálu s fotografií displeje.
 

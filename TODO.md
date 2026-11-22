@@ -54,8 +54,16 @@
 - [x] Vlastní karta `custom:muj-cez-reading-card` (servíruje integrace), záložka `cez-odecet`
 - [x] Sonda `tools/probe/probe_reading.py` na obou loginech: tvary ověřeny (kWh, dny), validace odpovídá screenshotům portálu; nabízené typy z `requests-advanced`, rozsah data z `form-config`
 - [x] Ostrý test odeslání (2026-11-21, jednotarif, deníčkový odečet s poznámkou): HTTP 200, odečet hned na portálu; zkušební režim a volba „Odesílat odečty“ odebrány
-- [ ] Ostrý test na dvoutarifu (vzdálené HA) až bude stav VT/NT
+- [x] Ostrý test na dvoutarifu: ověřil autor issue #1 (D57d, deníčkový, VT i NT na portálu)
 - [x] Nasazeno na lokální HA (záložka přes Dashboard Editor) i vzdálené HA (generovaný dashboard), karta se znovu registruje (polyfill scoped registry ztrácel brzkou definici)
+
+## Dashboard po odběrných místech, obnova po odečtu, perioda faktur (issue #1)
+- [x] Záložka na odběrné místo (`cez-<EAN>`, „⚡ ulice · konec EAN“) s vlastní kartou `custom:muj-cez-tabs` (Přehled / Ceny / Odečet, responzivní mřížka); náhledy A/B/C porovnány, zvolena C
+- [x] Víc instancí v jednom dashboardu: vlastnictví podle `entry_id` v kartě, zámek zápisu, migrace starých záložek `cez*`
+- [x] Po odeslání odečtu: odečty, simulace, zálohy a období jen daného místa (hned a za 10 min), selhaný požadavek ponechá předchozí hodnotu
+- [x] Perioda kontroly faktur po místě (krok průvodce i nastavení, předvyplněno podle zúčtovacího období, uživatelská změna se nepřepíše), denně 30 dní po konci období, tlačítko + ikona s potvrzením v záložce Ceny
+- [x] Nasazeno a ověřeno na lokálním HA (migrace, záložky, dialog a stažení faktur)
+- [ ] Ověřit s autorem issue #1 dvě instance v jednom dashboardu
 
 ## Uživatelská příručka (docs/guide)
 - [x] Kapitoly: instalace, nastavení, entity, dashboard ČEZ, cenový rozpad, odečet, akce, potíže

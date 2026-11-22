@@ -1,8 +1,10 @@
 # Cenový rozpad
 
-Záložka **Cenový rozpad** (ikona bankovky) ukazuje, kolik stojí jednotlivé položky
-vyúčtování elektřiny po měsících, kvartálech a letech, s DPH i bez. Zapíná se volbou
-**Cenový rozpad** v nastavení integrace (u nových instalací je vypnutá).
+Vnitřní záložka **Ceny** (ikona bankovky) u odběrného místa ukazuje, kolik stojí
+jednotlivé položky vyúčtování elektřiny po měsících, kvartálech a letech, s DPH i bez.
+Zapíná se volbou **Cenový rozpad** v nastavení integrace (u nových instalací je vypnutá).
+Ikona **obnovit** v záhlaví po potvrzení hned stáhne nové faktury a ceníky místa; jinak se
+hledají podle [periody aktualizace faktur](nastaveni.md#aktualizace-faktur).
 
 ## Měsíc
 

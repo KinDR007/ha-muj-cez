@@ -34,9 +34,11 @@ ceny podle integrace cz_energy_spot_prices.
 ## Dashboard
 
 - **Dashboard**: kam přidat záložky ČEZ: nový dashboard „ČEZ“, některý existující, nebo
-  nevytvářet. Záložky se vygenerují podle entit v tomto HA (s fotovoltaikou i bez ní)
+  nevytvářet. Každé odběrné místo dostane jednu záložku s vnitřními záložkami Přehled,
+  Ceny a Odečet. Záložky se vygenerují podle entit v tomto HA (s fotovoltaikou i bez ní)
   a při každém načtení integrace se aktualizují; ostatní záložky dashboardu zůstanou beze
-  změny. Popis v kapitolách [Dashboard ČEZ](dashboard-cez.md),
+  změny. Další zákaznický účet (instance integrace) může zvolit stejný dashboard, záložky
+  se navzájem nepřepíšou. Popis v kapitolách [Dashboard ČEZ](dashboard-cez.md),
   [Cenový rozpad](cenovy-rozpad.md) a [Odečet elektroměru](odecet.md).
 - **Nainstalovat chybějící karty** (výchozí zapnuto): dashboard potřebuje karty
   **button-card**, **stack-in-card** a **mini-graph-card**. Chybějící integrace nainstaluje
@@ -54,6 +56,21 @@ ceny podle integrace cz_energy_spot_prices.
   nebo PDF) a ceníky produktu a přidá záložku **Cenový rozpad**. Vypnutý: nic z toho se
   nestahuje, záložka se nevytvoří a vypnutím se stažené faktury smažou. Knihovnu `pypdf`
   pro PDF faktury Home Assistant doinstaluje až při zapnutí.
+
+## Aktualizace faktur
+
+Se zapnutým cenovým rozpadem následuje krok **Aktualizace faktur**: jak často hledat nové
+faktury a ceníky každého odběrného místa (**týdně, měsíčně, čtvrtletně, ročně**).
+
+- Předvyplní se podle délky zúčtovacího období z portálu (měsíční fakturace = měsíčně,
+  roční = ročně).
+- Po skončení zúčtovacího období se vyúčtování hledá denně, dokud nepřijde (nejvýš 30 dní),
+  bez ohledu na zvolenou periodu.
+- Hodnotu, kterou změníte, integrace nepřepíše; vrátíte-li předvyplněnou, řídí se zase
+  fakturací.
+- Hned načíst faktury jde ikonou **obnovit** v záložce **Ceny** (po potvrzení) nebo
+  tlačítkem **Aktualizovat faktury** u odběrného místa. Znovunačtení integrace zkontroluje
+  faktury všech míst.
 
 ## Změna hesla
 

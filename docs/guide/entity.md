@@ -17,8 +17,11 @@ Názvy entit jsou v češtině nebo angličtině podle jazyka Home Assistantu.
 | Spotřeba a náklady za minulé období | uzavřené zúčtovací období |
 | Distribuční sazba, Hlavní jistič, Konec smlouvy, Datum změny ceny | údaje ze smlouvy |
 | Plánované odstávky | odstávky distribuce, seznam v atributu `outages` |
-| Zúčtovací období | historie období v atributu `periods`: spotřeba, náklady, zálohy, vyúčtování, Kč/kWh |
+| Zúčtovací období | historie období v atributu `periods`: spotřeba, náklady, zálohy, vyúčtování, Kč/kWh; `invoices_updated` = poslední kontrola faktur |
 | Odchylka od ČEZ | porovnání s referenčním senzorem v %, data pro grafy v atributech |
+
+Tlačítko **Aktualizovat faktury** (jen se zapnutým cenovým rozpadem) hned stáhne nové
+faktury a ceníky odběrného místa.
 
 Diagnostické entity: EAN, číslo elektroměru, číslo smlouvy, zákaznické číslo, produkt,
 čas poslední aktualizace.

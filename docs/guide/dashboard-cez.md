@@ -1,12 +1,20 @@
 # Dashboard ČEZ
 
 Integrace umí vytvořit vlastní dashboard **ČEZ** nebo přidat záložky do existujícího
-(volba **Dashboard** v [nastavení](nastaveni.md)). Záložky:
+(volba **Dashboard** v [nastavení](nastaveni.md)). Každé odběrné místo má jednu záložku
+s ulicí a koncem EAN, například **⚡ Dlouhá 12 · 1234567**, a v ní vnitřní záložky:
 
-- **ČEZ** (ikona blesku): přehled popsaný na této stránce,
-- **Cenový rozpad** (ikona bankovky): viz [Cenový rozpad](cenovy-rozpad.md), jen se
-  zapnutou volbou,
-- **Odečet** (ikona počítadla): viz [Odečet elektroměru](odecet.md).
+- **Přehled** (ikona blesku): přehled popsaný na této stránce,
+- **Ceny** (ikona bankovky): viz [Cenový rozpad](cenovy-rozpad.md), jen se zapnutou
+  volbou,
+- **Odečet** (ikona počítadla): viz [Odečet elektroměru](odecet.md), jen pro toto
+  odběrné místo.
+
+Vnitřní záložky dodává integrace (karta `custom:muj-cez-tabs`), prohlížeč si pamatuje
+naposledy otevřenou. Na mobilu se sekce skládají pod sebe. Více odběrných míst i více
+zákaznických účtů (další instance integrace) může sdílet jeden dashboard: každá instance
+přepisuje jen záložky svých odběrných míst, záložky starších verzí (ČEZ, Cenový rozpad,
+Odečet) nahradí.
 
 Sekce se přizpůsobí tomu, co účet a Home Assistant mají: s průběhovým měřením (typicky
 fotovoltaika) přibudou elektroměr, výkup, přetoky a spotové ceny, s HDO tarif a cena.

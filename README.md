@@ -30,7 +30,8 @@ včetně hotového dashboardu.
   Energie, výkup přetoků, spotové ceny.
 - **Porovnání s měřením v HA**: odchylka vlastního elektroměru od údajů ČEZ.
 - **Doklady**: kalendář všech dokladů a akce pro automatizace.
-- **Hotový dashboard**: záložky ČEZ, Cenový rozpad a Odečet se vygenerují samy podle entit.
+- **Hotový dashboard**: pro každé odběrné místo záložka s vnitřními záložkami Přehled, Ceny
+  a Odečet, vygeneruje se sama podle entit.
 
 ## Ukázky
 
