@@ -10,6 +10,8 @@ s ulicí a koncem EAN, například **⚡ Dlouhá 12 · 1234567**, a v ní vnitř
 - **Odečet** (ikona počítadla): viz [Odečet elektroměru](odecet.md), jen pro toto
   odběrné místo.
 
+![Záložka odběrného místa s vnitřními záložkami](img/dashboard-zalozky.png)
+
 Vnitřní záložky dodává integrace (karta `custom:muj-cez-tabs`), prohlížeč si pamatuje
 naposledy otevřenou. Na mobilu se sekce skládají pod sebe. Více odběrných míst i více
 zákaznických účtů (další instance integrace) může sdílet jeden dashboard: každá instance

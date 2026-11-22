@@ -4,7 +4,8 @@
 //   HA_LOCAL_URL=... HA_LOCAL_TOKEN=... HA_REMOTE_URL=... HA_REMOTE_TOKEN=... \
 //     node tools/docs/shots.mjs [shot id ...]
 //
-// Shots are defined in shots.json: Home Assistant (local / remote), page path, actions
+// Shots are defined in shots.json: Home Assistant (local / remote), page path (/muj-cez
+// opens the tab of the first supply point), inner tab of muj-cez-tabs ("tab"), actions
 // (fill, click, clickLabel), the element to cut out (section by heading, card by tag,
 // dialog, or a clip rectangle) and
 // optional numbered callouts placed next to texts. Before every screenshot all visible
@@ -110,7 +111,13 @@ function pageHelpers() {
   window.__target = (t) => {
     const all = deep(document);
     if (t.section) {
-      return all.filter((e) => e.localName === "hui-section").find((s) => {
+      // Sections of a sections view, or of the visible tab of muj-cez-tabs.
+      const sections = all.filter(
+        (e) =>
+          (e.localName === "hui-section" || e.classList?.contains("section")) &&
+          e.getBoundingClientRect().height > 0,
+      );
+      return sections.find((s) => {
         const txt = textNodes(s.shadowRoot || s).map((n) => n.nodeValue).join(" ");
         return txt.includes(t.section);
       });
@@ -183,8 +190,29 @@ async function act(page, a) {
   await page.waitForTimeout(a.wait ?? 800);
 }
 
+async function innerTab(page, title) {
+  const ok = await page.evaluate((t) => {
+    let card = null;
+    const walk = (r) => {
+      for (const e of r.querySelectorAll("*")) {
+        if (!card && e.localName === "muj-cez-tabs") card = e;
+        if (e.shadowRoot) walk(e.shadowRoot);
+      }
+    };
+    walk(document);
+    const button = card && [...card.shadowRoot.querySelectorAll("button")].find(
+      (b) => b.textContent.trim() === t,
+    );
+    if (button) button.click();
+    return !!button;
+  }, title);
+  if (!ok) throw new Error(`inner tab ${title} not found`);
+  await page.waitForTimeout(4000);
+}
+
 async function shot(browser, s) {
   const page = await open(browser, s.host, s.path, s.viewport);
+  if (s.tab) await innerTab(page, s.tab);
   for (const a of s.actions || []) await act(page, a);
   await page.evaluate((r) => window.__anon(r), PRIVATE.replace);
   if (s.callouts) await page.evaluate(([c, w]) => window.__callouts(c, w), [s.callouts, s.target.tag]);

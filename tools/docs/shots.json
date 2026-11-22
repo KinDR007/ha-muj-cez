@@ -3,7 +3,8 @@
     {
       "id": "odecet-formular",
       "host": "remote",
-      "path": "/muj-cez/cez-odecet",
+      "path": "/muj-cez",
+      "tab": "Odečet",
       "target": {
         "section": "Odečet elektroměru"
       },
@@ -54,7 +55,8 @@
     {
       "id": "odecet-kontrola",
       "host": "remote",
-      "path": "/muj-cez/cez-odecet",
+      "path": "/muj-cez",
+      "tab": "Odečet",
       "actions": [
         {
           "fill": "muj-cez-reading-card >> #vt",
@@ -77,7 +79,8 @@
     {
       "id": "odecet-souhrn",
       "host": "remote",
-      "path": "/muj-cez/cez-odecet",
+      "path": "/muj-cez",
+      "tab": "Odečet",
       "actions": [
         {
           "fill": "muj-cez-reading-card >> #vt",
@@ -104,7 +107,8 @@
     {
       "id": "ceny-mesic",
       "host": "remote",
-      "path": "/muj-cez/cez-ceny",
+      "path": "/muj-cez",
+      "tab": "Ceny",
       "target": {
         "section": "Platby podle položek"
       },
@@ -146,7 +150,8 @@
     {
       "id": "cez-smlouva",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Smlouva a odběrné místo"
       }
@@ -154,7 +159,8 @@
     {
       "id": "cez-vyuctovani",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Predikce vyúčtování"
       }
@@ -162,7 +168,8 @@
     {
       "id": "cez-zalohy",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Příští záloha"
       }
@@ -170,7 +177,8 @@
     {
       "id": "cez-hdo",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Tarif HDO a cena"
       }
@@ -178,7 +186,8 @@
     {
       "id": "cez-elektromer",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Přetoky do sítě"
       }
@@ -186,7 +195,8 @@
     {
       "id": "cez-vykup",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Výkup přetoků"
       }
@@ -194,7 +204,8 @@
     {
       "id": "cez-ha-vs-cez",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "HA vs elektroměr ČEZ"
       }
@@ -202,7 +213,8 @@
     {
       "id": "cez-odber-mesice",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Odběr a přetoky po měsících"
       }
@@ -210,7 +222,8 @@
     {
       "id": "cez-vykup-mesice",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Výkup po měsících"
       }
@@ -218,7 +231,8 @@
     {
       "id": "cez-15min",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Průběh po 15 minutách"
       }
@@ -226,7 +240,8 @@
     {
       "id": "cez-spot-dnes",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Spotová cena dnes a zítra"
       }
@@ -234,7 +249,8 @@
     {
       "id": "cez-spot-mesice",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Spotová cena po měsících"
       }
@@ -242,7 +258,8 @@
     {
       "id": "cez-spotreba-mesice",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Spotřeba po měsících"
       }
@@ -250,7 +267,8 @@
     {
       "id": "cez-mezirocni",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Meziroční porovnání"
       }
@@ -258,7 +276,8 @@
     {
       "id": "cez-obdobi-celkem",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Zúčtovací období celkem"
       }
@@ -266,7 +285,8 @@
     {
       "id": "cez-obdobi",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Průměrná cena"
       }
@@ -274,7 +294,8 @@
     {
       "id": "cez-doklady",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "section": "Doklady"
       }
@@ -282,7 +303,8 @@
     {
       "id": "ceny-kvartal",
       "host": "remote",
-      "path": "/muj-cez/cez-ceny",
+      "path": "/muj-cez",
+      "tab": "Ceny",
       "actions": [
         {
           "click": "text=Kvartál",
@@ -296,7 +318,8 @@
     {
       "id": "ceny-rok",
       "host": "remote",
-      "path": "/muj-cez/cez-ceny",
+      "path": "/muj-cez",
+      "tab": "Ceny",
       "actions": [
         {
           "click": "text=Rok",
@@ -310,7 +333,8 @@
     {
       "id": "ceny-rok-minuly",
       "host": "remote",
-      "path": "/muj-cez/cez-ceny",
+      "path": "/muj-cez",
+      "tab": "Ceny",
       "actions": [
         {
           "click": "text=Rok",
@@ -401,9 +425,28 @@
       }
     },
     {
+      "id": "dashboard-zalozky",
+      "host": "remote",
+      "path": "/muj-cez",
+      "tab": "Přehled",
+      "viewport": {
+        "width": 1400,
+        "height": 900
+      },
+      "target": {
+        "clip": [
+          0,
+          0,
+          1400,
+          108
+        ]
+      }
+    },
+    {
       "id": "readme-dashboard",
       "host": "remote",
-      "path": "/muj-cez/cez",
+      "path": "/muj-cez",
+      "tab": "Přehled",
       "target": {
         "clip": [
           16,
@@ -416,7 +459,8 @@
     {
       "id": "readme-ceny",
       "host": "remote",
-      "path": "/muj-cez/cez-ceny",
+      "path": "/muj-cez",
+      "tab": "Ceny",
       "target": {
         "section": "Platby podle položek"
       }
@@ -424,7 +468,8 @@
     {
       "id": "readme-odecet",
       "host": "remote",
-      "path": "/muj-cez/cez-odecet",
+      "path": "/muj-cez",
+      "tab": "Odečet",
       "actions": [
         {
           "fill": "muj-cez-reading-card >> #vt",
