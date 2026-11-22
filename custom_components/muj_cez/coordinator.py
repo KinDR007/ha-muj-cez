@@ -49,6 +49,7 @@ from .const import (
 from .distribuce import DipClient, DipError, merge, parse_signals, prune
 from .pricing import InvoiceStore
 from .profile import ProfileStore
+from .restore import async_contract_from_history
 from .statistics import async_update_statistics, statistic_id
 
 _LOGGER = logging.getLogger(__name__)
@@ -211,10 +212,13 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         if cached and self._fresh(cached[1]):
             data, fetched = cached
             _LOGGER.debug("Using data downloaded at %s", fetched)
+            if await self._async_restore_contracts(data):
+                await self.cache.async_save_data(data, fetched)
         elif cached:
             # Show the stored values now, download in the background after the setup.
             data, fetched = cached
             self.refresh_after_start = True
+            await self._async_restore_contracts(data)
         else:
             data = await self._async_fetch()
             fetched = dt_util.utcnow()
@@ -231,6 +235,21 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
             self._schedule_invoices(data)
         return data
 
+    async def _async_restore_contracts(self, data: CezData) -> bool:
+        """Contracts still missing (no earlier download at hand): the recorded states of
+        the contract sensors. True when something was restored."""
+        restored = False
+        for spd in data.supply_points.values():
+            if spd.contract is None and not spd.supply_point.production:
+                spd.contract = await async_contract_from_history(self.hass, spd.supply_point.uid)
+                if spd.contract is not None:
+                    restored = True
+                    _LOGGER.info(
+                        "Contract of %s not available, restored from the history",
+                        spd.supply_point.ean,
+                    )
+        return restored
+
     async def _async_fetch(self) -> CezData:
         try:
             data = await self.client.fetch_all(dt_util.now().date(), self._grid_cache)
@@ -244,6 +263,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
             previous = cached[0] if cached else None
         if kept := keep_previous(data, previous):
             _LOGGER.info("Portal requests failed, keeping the last values: %s", ", ".join(kept))
+        await self._async_restore_contracts(data)
         await self._grid_store.async_save(self._grid_cache)
         await self.cache.async_save_data(data, dt_util.utcnow())
         return data
