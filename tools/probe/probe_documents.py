@@ -144,10 +144,10 @@ async def probe_pricelists(p: Probe, place_id: str, ean: str) -> None:
             await download_doc(p, doc["documentGuidCol"], f"cenik_{ean}_{i}")
 
 
-async def probe_calculator(p: Probe, agreement: str, ean: str) -> None:
+async def probe_calculator(p: Probe, agreement: str, ean: str, commodity: str = "E1") -> None:
     print(f"product calculator {agreement}/{ean}")
     status, products = await p.req(
-        "GET", f"/product-calculator/{agreement}/products/{ean}?commodity=E1"
+        "GET", f"/product-calculator/{agreement}/products/{ean}?commodity={commodity}"
     )
     print(f"  products: HTTP {status} {str(products)[:300]}")
     save(f"calc_products_{agreement}.json", products)
@@ -160,7 +160,7 @@ async def probe_calculator(p: Probe, agreement: str, ean: str) -> None:
                 ids += [x.get("id") or x.get("productId") for x in v if isinstance(x, dict)]
     ids = [i for i in ids if i][:5]
     body = {
-        "commodity": "E1",
+        "commodity": commodity,
         "agreementIdIsu": agreement,
         "supplyPointCode": ean,
         "productCalculationInfo": [
@@ -223,10 +223,12 @@ async def main() -> int:
             for key, f in calc_files:
                 calc = json.loads((SNAPSHOT_DIR / f).read_text())
                 agreement, ean = key.split("/")[2], key.split("/")[4].split("?")[0].strip()
-                if calc.get("tariffType"):  # consumption points only
+                commodity = key.split("commodity=")[-1] if "commodity=" in key else "E1"
+                # Consumption points only (gas has no tariff type).
+                if calc.get("tariffType") or commodity.startswith("P"):
                     if agreement in places:
                         await probe_pricelists(p, places[agreement], ean)
-                    await probe_calculator(p, agreement, ean)
+                    await probe_calculator(p, agreement, ean, commodity)
         except api.CezError as err:
             print(f"ERROR: {err}", file=sys.stderr)
             return 1

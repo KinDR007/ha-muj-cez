@@ -3,7 +3,7 @@
 Usage: CEZ_USER=... CEZ_PASS=... CEZ_SNAPSHOT_DIR=.snapshot/<name> \
   .venv/bin/python tools/probe/probe_reading.py
 
-For every electricity consumption point saves to <CEZ_SNAPSHOT_DIR>/reading/ (git-ignored,
+For every consumption point (electricity and gas) saves to <CEZ_SNAPSHOT_DIR>/reading/ (git-ignored,
 personal data): the readings with reason and status, consumption of the last billing
 period with the yearly limits, the selectable reading types and the date range per type.
 Used to verify meter_reading.py against real responses before turning sending on.
@@ -62,7 +62,7 @@ async def main() -> int:
         points = [
             sp
             for sp in await client.get_supply_points()
-            if not sp.production and sp.commodity.startswith("E")
+            if not sp.production and sp.commodity.startswith(("E", "P"))
         ]
         for sp in points:
             print(f"{sp.name} ({sp.ean[-6:]})")
