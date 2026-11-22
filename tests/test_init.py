@@ -311,3 +311,60 @@ async def test_no_low_tariff_sensor_single_tariff(
     registry = er.async_get(hass)
     assert registry.async_get_entity_id("sensor", DOMAIN, f"{UID}_meter_reading") is not None
     assert registry.async_get_entity_id("sensor", DOMAIN, f"{UID}_meter_reading_low") is None
+
+
+async def test_failed_optional_requests_keep_last_values(
+    hass: HomeAssistant, entry: MockConfigEntry, mock_client: AsyncMock
+) -> None:
+    """A portal outage of single endpoints (e.g. contract info HTTP 500) keeps the values."""
+    import dataclasses
+
+    from .conftest import sample_data
+
+    await _setup(hass, entry)
+    assert _state(hass, "distribution_rate") not in (STATE_UNKNOWN, None)
+    rate, balance = _state(hass, "distribution_rate"), _state(hass, "invoice_balance")
+    consumption, invoice = _state(hass, "last_period_consumption"), _state(hass, "last_invoice")
+    failed = sample_data()
+    spd = failed.supply_points[UID]
+    failed.supply_points[UID] = dataclasses.replace(
+        spd, contract=None, simulation=None, months=None, last_period=None, outages=None,
+        billing=None, periods=[],
+    )  # fmt: skip
+    failed.documents = []
+    mock_client.fetch_all.return_value = failed
+    coordinator = entry.runtime_data
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert _state(hass, "distribution_rate") == rate
+    assert _state(hass, "invoice_balance") == balance
+    assert _state(hass, "last_period_consumption") == consumption
+    assert _state(hass, "last_invoice") == invoice
+    assert coordinator.data.supply_points[UID].periods == spd.periods
+    assert coordinator.data.documents
+    # The portal answers again: new values win.
+    fresh = sample_data()
+    fresh.supply_points[UID].simulation.total_amount = -1.0
+    mock_client.fetch_all.return_value = fresh
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert _state(hass, "invoice_balance") == "-1.0"
+
+
+async def test_reload_keeps_last_values_from_cache(
+    hass: HomeAssistant, entry: MockConfigEntry, mock_client: AsyncMock
+) -> None:
+    """A reload downloads again; a failed optional request takes the cached value."""
+    import dataclasses
+
+    from .conftest import sample_data
+
+    await _setup(hass, entry)
+    rate = _state(hass, "distribution_rate")
+    failed = sample_data()
+    failed.supply_points[UID] = dataclasses.replace(failed.supply_points[UID], contract=None)
+    mock_client.fetch_all.return_value = failed
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert mock_client.fetch_all.call_count == 2  # downloaded, not taken from the cache
+    assert _state(hass, "distribution_rate") == rate

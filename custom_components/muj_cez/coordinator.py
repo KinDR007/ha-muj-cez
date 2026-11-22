@@ -66,7 +66,36 @@ READING_FIELDS = (
     "advance_settings",
 )
 
+# Parts of a full refresh fetched by optional requests (None = the request failed): the
+# last known value is kept, so a portal outage of one endpoint does not empty sensors.
+OPTIONAL_FIELDS = (*READING_FIELDS, "periods", "contract", "billing", "outages", "payouts")
+
 type MujCezConfigEntry = ConfigEntry[MujCezCoordinator]
+
+
+def keep_previous(new: CezData, old: CezData | None) -> list[str]:
+    """Fill parts missing in `new` (failed optional requests) from `old`; returns what was
+    kept as "<field> <ean>" for the log."""
+    if old is None:
+        return []
+    kept = []
+    for uid, spd in new.supply_points.items():
+        prev = old.supply_points.get(uid)
+        if prev is None:
+            continue
+        history_failed = spd.last_period is None and prev.last_period is not None
+        for name in OPTIONAL_FIELDS:
+            if getattr(spd, name) is None and getattr(prev, name) is not None:
+                setattr(spd, name, getattr(prev, name))
+                kept.append(f"{name} {spd.supply_point.ean}")
+        if history_failed and spd.periods is not prev.periods:
+            spd.periods = prev.periods  # built from the history: keep them together
+    if not new.documents and old.documents:
+        new.documents = old.documents
+        kept.append("documents")
+    if new.unread_messages is None and old.unread_messages is not None:
+        new.unread_messages = old.unread_messages
+    return kept
 
 
 def is_update_day(period: str, now: datetime) -> bool:
@@ -209,6 +238,12 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
             raise ConfigEntryAuthFailed(str(err)) from err
         except CezError as err:
             raise UpdateFailed(str(err)) from err
+        previous = self.data
+        if previous is None:  # first refresh of a reload: the last download on disk
+            cached = await self.cache.async_get_data()
+            previous = cached[0] if cached else None
+        if kept := keep_previous(data, previous):
+            _LOGGER.info("Portal requests failed, keeping the last values: %s", ", ".join(kept))
         await self._grid_store.async_save(self._grid_cache)
         await self.cache.async_save_data(data, dt_util.utcnow())
         return data
