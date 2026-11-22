@@ -9,6 +9,7 @@ replaces them. The cache is dropped when the integration version or the account 
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import types
 import typing
 from datetime import date, datetime, timedelta
@@ -76,6 +77,25 @@ def decode(tp: Any, value: Any) -> Any:
             }
         )
     return _plain(value)
+
+
+def schema(tp: Any = CezData) -> str:
+    """Short hash of the data structure (field names of the nested dataclasses): data
+    cached by a build with other fields are not used."""
+    seen: list[str] = []
+
+    def walk(t: Any) -> None:
+        for arg in typing.get_args(t):
+            walk(arg)
+        if isinstance(t, type) and dataclasses.is_dataclass(t) and t.__name__ not in seen:
+            seen.append(t.__name__)
+            hints = typing.get_type_hints(t)
+            seen.extend(f.name for f in dataclasses.fields(t))
+            for f in dataclasses.fields(t):
+                walk(hints[f.name])
+
+    walk(tp)
+    return hashlib.sha1(",".join(seen).encode()).hexdigest()[:12]
 
 
 def last_scheduled_run(

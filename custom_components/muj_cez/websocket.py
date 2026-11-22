@@ -121,7 +121,10 @@ async def ws_prices(
         invoice_gas.SIM_PARTS if sp.gas else None,
         invoice_gas.SIM_NAMES if sp.gas else None,
     )
-    connection.send_result(msg["id"], {"supply_point": sp.name, "ean": sp.ean, **report})
+    kwh_per_m3 = spd.simulation.gas_kwh_per_m3 if sp.gas and spd.simulation else None
+    connection.send_result(
+        msg["id"], {"supply_point": sp.name, "ean": sp.ean, "kwh_per_m3": kwh_per_m3, **report}
+    )
 
 
 READING_FIELDS = {

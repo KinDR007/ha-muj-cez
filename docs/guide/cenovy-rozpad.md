@@ -83,4 +83,5 @@ spotřeba (Kč/MWh), stálá platba a daň z plynu (domácnosti jsou osvobozené
 s nulou), distribuční část distribuce (Kč/MWh), stálá platba za distribuci a činnost
 OTE. Běžné období se rozdělí podle cen poslední faktury, nový cenový rok podle ceníku
 plynu (pásmo podle roční spotřeby minulého období; odběr nad 63 MWh s cenou za kapacitu
-se nerozkládá a zůstane jako souhrn ze simulace).
+se nerozkládá a zůstane jako souhrn ze simulace). ČEZ plyn účtuje v kWh; spotřeba a
+průměrná cena se ukážou i v m³ podle přepočtu ze simulace (např. 1 m³ ≈ 10,69 kWh).

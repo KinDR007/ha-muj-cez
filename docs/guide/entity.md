@@ -31,7 +31,8 @@ Diagnostické entity: EAN, číslo elektroměru, číslo smlouvy, zákaznické �
 Plynové odběrné místo má stejné senzory vyúčtování, záloh, dokladů a období (spotřeba
 v kWh, jak je účtuje ČEZ). Místo stavu elektroměru má **Stav plynoměru** v m³ (typ plyn,
 lze použít v panelu Energie) s historií odečtů v atributu `readings` (stav, spotřeba
-v m³ od předchozího odečtu, po výměně plynoměru prázdná) a diagnostiku **Číslo plynoměru**.
+v m³ od předchozího odečtu, po výměně plynoměru prázdná), přepočtem `kwh_per_m3` (kWh na
+1 m³ = objemový koeficient × spalné teplo ze simulace ČEZ) a diagnostiku **Číslo plynoměru**.
 Jistič, HDO, aktuální cena a průběhová data u plynu nejsou; porovnání s referenčním
 senzorem HA se nepočítá (ten měří elektřinu). Cenový rozpad a odečet fungují jako u
 elektřiny (viz [Cenový rozpad](cenovy-rozpad.md#plyn) a [Odečet](odecet.md#plyn)).

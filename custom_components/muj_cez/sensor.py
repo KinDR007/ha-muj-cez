@@ -414,6 +414,7 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
                 else {}
             ),
             "readings": _gas_readings(d),
+            "kwh_per_m3": d.simulation.gas_kwh_per_m3 if d.simulation else None,
         },
         commodity=GAS,
     ),

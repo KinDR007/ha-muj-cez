@@ -220,7 +220,9 @@ contract = {
 
 # Gas point (export only): meter in m³, no circuit breaker / HDO / reading comparison.
 GAS_ROWS_TAIL = (
-    "+row('spotreba_za_minule_obdobi','Minulé období',num('spotreba_za_minule_obdobi')+' kWh · '+num('naklady_za_minule_obdobi')+' Kč')"
+    "+row('spotreba_za_minule_obdobi','Minulé období',num('spotreba_za_minule_obdobi')+' kWh'"
+    "+(at('stav_plynomeru','kwh_per_m3')&&st('spotreba_za_minule_obdobi')?' ≈ '+f(parseFloat(st('spotreba_za_minule_obdobi').state)/at('stav_plynomeru','kwh_per_m3'),0)+' m³':'')"
+    "+' · '+num('naklady_za_minule_obdobi')+' Kč')"
     "+row('planovane_odstavky','Plánované odstávky',st('planovane_odstavky')?.state??'–')"
     f"+row('{A_MESSAGES}','Nepřečtené zprávy',st('{A_MESSAGES}')?.state??'–')"
     "+row('ean','EAN',st('ean')?.state||'–')"
@@ -248,6 +250,7 @@ contract_gas = {
                 "+row('distribucni_sazba','Distribuční sazba',st('distribucni_sazba')?.state||'–')"
                 "+row('konec_smlouvy','Konec smlouvy',dt(st('konec_smlouvy')?.state))"
                 "+row('datum_zmeny_ceny','Změna ceny',dt(st('datum_zmeny_ceny')?.state))"
+                "+row('stav_plynomeru','Přepočet',at('stav_plynomeru','kwh_per_m3')?'1 m³ ≈ '+f(at('stav_plynomeru','kwh_per_m3'),2)+' kWh':'–')"
                 + GAS_ROWS_TAIL
             ),
         ),
@@ -273,14 +276,14 @@ gas_readings = {
                 "const th=(t,r)=>`<th style='text-align:${r?'right':'left'};font-weight:400;color:var(--secondary-text-color);padding:7px 0 7px 12px'>${t}</th>`;"
                 "const td=(t,r)=>`<td style='text-align:${r?'right':'left'};padding:7px 0 7px 12px;border-top:1px solid var(--divider-color);white-space:nowrap'>${t}</td>`;"
                 "const sub=(t)=>`<div style='font-size:11px;color:var(--secondary-text-color)'>${t}</div>`;"
-                "const all=at('stav_plynomeru','readings')||[];"
+                "const all=at('stav_plynomeru','readings')||[];const KM3=at('stav_plynomeru','kwh_per_m3');"
                 "const body=rs.map(r=>{const first=all.indexOf(r)===0;"
                 "const c=r.consumption!=null?f(r.consumption)+' m³':(first?'–':sub('nový plynoměr'));"
                 "return '<tr>'+td(dt(r.date)+sub(r.reading_type||''))+td(f(r.value)+' m³',1)+td(c,1)+'</tr>'}).join('');"
                 "return `<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:13px'>"
                 "<tr>${th('Odečet')}${th('Stav',1)}${th('Spotřeba',1)}</tr>${body}</table></div>`"
                 "+`<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0;white-space:normal'>"
-                "Plynoměr měří m³, portál účtuje kWh (přepočet podle spalného tepla).</div>`;"
+                "Plynoměr měří m³, ČEZ účtuje kWh${KM3?': 1 m³ ≈ '+f(KM3,2)+' kWh':''} (objemový koeficient × spalné teplo).</div>`;"
             ),
         ),
     ],
@@ -1228,12 +1231,17 @@ def prices_body() -> str:
         # Totals: fixed vs consumption, average price, VAT.
         "const r2=(l,v)=>`<div class='r'><span class='l'>${l}</span><span>${v}</span></div>`;"
         "const fixd=IT.filter(x=>x.unit==='month').reduce((s0,x)=>s0+val(x),0);"
-        "const kwhs=IT.filter(x=>/^(energy|sim_vt|sim_nt)/.test(x.kind)).reduce((s0,x)=>s0+x.q*1000,0);"
+        "const kwhs=IT.filter(x=>/^(energy|sim_vt|sim_nt|sim_gas)/.test(x.kind)).reduce((s0,x)=>s0+x.q*1000,0);"
+        # Gas: also in m³ of the meter (conversion of the simulation).
+        "const KM=RD.kwh_per_m3;const m3=(k)=>KM&&k?' ≈ '+f(k/KM,0)+' m³':'';"
         "const A=IT.reduce((s0,x)=>s0+x.a,0),V=IT.reduce((s0,x)=>s0+x.v,0);"
-        "const sums=`<div style='margin-top:14px'>${r2('Spotřeba',f(kwhs,0)+' kWh')}"
+        "const sums=`<div style='margin-top:14px'>${r2('Spotřeba',f(kwhs,0)+' kWh'+m3(kwhs))}"
         "${r2('Platby za spotřebu',f(T-fixd,2)+' Kč')}${r2('Stálé platby (nezávislé na spotřebě)',f(fixd,2)+' Kč')}"
         "${r2('Průměrná cena za kWh vč. stálých plateb',kwhs?f(T/kwhs,2)+' Kč/kWh':'–')}"
-        "${r2('Celkem bez DPH',f(A,2)+' Kč')}${r2('DPH',f(V,2)+' Kč')}${r2('<b>Celkem s DPH</b>','<b>'+f(A+V,2)+' Kč</b>')}</div>`;"
+        "${KM?r2('Průměrná cena za m³ vč. stálých plateb',kwhs?f(T/kwhs*KM,2)+' Kč/m³':'–'):''}"
+        "${r2('Celkem bez DPH',f(A,2)+' Kč')}${r2('DPH',f(V,2)+' Kč')}${r2('<b>Celkem s DPH</b>','<b>'+f(A+V,2)+' Kč</b>')}"
+        "${KM?`<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0;white-space:normal'>Plyn se účtuje v kWh: "
+        "1 m³ ≈ ${f(KM,2)} kWh (objemový koeficient × spalné teplo ze simulace ČEZ).</div>`:''}</div>`;"
         # Payout (production point).
         "const PY=Object.values(SP.pay);const pay=PY.length?`<div style='display:flex;justify-content:space-between;margin-top:14px;font-weight:500;font-size:13px'>"
         "<span>${dot('#22c55e')}Výkup elektřiny (přetoky)</span><span>${f(PY.reduce((s0,x)=>s0+x.a+x.v,0),2)} Kč</span></div>"

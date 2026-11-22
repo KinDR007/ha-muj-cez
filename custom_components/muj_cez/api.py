@@ -118,6 +118,8 @@ class InvoiceSimulation:
     measured_until: date | None = None
     # Variable price per kWh incl. VAT by register ("VT", "NT") from the latest item.
     unit_prices: dict[str, float] = field(default_factory=dict)
+    # Gas: kWh per m³ of the meter (volume coefficient x gross calorific value).
+    gas_kwh_per_m3: float | None = None
 
 
 @dataclass
@@ -494,7 +496,18 @@ def parse_simulation(data: dict[str, Any]) -> InvoiceSimulation | None:
             default=None,
         ),
         unit_prices=parse_unit_prices(items),
+        gas_kwh_per_m3=gas_conversion(consumption),
     )
+
+
+def gas_conversion(consumption: list[dict[str, Any]]) -> float | None:
+    """kWh per m³ of the latest simulated gas reading (coefficient x calorific value)."""
+    for row in reversed(consumption):
+        heat = _float(row.get("meterReadingGasCombustionHeat"))
+        coefficient = _float(row.get("meterReadingGasVolumeCoefficient"))
+        if heat and coefficient:
+            return round(heat * coefficient, 4)
+    return None
 
 
 def parse_unit_prices(items: list[dict[str, Any]]) -> dict[str, float]:

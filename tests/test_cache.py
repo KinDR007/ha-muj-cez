@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from datetime import datetime
 from functools import partial
@@ -16,7 +17,7 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.muj_cez import api
-from custom_components.muj_cez.cache import decode, encode, last_scheduled_run
+from custom_components.muj_cez.cache import decode, encode, last_scheduled_run, schema
 from custom_components.muj_cez.const import CONF_HDO, DOMAIN, PERIOD_MONTHLY, PERIOD_WEEKLY
 from custom_components.muj_cez.coordinator import is_update_day
 
@@ -166,3 +167,30 @@ async def test_hdo_not_downloaded_again_after_restart(
 from custom_components.muj_cez.cache import DataCache  # noqa: E402
 
 _orig_init = DataCache.__init__
+
+
+@dataclasses.dataclass
+class _Inner:
+    a: int
+
+
+@dataclasses.dataclass
+class _Outer:
+    inner: _Inner | None
+
+
+@dataclasses.dataclass
+class _InnerMore:
+    a: int
+    b: int = 0
+
+
+@dataclasses.dataclass
+class _OuterMore:
+    inner: _InnerMore | None
+
+
+def test_schema_follows_fields() -> None:
+    assert schema() == schema()
+    assert schema(_Outer) != schema(_OuterMore)
+    assert len(schema()) == 12

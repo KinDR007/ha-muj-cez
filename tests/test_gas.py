@@ -74,7 +74,7 @@ def gas_data() -> api.CezData:
             price_change_date=date(2026, 11, 22),
             double_tariff=False,
         ),
-        simulation=dataclasses.replace(spd.simulation, unit_prices={}),
+        simulation=dataclasses.replace(spd.simulation, unit_prices={}, gas_kwh_per_m3=10.6935),
         sim_items=[],
     )
     return dataclasses.replace(data, supply_points={UID: spd, GAS_UID: gas})
@@ -131,6 +131,7 @@ async def test_gas_sensors(
         104.0,
         25.0,
     ]
+    assert state.attributes["kwh_per_m3"] == 10.6935
     assert hass.states.get(_entity(hass, GAS_UID, "gas_meter_number")).state == "G2"
     # Consumption and costs stay in kWh.
     consumption = hass.states.get(_entity(hass, GAS_UID, "last_period_consumption"))
@@ -276,3 +277,13 @@ async def test_gas_reading_form_and_submit(
     body = mock_client.submit_meter_reading.await_args.args[0]
     assert body["meterReadingDeviceNumber"] == "90000001"
     assert body["selfMeterReadingHighTariff"]["meterReadingValue"] == 2880
+
+
+def test_gas_conversion_from_simulation() -> None:
+    """kWh per m³ = volume coefficient x calorific value of the latest simulated reading."""
+    rows = [
+        {"meterReadingGasCombustionHeat": 10.5, "meterReadingGasVolumeCoefficient": 0.97},
+        {"meterReadingGasCombustionHeat": 10.9767, "meterReadingGasVolumeCoefficient": 0.9742},
+    ]
+    assert api.gas_conversion(rows) == round(10.9767 * 0.9742, 4)
+    assert api.gas_conversion([{"consumptionValue": 225}]) is None  # electricity

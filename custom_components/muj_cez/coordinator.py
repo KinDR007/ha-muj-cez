@@ -22,7 +22,7 @@ from homeassistant.util import dt as dt_util
 
 from . import grid as gridlib
 from .api import CezAuthError, CezClient, CezData, CezError
-from .cache import DataCache, last_scheduled_run
+from .cache import DataCache, last_scheduled_run, schema
 from .compare import DailyEnergy, build_comparison
 from .const import (
     CONF_HDO,
@@ -152,6 +152,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         self.invoices_updated: dict[str, str] = {}
         identity = {
             "version": version,
+            "schema": schema(),
             "username": entry.data[CONF_USERNAME],
             "partner": entry.data.get(CONF_PARTNER),
         }
