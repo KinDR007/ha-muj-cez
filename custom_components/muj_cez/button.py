@@ -24,7 +24,7 @@ async def async_setup_entry(
     async_add_entities(
         MujCezInvoiceButton(coordinator, uid)
         for uid, spd in (coordinator.data.supply_points if coordinator.data else {}).items()
-        if not spd.supply_point.production and not spd.supply_point.gas
+        if spd.supply_point.invoiced
     )
 
 

@@ -197,7 +197,7 @@ async def _invoice_points(client: CezClient) -> list[InvoicePoint]:
         _LOGGER.debug("Supply points for the invoice step: %s", err)
         return points
     for sp in supply_points:
-        if sp.production or not sp.agreement_id or not sp.commodity.startswith("E"):
+        if not sp.invoiced:
             continue
         try:
             simulation = (await client.get_simulation(sp))[0]
@@ -392,9 +392,7 @@ class MujCezOptionsFlow(OptionsFlowWithReload):
         return [
             (spd.supply_point, spd.simulation)
             for spd in data.supply_points.values()
-            if not spd.supply_point.production
-            and spd.supply_point.agreement_id
-            and spd.supply_point.commodity.startswith("E")
+            if spd.supply_point.invoiced
         ]
 
     async def async_step_invoices(

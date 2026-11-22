@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
-from . import invoice, meter_reading, pricelist
+from . import invoice, invoice_gas, meter_reading, pricelist
 from .const import DOMAIN, price_breakdown_enabled
 
 # The dashboard section identifies the place by a sensor of it.
@@ -97,11 +97,16 @@ async def ws_prices(
     }
     invoices = await coordinator.invoices.async_invoices(agreements)
     contract = spd.contract
-    sources = pricelist.price_sources(
-        await coordinator.invoices.async_pricelists(sp.ean),
-        contract.tariff_code if contract else None,
-        contract.circuit_breaker if contract else None,
-        contract.phase if contract else None,
+    # Gas: own simulation components, no price lists (electricity tables only).
+    sources = (
+        None
+        if sp.gas
+        else pricelist.price_sources(
+            await coordinator.invoices.async_pricelists(sp.ean),
+            contract.tariff_code if contract else None,
+            contract.circuit_breaker if contract else None,
+            contract.phase if contract else None,
+        )
     )
     report = invoice.build_report(
         invoices,
@@ -109,6 +114,8 @@ async def ws_prices(
         spd.simulation.measured_until if spd.simulation else None,
         invoice.weights_from_readings(spd.readings or []),
         sources,
+        invoice_gas.SIM_PARTS if sp.gas else None,
+        invoice_gas.SIM_NAMES if sp.gas else None,
     )
     connection.send_result(msg["id"], {"supply_point": sp.name, "ean": sp.ean, **report})
 

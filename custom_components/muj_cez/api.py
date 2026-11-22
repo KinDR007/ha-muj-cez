@@ -91,6 +91,15 @@ class SupplyPoint:
         """Gas supply point (commodity P1): meter in m³, no HDO, smart meter or reading form."""
         return self.commodity.startswith(("P", "G"))
 
+    @property
+    def invoiced(self) -> bool:
+        """Consumption point with a contract whose invoices are parsed (electricity, gas)."""
+        return (
+            not self.production
+            and bool(self.agreement_id)
+            and self.commodity.startswith(("E", "P", "G"))
+        )
+
 
 @dataclass
 class InvoiceSimulation:
@@ -286,7 +295,7 @@ class SimulationItem:
 
     date_from: date
     date_to: date
-    kind: str  # "vt", "nt" or "fixed"
+    kind: str  # "vt", "nt", "gas" or "fixed"
     mwh: float
     amount: float  # without VAT
     amount_with_tax: float
@@ -539,7 +548,14 @@ def invoice_filter(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-SIM_ITEM_KINDS = {"ZUCT_SPOTR_VT": "vt", "ZUCT_SPOTR_NT": "nt", "ZUCT_STAL_PLAT_EE": "fixed"}
+SIM_ITEM_KINDS = {
+    "ZUCT_SPOTR_VT": "vt",
+    "ZUCT_SPOTR_NT": "nt",
+    "ZUCT_STAL_PLAT_EE": "fixed",
+    # Gas: consumption and the monthly fees.
+    "ZUCT_SPOTR_PLN": "gas",
+    "ZUCT_STAL_PLAT_OKN": "fixed",
+}
 
 
 def parse_simulation_items(data: Any) -> list[SimulationItem]:

@@ -330,3 +330,45 @@ async def test_refresh_button(hass: HomeAssistant, mock_client: AsyncMock) -> No
         await hass.async_block_till_done(wait_background_tasks=True)
     assert mock_client.get_invoice_rows.call_count == 2
     assert hass.states.get(sensor).attributes["invoices_updated"] > before
+
+
+async def test_gas_invoices_use_gas_parser(
+    hass: HomeAssistant, hass_storage: dict[str, Any]
+) -> None:
+    """Gas contract: PDF parsed by invoice_gas (no CSV, no price lists); electricity as before."""
+    from .test_gas import GAS_UID, gas_data
+
+    data = gas_data()
+    gas_agreement = "000099999999"
+    gas = data.supply_points[GAS_UID]
+    data.supply_points[GAS_UID] = dataclasses.replace(
+        gas,
+        supply_point=dataclasses.replace(
+            gas.supply_point, agreement_id=gas_agreement, place_id="0009999999"
+        ),
+    )
+    store = pricing.InvoiceStore(hass, "e1")
+    client = _client()
+    client.get_invoice_pdf.side_effect = lambda row: b"%PDF"
+    client.get_price_lists.return_value = []
+    texts = {
+        "X1": (FIXTURES / "invoice_gas_pdf.txt").read_text(),
+        "A2": (FIXTURES / "invoice_settlement_pdf.txt").read_text(),
+    }
+    numbers = iter(["A2", "A3", "X1"])  # order of the PDF downloads
+    with (
+        patch.object(pricing, "pdf_text", side_effect=lambda _d: texts.get(next(numbers), "")),
+        patch.object(pricing, "REQUEST_PAUSE", 0),
+    ):
+        await store.async_update(client, data, date(2026, 11, 1))
+    saved = hass_storage[f"{DOMAIN}.e1.invoices"]["data"]["invoices"]
+    gas_items = {i["kind"] for i in saved["X1"]["invoice"]["items"]}
+    assert "distribution_fixed" in gas_items and "breaker" not in gas_items
+    assert saved["X1"]["agreement"] == gas_agreement
+    assert saved["A2"]["invoice"]["source"] == "pdf"
+    assert "distribution_fixed" not in {i["kind"] for i in saved["A2"]["invoice"]["items"]}
+    # The gas invoice is not tried as a CSV, price lists only for electricity.
+    assert all(
+        c.args[0]["agreementIdIsu"] != gas_agreement for c in client.get_invoice_csv.call_args_list
+    )
+    assert [c.args[0].gas for c in client.get_price_lists.call_args_list] == [False]

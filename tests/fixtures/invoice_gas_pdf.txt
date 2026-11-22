@@ -1,0 +1,67 @@
+VYÚČTOVÁNÍ ZA PLYN
+Daňový přehled Základ daně Sazba DPH DPH Celkem s DPH
+Datum zdanitelného plnění 12. 10. 2026
+Datum vystavení 12. 10. 2026
+Cena za spotřebovaný plyn a služby 5 839,31 Kč 21 % 1 226,26 Kč 7 065,57 Kč
+Přijaté platby -9 090,95 Kč 21 % -1 909,05 Kč -11 000,00 Kč
+Celkem -3 251,64 Kč 21 % -682,79 Kč -3 934,43 Kč
+Podrobné vyúčtování
+Spotřebovaný plyn (obchodní část)
+9. 10. 2025 - 31. 12. 2025 Produkt Plyn na dobu neurčitou
+Množství Jednotková cena Celkem bez DPH
+Spotřeba 0,47052 MWh 1 346,28 Kč 633,45 Kč
+1. 1. 2026 - 7. 10. 2026 Produkt Plyn na dobu neurčitou
+Množství Jednotková cena Celkem bez DPH
+Spotřeba 1,19766 MWh 1 289,26 Kč 1 544,10 Kč
+Celková platba za spotřebu bez DPH
+s DPH
+2 177,55 Kč
+2 634,84 Kč
+Ostatní vyúčtované položky (obchodní část)
+9. 10. 2025 - 31. 12. 2025
+Množství Jednotková cena Celkem bez DPH
+Stálá platba 2,74200 měs. 89,00 Kč 244,04 Kč
+strana 2/5
+Daň z plynu
+(měřidlo Č. 90000001; typ ME_255-AC-RF1 G; účel daně: Dle § 4, písmene b)
+0,47052 MWh 0,00 Kč 0,00 Kč
+V souladu s ustanovením § 8 odst.1 písmeno a) části 45., čl. LXXI zákona č. 261/2007 Sb., o stabilizaci veřejných rozpočtů, o dani ze zemního plynu a některých dalších plynů, v platném změní, je dodaný
+plyn osvobozen od daně.
+1. 1. 2026 - 7. 10. 2026
+Množství Jednotková cena Celkem bez DPH
+Stálá platba 9,22600 měs. 94,00 Kč 867,24 Kč
+Daň z plynu
+(měřidlo Č. 90000001; typ ME_255-AC-RF1 G; účel daně: Dle § 4, písmene b)
+1,19766 MWh 0,00 Kč 0,00 Kč
+V souladu s ustanovením § 8 odst.1 písmeno a) části 45., čl. LXXI zákona č. 261/2007 Sb., o stabilizaci veřejných rozpočtů, o dani ze zemního plynu a některých dalších plynů, v platném změní, je dodaný
+plyn osvobozen od daně.
+Celková platba za ostatní vyúčtované položky bez DPH
+s DPH
+1 111,28 Kč
+1 344,66 Kč
+Celková platba za spotřebu a ostatní vyúčtované položky (obchodní část) bez DPH
+s DPH
+3 288,83 Kč
+3 979,50 Kč
+Daň z plynu je daň ze zákona č. 261/2007 Sb. (část čtyřicátá pátá - daň z plynu). Svou podstatou se jedná o spotřební daň, z čehož mimo jiné vyplývá fakt, že tato daň
+je součástí základu ceny pro výpočet DPH. Sazba daně je jednotná pro všechny napěťové hladiny bez rozdílu. Daň z plynu závisí na odebraném množství plynu v daném
+odběrném místě. Při splnění předpokladů specifikovaných v zákoně č. 261/2007 Sb. je možné požádat správce daně (místně příslušné pracoviště Celní správy ČR)
+o osvobození.
+Distribuce plynu (distribuční část)
+9. 10. 2025 - 31. 12. 2025 Množství Jednotková cena Celkem bez DPH
+Distribuce 0,47052 MWh 708,28 Kč 333,26 Kč
+Stálá platba 2,74194 měs. 104,47 Kč 286,45 Kč
+Činnost OTE 0,47052 MWh 4,26 Kč 2,01 Kč
+1. 1. 2026 - 7. 10. 2026 Množství Jednotková cena Celkem bez DPH
+Distribuce 1,19766 MWh 751,81 Kč 900,40 Kč
+Stálá platba 9,22581 měs. 110,94 Kč 1 023,51 Kč
+Činnost OTE 1,19766 MWh 4,06 Kč 4,85 Kč
+Celková platba za distribuci a služby bez DPH
+s DPH
+2 550,48 Kč
+3 086,07 Kč
+Co je OTE
+Operátor trhu (OTE) je instituce zajišťující chod trhu s energiemi. Cenu za činnost OTE určuje Energetický regulační úřad (ERÚ).
+Historie spotřeby
+Období Počet dní Spotřeba Celk. náklady
+ bez DPH

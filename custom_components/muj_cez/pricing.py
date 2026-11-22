@@ -31,6 +31,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.requirements import async_process_requirements
 
 from . import invoice as inv
+from . import invoice_gas as inv_gas
 from . import pricelist as pl
 from .api import CezClient, CezData, CezError, InvoiceSimulation, SupplyPoint
 from .const import DOMAIN, INVOICE_PERIOD_DAYS, PYPDF_REQUIREMENT, STORAGE_VERSION
@@ -170,13 +171,7 @@ class InvoiceStore:
         """
         store = await self._load()
         checked: dict[str, str] = store.setdefault("checked", {})
-        points = [
-            spd
-            for spd in data.supply_points.values()
-            if not spd.supply_point.production
-            and spd.supply_point.agreement_id
-            and spd.supply_point.commodity.startswith("E")
-        ]
+        points = [spd for spd in data.supply_points.values() if spd.supply_point.invoiced]
         due = []
         for spd in points:
             sp = spd.supply_point
@@ -199,14 +194,16 @@ class InvoiceStore:
             return 0
         places = {spd.supply_point.place_id for spd in due if spd.supply_point.place_id}
         agreements = {spd.supply_point.agreement_id: "INV" for spd in due}
+        gas = {spd.supply_point.agreement_id for spd in due if spd.supply_point.gas}
         for spd in data.supply_points.values():
             sp = spd.supply_point
             if sp.production and sp.agreement_id and sp.place_id in places:
                 agreements[sp.agreement_id] = "SLF"
-        added = await self._update_invoices(client, agreements, today)
+        added = await self._update_invoices(client, agreements, today, gas)
         for spd in due:
             sp = spd.supply_point
-            if sp.place_id:
+            # Price lists: electricity tables only (gas price lists are not parsed yet).
+            if sp.place_id and not sp.gas:
                 try:
                     await self._update_pricelists(client, sp, today)
                 except CezError as err:
@@ -255,7 +252,11 @@ class InvoiceStore:
         ]
 
     async def _update_invoices(
-        self, client: CezClient, agreements: dict[str, str], today: date
+        self,
+        client: CezClient,
+        agreements: dict[str, str],
+        today: date,
+        gas: set[str] | None = None,
     ) -> int:
         async with self._lock:
             store = await self._load()
@@ -272,7 +273,7 @@ class InvoiceStore:
                 if failed and date.fromisoformat(failed) > today - timedelta(days=RETRY_DAYS):
                     continue
                 try:
-                    parsed = await self._fetch(client, number, row)
+                    parsed = await self._fetch(client, number, row, agreement in (gas or ()))
                 except CezError as err:
                     _LOGGER.debug("Invoice %s: %s", number, err)
                     parsed = None
@@ -296,8 +297,15 @@ class InvoiceStore:
             return added
 
     async def _fetch(
-        self, client: CezClient, number: str, row: dict[str, Any]
+        self, client: CezClient, number: str, row: dict[str, Any], gas: bool = False
     ) -> inv.Invoice | None:
+        """Parsed settlement: gas invoices by invoice_gas (PDF only), electricity by invoice."""
+        if gas:
+            data = await client.get_invoice_pdf(row)
+            if not data or not await self._pdf_ready():
+                return None
+            text = await self.hass.async_add_executor_job(pdf_text, data)
+            return inv_gas.parse_pdf_text(number, text)
         if row.get("billingAccountingDocumentType2") == "INV":
             text = await client.get_invoice_csv(row)
             if text:

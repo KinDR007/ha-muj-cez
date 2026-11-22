@@ -520,7 +520,9 @@ _SIM_PARTS: dict[str, list[tuple[str, ...]]] = {
 
 
 def simulation_parts(
-    item: Any, prices: dict[str, InvoiceItem]
+    item: Any,
+    prices: dict[str, InvoiceItem],
+    table: dict[str, list[tuple[str, ...]]] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Split one simulation item (vt / nt / fixed) into invoice item kinds.
 
@@ -531,7 +533,7 @@ def simulation_parts(
     """
     want_unit = UNIT_MONTH if item.kind == "fixed" else UNIT_MWH
     chosen: list[InvoiceItem] = []
-    for alternatives in _SIM_PARTS.get(item.kind, []):
+    for alternatives in (table or _SIM_PARTS).get(item.kind, []):
         for kind in alternatives:
             p = prices.get(kind)
             if p is not None and p.unit == want_unit and p.unit_price:
@@ -585,12 +587,15 @@ def build_report(
     measured_until: date | None = None,
     weights: dict[date, float] | None = None,
     price_sources: Any = None,
+    sim_parts: dict[str, list[tuple[str, ...]]] | None = None,
+    sim_names: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Price breakdown per calendar month for the dashboard.
 
     History from invoices (provider's items, multi-month items split here), the current
     billing period from the simulation (after the last invoiced day), split with the
-    latest invoice unit prices. Month flags: source invoice / simulation / mixed,
+    latest invoice unit prices (components per simulation item kind from `sim_parts`,
+    electricity by default; gas passes invoice_gas.SIM_PARTS). Month flags: source invoice / simulation / mixed,
     predicted (after the last meter reading of the simulation).
     """
     valid, replaced = resolve_overlaps(invoices)
@@ -618,7 +623,7 @@ def build_report(
             candidates += price_sources(day, prices)
         # One price source for the whole month when it explains every item.
         for name, cand in candidates:
-            results = [simulation_parts(i, cand) for i in items]
+            results = [simulation_parts(i, cand, sim_parts) for i in items]
             if all(ok for _, ok in results):
                 for i, (parts, _ok) in zip(items, results, strict=True):
                     chosen_parts[id(i)] = (parts, True, name)
@@ -627,7 +632,7 @@ def build_report(
             for i in items:
                 chosen_parts[id(i)] = ([], False, None)
                 for name, cand in candidates:
-                    parts, ok = simulation_parts(i, cand)
+                    parts, ok = simulation_parts(i, cand, sim_parts)
                     if ok:
                         chosen_parts[id(i)] = (parts, True, name)
                         break
@@ -650,7 +655,7 @@ def build_report(
                 {
                     "kind": f"sim_{item.kind}",
                     "group": "simulation",
-                    "name": SIM_NAMES[item.kind],
+                    "name": (sim_names or SIM_NAMES).get(item.kind, item.kind),
                     "unit": UNIT_MONTH if item.kind == "fixed" else UNIT_MWH,
                     "quantity": _month_share(item.date_from, item.date_to)
                     if item.kind == "fixed"
