@@ -234,3 +234,36 @@ async def test_hdo_disabled(
     await _setup(hass, freezer, {CONF_HDO: False})
     assert fake_dip.calls == 0
     assert _entity(hass, "hdo_tariff") is None
+
+
+@pytest.mark.parametrize("fail", [False, True])
+async def test_ha_session_detached_not_closed(hass: HomeAssistant, fail: bool) -> None:
+    """The session of Home Assistant is detached after use (also when login fails);
+    closing it would only log a warning and leave it open."""
+    from functools import partial
+    from unittest.mock import patch
+
+    from homeassistant.helpers.aiohttp_client import async_create_clientsession
+
+    sessions = []
+
+    def factory(**kwargs):
+        session = async_create_clientsession(hass, auto_cleanup=False, **kwargs)
+        sessions.append(session)
+        return session
+
+    login = AsyncMock(side_effect=distribuce.DipError("x") if fail else None)
+    with (
+        patch.object(distribuce.DipClient, "_login", login),
+        patch("homeassistant.helpers.frame.report_usage") as report,
+    ):
+        client = distribuce.DipClient("u", "p", partial(factory), detach=True)
+        if fail:
+            with pytest.raises(distribuce.DipError):
+                await client.__aenter__()
+        else:
+            async with client:
+                pass
+    (session,) = sessions
+    assert session.connector is None  # detached
+    assert not report.called  # "closes the Home Assistant aiohttp session"

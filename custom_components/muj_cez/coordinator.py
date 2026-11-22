@@ -334,7 +334,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
             async with (
                 asyncio.timeout(HDO_TIMEOUT),
                 self.dip_client(
-                    entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD], factory
+                    entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD], factory, detach=True
                 ) as dip,
             ):
                 for ean in eans:

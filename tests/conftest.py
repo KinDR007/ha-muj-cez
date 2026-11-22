@@ -89,7 +89,9 @@ class FakeDip:
     error: Exception | None = None
     calls = 0
 
-    def __init__(self, username: str, password: str, factory: Any = None) -> None:
+    def __init__(
+        self, username: str, password: str, factory: Any = None, detach: bool = False
+    ) -> None:
         self.username = username
 
     async def __aenter__(self) -> FakeDip:

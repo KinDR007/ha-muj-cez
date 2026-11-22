@@ -55,8 +55,9 @@ def new_session(**kwargs: Any) -> aiohttp.ClientSession:
 class DipClient:
     """Short lived client: `async with DipClient(user, password) as c: await c.signals(ean)`.
 
-    `session_factory(**kwargs)` creates the session with its own cookie jar; it is
-    closed on exit.
+    `session_factory(**kwargs)` creates the session with its own cookie jar; on exit it
+    is closed, or detached (`detach=True`) when it shares the connector of Home
+    Assistant (async_create_clientsession), whose close must not be called.
     """
 
     def __init__(
@@ -64,10 +65,12 @@ class DipClient:
         username: str,
         password: str,
         session_factory: Callable[..., aiohttp.ClientSession] = new_session,
+        detach: bool = False,
     ) -> None:
         self._username = username
         self._password = password
         self._factory = session_factory
+        self._detach = detach
         self._session: aiohttp.ClientSession | None = None
         self._token: str | None = None
 
@@ -81,13 +84,21 @@ class DipClient:
         try:
             await self._login()
         except BaseException:
-            await self._session.close()
+            await self._release()
             raise
         return self
 
     async def __aexit__(self, *exc: object) -> None:
-        if self._session:
-            await self._session.close()
+        await self._release()
+
+    async def _release(self) -> None:
+        session, self._session = self._session, None
+        if session is None:
+            return
+        if self._detach:
+            session.detach()
+        else:
+            await session.close()
 
     @property
     def session(self) -> aiohttp.ClientSession:
