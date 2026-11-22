@@ -30,7 +30,7 @@ JS = (
     "{minimumFractionDigits:d,maximumFractionDigits:d})};"
     "const num=(k,d=0)=>{const s=st(k);return s?f(s.state,d):'–'};"
     "const at=(k,a)=>{const s=st(k);return s?s.attributes[a]:undefined};"
-    "const dt=(v)=>v?String(v).slice(0,10).split('-').reverse().join('.'):'–';"
+    "const dt=(v)=>v&&v!=='unknown'&&v!=='unavailable'?String(v).slice(0,10).split('-').reverse().join('.'):'–';"
     "const u=(v,unit)=>`${v}<span class='u'>${unit}</span>`;"
     'const row=(k,l,v)=>`<div class=\'r\' data-tap=\'{"action":"more-info","entity":"${id(k)}"}\' '
     "onclick='dashTap(event,this)' ontouchstart='cezTs(event)' ontouchend='cezTe(event,this)' style='pointer-events:auto;cursor:pointer'><span class='l'>${l}</span><span>${v}</span></div>`;"
@@ -414,6 +414,7 @@ CH = (
     "const SVC=['select','select_option'].join('.');"
     f"const SEL='{SELECT}';const UN=(states['{SELECT}']||{{}}).state==='czk'?'czk':'kwh';"
     f"const UL=UN==='czk'?'Kč':'kWh';const CMP=states['{COMPARISON}'];const CA=CMP?CMP.attributes:{{}};"
+    "const RS=!!CA.reference_sensor;"
     "const MN=['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro'];"
     "const mlab=(ym)=>{const [y,m]=ym.split('-');return MN[+m-1]+' '+y.slice(2)};"
     'const pill=(o,t)=>`<span data-tap=\'{"action":"perform-action","perform_action":"${SVC}",'
@@ -476,7 +477,7 @@ monthly = {
         heading("Spotřeba po měsících", "mdi:chart-bar"),
         stack(
             chead(
-                "Predikce podle HA",
+                "Predikce za období",
                 "mdi:chart-bar",
                 "const p=(CA.periods||[]).find(x=>x.predicted);"
                 "const v=p?(val(p,'ha')??val(p,'cez')):null;return u(f(v),UL);",
@@ -485,13 +486,13 @@ monthly = {
                 "const ms=CA.months||[];const c=CA.current||{};"
                 "const g=ms.map((m,i)=>({l:m.month.endsWith('-01')?mlab(m.month):MN[+m.month.slice(5)-1],b:["
                 "{v:val(m,'cez'),c:CZ,n:'ČEZ'+(m.estimated?' (odhad)':''),o:{hatch:m.estimated}},"
-                "{v:val(m,'ha'),c:HA,n:'HA'+(m.ha_partial?' (zatím)':''),o:{dim:m.ha_partial}}],h:mlab(m.month)+' ('+dt(m.from).slice(0,6)+'–'+dt(m.to).slice(0,6)+')',"
+                "...(RS?[{v:val(m,'ha'),c:HA,n:'HA'+(m.ha_partial?' (zatím)':''),o:{dim:m.ha_partial}}]:[])],h:mlab(m.month)+' ('+dt(m.from).slice(0,6)+'–'+dt(m.to).slice(0,6)+')',"
                 "x:(m.ha_kwh!=null&&m.cez_kwh)?['HA vs ČEZ '+pct((m.ha_kwh-m.cez_kwh)/m.cez_kwh*100)]:[]}));"
                 "return chart(g,[[CZ,'ČEZ – rozpis odečtů'],[CZ,'ČEZ – odhad do konce období',{hatch:1}],"
-                "[HA,'HA naměřeno'],[HA,'HA – běžící měsíc',{dim:1}]])"
-                "+row('odchylka_od_cez','ČEZ do posledního odečtu ('+dt(c.measured_until)+')',f(c.cez_measured_kwh)+' kWh')"
+                "...(RS?[[HA,'HA naměřeno'],[HA,'HA – běžící měsíc',{dim:1}]]:[])])"
+                "+(RS?row('odchylka_od_cez','ČEZ do posledního odečtu ('+dt(c.measured_until)+')',f(c.cez_measured_kwh)+' kWh')"
                 "+row('odchylka_od_cez','HA za stejné období',f(c.ha_measured_kwh,1)+' kWh')"
-                "+row('odchylka_od_cez','Odchylka HA od ČEZ',pct(c.diff_pct));",
+                "+row('odchylka_od_cez','Odchylka HA od ČEZ',pct(c.diff_pct)):'');",
             ),
         ),
     ],
@@ -545,21 +546,24 @@ totals = {
         heading("Zúčtovací období celkem", "mdi:chart-box-outline"),
         stack(
             chead(
-                "Odchylka HA/ČEZ",
+                "Celkem za období",
                 "mdi:chart-box-outline",
-                "const p=(CA.periods||[]).filter(x=>!x.predicted&&x.diff_pct!=null).pop();"
-                "return p?u(pct(p.diff_pct).replace(' %',''),'% · '+p.label):'–';",
+                # With the HA reference sensor: deviation of the last period, else its total.
+                "const done=(CA.periods||[]).filter(x=>!x.predicted);"
+                "if(!RS){const q=done.pop();return q?u(f(val(q,'cez')),UL+' · '+q.label):'–'}"
+                "const p=done.filter(x=>x.diff_pct!=null).pop();"
+                "return p?u(pct(p.diff_pct).replace(' %',''),'% HA/ČEZ · '+p.label):'–';",
             ),
             cdetails(
                 "const ps=CA.periods||[];"
                 "const g=ps.map(p=>{const ok=p.ha_coverage==='full';return {l:p.label,s:p.diff_pct!=null?pct(p.diff_pct):'',"
                 "h:'Období '+p.label+' ('+dt(p.from)+' – '+dt(p.to)+')',x:p.diff_pct!=null?['HA vs ČEZ '+pct(p.diff_pct)]:(p.ha_coverage==='partial'?['HA data jen za část období']:[]),"
                 "b:[{v:val(p,'cez'),c:CZ,n:'ČEZ'+(p.predicted?' (predikce)':''),o:{hatch:p.predicted}},"
-                "{v:ok?val(p,'ha'):null,c:HA,n:'HA'+(p.predicted?' (naměřeno + odhad)':''),"
-                "o:{hatch:p.predicted}}]}});"
-                "return chart(g,[[CZ,'ČEZ fakturováno'],[HA,'HA naměřeno'],[CZ,'predikce',{hatch:1}]],130)"
-                "+`<div style='font-size:12px;color:var(--secondary-text-color);padding:4px 0;white-space:normal'>HA data od "
-                "${dt(CA.ha_first_day)}; období bez úplných dat HA jsou jen za ČEZ.</div>`;",
+                "...(RS?[{v:ok?val(p,'ha'):null,c:HA,n:'HA'+(p.predicted?' (naměřeno + odhad)':''),"
+                "o:{hatch:p.predicted}}]:[])]}});"
+                "return chart(g,[[CZ,'ČEZ fakturováno'],...(RS?[[HA,'HA naměřeno']]:[]),[CZ,'predikce',{hatch:1}]],130)"
+                "+(RS?`<div style='font-size:12px;color:var(--secondary-text-color);padding:4px 0;white-space:normal'>HA data od "
+                "${dt(CA.ha_first_day)}; období bez úplných dat HA jsou jen za ČEZ.</div>`:'');",
             ),
         ),
     ],
@@ -1278,19 +1282,19 @@ def _tag(section: dict, *requires: str) -> dict:
 SECTIONS = [
     billing,
     advances,
-    *(
-        [_tag(contract, "electricity"), _tag(contract_gas, "gas"), _tag(gas_readings, "gas")]
-        if EXPORT
-        else [contract]
-    ),
+    *([_tag(contract, "electricity"), _tag(contract_gas, "gas")] if EXPORT else [contract]),
     *([_tag(hdo, "hdo")] if EXPORT else ([hdo] if HDO_ON else [])),
     *grid_sections(),
     *([profile_section()] if G else []),
     *spot_sections(),
     monthly,
-    *([_tag(yoy_meter(), "grid"), _tag(yoy, "no_grid")] if EXPORT else [yoy_meter() if G else yoy]),
+    *(
+        [_tag(yoy_meter(), "grid"), _tag(yoy, "no_grid", "electricity")]
+        if EXPORT
+        else [yoy_meter() if G else yoy]
+    ),
     totals,
-    _tag(check, "electricity") if EXPORT else check,
+    *([_tag(check, "electricity"), _tag(gas_readings, "gas")] if EXPORT else [check]),
     periods,
     documents,
 ]
