@@ -2,7 +2,7 @@
 // Served by the integration, validation and sending are done by the backend
 // (websocket muj_cez/reading_form, muj_cez/reading_check, muj_cez/reading_submit).
 
-const VERSION = "5";
+const VERSION = "6";
 
 const STRINGS = {
   cs: {
@@ -144,8 +144,13 @@ class MujCezReadingCard extends HTMLElement {
       if (this._config.entry_id) msg.entry_id = this._config.entry_id;
       const data = await this._hass.callWS(msg);
       this._data = data;
-      const points = data.points || [];
-      const wanted = points.find((p) => p.ean === this._config.ean) || points[0];
+      let points = data.points || [];
+      // A card of one supply point (dashboard tab) offers only that point.
+      if (this._config.ean) {
+        const own = points.filter((p) => p.ean === this._config.ean);
+        if (own.length) points = data.points = own;
+      }
+      const wanted = points[0];
       this._point = wanted ? wanted.key : null;
       this._form.date = data.today;
       this._state = { phase: points.length ? "form" : "empty" };

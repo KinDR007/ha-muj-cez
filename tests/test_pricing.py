@@ -221,7 +221,8 @@ async def test_disabled_price_breakdown(
     reply = await ws.receive_json()
     assert not reply["success"] and reply["error"]["code"] == "disabled"
     views = dashboard.build_views(hass, entry.entry_id, entry.runtime_data.data, prices=False)
-    assert [v["path"] for v in views] == ["cez", "cez-odecet"]
+    (view,) = views
+    assert [t["title"] for t in view["cards"][0]["tabs"]] == ["Přehled", "Odečet"]
 
 
 async def test_pypdf_installed_on_demand(hass: HomeAssistant) -> None:

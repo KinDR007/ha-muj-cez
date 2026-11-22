@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import json
 import re
@@ -77,23 +78,44 @@ async def _config(hass: HomeAssistant, url: str | None) -> dict[str, Any]:
     return await hass.data[LOVELACE_DATA].dashboards[url].async_load(False)
 
 
+def _tabs(view: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Inner tabs of a supply point view by title."""
+    assert view["type"] == "panel"
+    (card,) = view["cards"]
+    assert card["type"] == dashboard.TABS_CARD and card["id"] == view["path"]
+    return {tab["title"]: tab for tab in card["tabs"]}
+
+
+def _overview(view: dict[str, Any]) -> str:
+    return json.dumps(_tabs(view)["Přehled"], ensure_ascii=False)
+
+
 async def test_new_dashboard_without_pv(
     hass: HomeAssistant, mock_client: AsyncMock, freezer: FrozenDateTimeFactory
 ) -> None:
     await _setup(hass, freezer, DASHBOARD_NEW)
     config = await _config(hass, "muj-cez")
-    view, prices, reading = config["views"]
-    assert view["path"] == "cez"
-    assert reading["path"] == "cez-odecet" and reading["icon"] == "mdi:counter"
-    card = reading["sections"][0]["cards"][0]
-    assert card["type"] == "custom:muj-cez-reading-card"
-    assert card["entry_id"] == hass.config_entries.async_entries("muj_cez")[0].entry_id
-    assert prices["path"] == "cez-ceny" and prices["icon"] == "mdi:cash-multiple"
-    assert not prices.get("subview")  # own tab
+    (view,) = config["views"]
+    sp = next(iter(mock_client.fetch_all.return_value.supply_points.values())).supply_point
+    assert view["path"] == f"cez-{sp.ean}"
+    assert view["title"] == f"⚡ {sp.name} · {sp.ean[-7:]}"
+    assert "icon" not in view  # HA shows the icon instead of the title
+    entry_id = hass.config_entries.async_entries("muj_cez")[0].entry_id
+    assert dashboard.view_owner(view) == entry_id
+    tabs = _tabs(view)
+    assert list(tabs) == ["Přehled", "Ceny", "Odečet"]
+    reading = tabs["Odečet"]
+    assert reading["icon"] == "mdi:counter" and reading["max_width"]
+    assert reading["cards"] == [
+        {"type": "custom:muj-cez-reading-card", "entry_id": entry_id, "ean": sp.ean}
+    ]
+    prices = tabs["Ceny"]
+    assert prices["icon"] == "mdi:cash-multiple"
     prices_text = json.dumps(prices, ensure_ascii=False)
     assert "muj_cez/prices" in prices_text and "mujcez_" not in prices_text
     _assert_entities_exist(hass, prices_text)
-    text = json.dumps(view, ensure_ascii=False)
+    text = _overview(view)
+    assert tabs["Přehled"]["max_columns"] == 3
     assert "mujcez_" not in text  # every marker resolved
     assert len(_assert_entities_exist(hass, text)) > 25
     assert "muj_cez_head" in text and "vrm_head" not in text
@@ -102,7 +124,7 @@ async def test_new_dashboard_without_pv(
     expected = [
         s for s in template["sections"] if not s["requires"] or s["requires"] == ["no_grid"]
     ]
-    assert len(view["sections"]) == len(expected)
+    assert len(tabs["Přehled"]["sections"]) == len(expected)
     assert "Přetoky do sítě" not in text and "Výkup přetoků" not in text
     assert "muj_cez/profile" not in text
     # Custom cards are not installed in the test instance.
@@ -119,22 +141,26 @@ async def test_pv_dashboard_into_existing(
     collection = dashboard._dashboards_collection(hass)
     await collection.async_create_item({"url_path": "my-home", "title": "Home"})
     await hass.async_block_till_done()
+    old = [{"path": p, "title": "old"} for p in ("cez", "cez-ceny", "cez-2", "cez-odecet")]
     await (
         hass.data[LOVELACE_DATA]
         .dashboards["my-home"]
         .async_save(
             {
-                "views": [{"path": "home", "title": "Home"}, {"path": "cez", "title": "old"}],
+                "views": [{"path": "home", "title": "Home"}, *old, {"path": "end"}],
                 "button_card_templates": {"mine": {"color": "red"}},
             }
         )
     )
     await _setup(hass, freezer, "my-home")
     config = await _config(hass, "my-home")
-    assert [v["path"] for v in config["views"]] == ["home", "cez", "cez-ceny", "cez-odecet"]
+    # Tabs of older versions are replaced in place, other views are kept.
+    paths = [v["path"] for v in config["views"]]
+    assert paths[0] == "home" and paths[-1] == "end" and len(paths) == 3
+    assert paths[1].startswith("cez-") and not dashboard._is_legacy(paths[1])
     assert config["views"][0] == {"path": "home", "title": "Home"}
     assert "mine" in config["button_card_templates"]
-    text = json.dumps(config["views"][1], ensure_ascii=False)
+    text = _overview(config["views"][1])
     assert "mujcez_" not in text
     _assert_entities_exist(hass, text)
     # PV sections with real entity ids of both supply points.
@@ -186,8 +212,8 @@ async def test_hdo_section(
     fake_dip.signals_data = {"*": load("dip_signals.json")}
     freezer.move_to(datetime(2026, 11, 17, 9, 30, tzinfo=TZ))
     await _setup(hass, freezer, DASHBOARD_NEW, now=datetime(2026, 11, 17, 9, 30, tzinfo=TZ))
-    view, _prices, _reading = (await _config(hass, "muj-cez"))["views"]
-    text = json.dumps(view, ensure_ascii=False)
+    (view,) = (await _config(hass, "muj-cez"))["views"]
+    text = _overview(view)
     assert "Tarif HDO a cena" in text
     ids = _assert_entities_exist(hass, text)
     registry = er.async_get(hass)
@@ -200,8 +226,8 @@ async def test_no_hdo_section_price_in_contract(
     hass: HomeAssistant, mock_client: AsyncMock, freezer: FrozenDateTimeFactory
 ) -> None:
     await _setup(hass, freezer, DASHBOARD_NEW)
-    view, _prices, _reading = (await _config(hass, "muj-cez"))["views"]
-    text = json.dumps(view, ensure_ascii=False)
+    (view,) = (await _config(hass, "muj-cez"))["views"]
+    text = _overview(view)
     assert "Tarif HDO a cena" not in text
     uid = next(iter(mock_client.fetch_all.return_value.supply_points))
     price = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{uid}_current_price")
@@ -218,8 +244,8 @@ async def test_meter_reading_rows(
     assert spd.meter_reading
     spd.meter_reading.value_lt = 13160.0 if dual else None
     await _setup(hass, freezer, DASHBOARD_NEW)
-    view, _prices, _reading = (await _config(hass, "muj-cez"))["views"]
-    text = json.dumps(view, ensure_ascii=False)
+    (view,) = (await _config(hass, "muj-cez"))["views"]
+    text = _overview(view)
     _assert_entities_exist(hass, text)
     registry = er.async_get(hass)
     vt = registry.async_get_entity_id("sensor", DOMAIN, f"{spd.supply_point.uid}_meter_reading")
@@ -232,20 +258,64 @@ async def test_meter_reading_rows(
         assert nt is None and f"sensor.{dashboard.MISSING}" in text
 
 
-def test_is_ours() -> None:
+def test_is_legacy() -> None:
     assert all(
-        dashboard._is_ours(p) for p in ("cez", "cez-2", "cez-ceny", "cez-ceny-3", "cez-odecet")
+        dashboard._is_legacy(p) for p in ("cez", "cez-2", "cez-ceny", "cez-ceny-3", "cez-odecet")
     )
-    assert not any(dashboard._is_ours(p) for p in ("home", "cez-x", "cezceny", None, "cez-ceny-"))
+    assert not any(
+        dashboard._is_legacy(p)
+        for p in ("home", "cez-x", "cezceny", None, "cez-ceny-", "cez-859182400500000007")
+    )
 
 
-async def test_second_point_own_price_tab(
+async def test_second_point_own_tab(
     hass: HomeAssistant, mock_client: AsyncMock, freezer: FrozenDateTimeFactory
 ) -> None:
     await _setup(hass, freezer, DASHBOARD_NEW)
     coordinator = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
     spd = next(iter(coordinator.data.supply_points.values()))
-    data = dataclasses.replace(coordinator.data, supply_points={"a": spd, "b": spd})
-    views = dashboard.build_views(hass, coordinator.config_entry.entry_id, data)
-    assert [v["path"] for v in views] == ["cez", "cez-ceny", "cez-2", "cez-ceny-2", "cez-odecet"]
-    assert "muj_cez/prices" in json.dumps(views[3], ensure_ascii=False)
+    other = dataclasses.replace(
+        spd,
+        supply_point=dataclasses.replace(spd.supply_point, ean="859182400500000007", name="Jiná 2"),
+    )
+    data = dataclasses.replace(coordinator.data, supply_points={"a": spd, "b": other})
+    views = dashboard.build_views(hass, coordinator.config_entry.entry_id, data, prices=False)
+    assert [v["path"] for v in views] == [f"cez-{spd.supply_point.ean}", "cez-859182400500000007"]
+    assert views[1]["title"] == "⚡ Jiná 2 · 0000007"
+    tabs = _tabs(views[1])
+    assert list(tabs) == ["Přehled", "Odečet"]
+    assert tabs["Odečet"]["cards"][0]["ean"] == "859182400500000007"
+
+
+def _view(entry_id: str, path: str) -> dict[str, Any]:
+    card = {"type": dashboard.TABS_CARD, "id": path, "entry_id": entry_id, "tabs": []}
+    return {"path": path, "title": path, "type": "panel", "cards": [card]}
+
+
+async def test_entries_share_dashboard(hass: HomeAssistant) -> None:
+    """Accounts of one login write into one dashboard without removing each other's tabs."""
+    assert await async_setup_component(hass, "lovelace", {})
+    collection = dashboard._dashboards_collection(hass)
+    await collection.async_create_item({"url_path": "cez-shared", "title": "ČEZ"})
+    await hass.async_block_till_done()
+    dash = hass.data[LOVELACE_DATA].dashboards["cez-shared"]
+    await dash.async_save({"views": [{"path": "home"}]})
+    load = dash.async_load
+
+    async def slow_load(force: bool) -> dict[str, Any]:
+        config = await load(force)
+        await asyncio.sleep(0.01)  # the other entry runs meanwhile
+        return config
+
+    dash.async_load = slow_load
+    # Both entries write at the same time (setup after a restart).
+    await asyncio.gather(
+        dashboard.async_write_dashboard(hass, "cez-shared", [_view("a", "cez-1111")], "a"),
+        dashboard.async_write_dashboard(hass, "cez-shared", [_view("b", "cez-2222")], "b"),
+    )
+    paths = [v["path"] for v in (await load(False))["views"]]
+    assert paths == ["home", "cez-1111", "cez-2222"]
+    # Entry a: a point was removed and another added, b stays.
+    await dashboard.async_write_dashboard(hass, "cez-shared", [_view("a", "cez-3333")], "a")
+    paths = [v["path"] for v in (await load(False))["views"]]
+    assert paths == ["home", "cez-3333", "cez-2222"]

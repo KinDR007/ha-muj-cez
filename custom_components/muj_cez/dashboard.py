@@ -6,14 +6,20 @@ are replaced with entity ids looked up in the entity registry by unique id, so r
 entities and other languages work. Sections are kept only when their data exist
 (smart meter, production point), so accounts with and without PV get a fitting view.
 
-The view (path "cez", further consumption points "cez-2", ...) is written into a storage
-dashboard chosen in the options; other views of that dashboard are kept. The view uses
-custom cards (button-card, stack-in-card, mini-graph-card); missing ones are installed
-with the user's consent (option, or the repair issue's fix button), see cards.py.
+Every consumption supply point gets one tab (panel view, path "cez-<EAN>", title
+"⚡ <street> · <EAN end>") with the integration's own card muj-cez-tabs: inner tabs
+Přehled, Ceny (price breakdown on) and Odečet (meter reading card of the point).
+Views are written into a storage dashboard chosen in the options; other views are kept.
+A view belongs to the config entry named in its tabs card, so several entries (customer
+accounts) share one dashboard without overwriting each other. Tabs of older versions
+(cez, cez-2, cez-ceny, cez-odecet) are replaced. The views use custom cards (button-card,
+stack-in-card, mini-graph-card); missing ones are installed with the user's consent
+(option, or the repair issue's fix button), see cards.py.
 """
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import json
 import logging
@@ -51,6 +57,9 @@ MISSING = "muj_cez_unavailable"
 VIEW_PATH = "cez"
 PRICES_PATH = "cez-ceny"
 READING_PATH = "cez-odecet"
+TABS_CARD = "custom:muj-cez-tabs"
+READING_CARD = "custom:muj-cez-reading-card"
+READING_MAX_WIDTH = 720
 ACCOUNT_UNIQUE = {
     "chart_unit": "{entry}_chart_unit",
     "documents": "{entry}_documents",
@@ -205,6 +214,17 @@ async def async_ensure_new_dashboard(hass: HomeAssistant) -> str:
 # --- View generation -----------------------------------------------------------------
 
 
+def point_path(sp: Any) -> str:
+    """Stable, unique path of the tab of a supply point."""
+    return f"{VIEW_PATH}-{re.sub(r'[^a-z0-9]', '', (sp.ean or sp.uid).lower())}"
+
+
+def point_title(sp: Any) -> str:
+    """Street and number with the end of the EAN (as on the meter reading card)."""
+    ident = (sp.ean or sp.uid)[-7:]
+    return f"⚡ {sp.name} · {ident}" if sp.name else f"⚡ {ident}"
+
+
 def build_views(
     hass: HomeAssistant,
     entry_id: str,
@@ -214,7 +234,7 @@ def build_views(
     prices: bool = True,
     reading: bool = True,
 ) -> list[dict[str, Any]]:
-    """One view per consumption supply point, sections fitting the existing entities."""
+    """One tab per consumption supply point, sections fitting the existing entities."""
     template = load_template()
     registry = er.async_get(hass)
     keys: dict[str, str] = template["keys"]
@@ -224,7 +244,7 @@ def build_views(
 
     consumption = [s for s in data.supply_points.values() if not s.supply_point.production]
     views = []
-    for index, spd in enumerate(consumption):
+    for spd in consumption:
         sp = spd.supply_point
         prod = next(
             (
@@ -272,50 +292,70 @@ def build_views(
             if not production and "span_without_production" in item:
                 section["column_span"] = item["span_without_production"]
             sections.append(section)
-        suffix = f"-{index + 1}" if index else ""
-        view = dict(template["view"], sections=sections)
-        if index:
-            view["path"] = f"{VIEW_PATH}{suffix}"
-        if len(consumption) > 1:
-            view["title"] = f"ČEZ {sp.name}"
-        views.append(view)
+        main = template["view"]
+        tabs: list[dict[str, Any]] = [
+            {
+                "title": "Přehled",
+                "icon": main["icon"],
+                "max_columns": main.get("max_columns", 3),
+                "sections": sections,
+            }
+        ]
         if prices and (sub := template.get("subview")):
-            # Price breakdown: own tab next to the ČEZ view.
             text = MARKER.sub(resolve, json.dumps(sub["sections"], ensure_ascii=False))
-            prices = dict(sub["view"], sections=json.loads(text), path=f"{PRICES_PATH}{suffix}")
-            if len(consumption) > 1:
-                prices["title"] = f"{prices['title']} {sp.name}"
-            views.append(prices)
-    if reading and consumption:
-        views.append(reading_view(entry_id))
+            tabs.append(
+                {
+                    "title": "Ceny",
+                    "icon": sub["view"]["icon"],
+                    "max_columns": sub["view"].get("max_columns", 2),
+                    "sections": json.loads(text),
+                }
+            )
+        if reading:
+            tabs.append(reading_tab(entry_id, sp.ean))
+        path = point_path(sp)
+        card = {"type": TABS_CARD, "id": path, "entry_id": entry_id, "tabs": tabs}
+        views.append({"title": point_title(sp), "path": path, "type": "panel", "cards": [card]})
     return views
 
 
-def reading_view(entry_id: str) -> dict[str, Any]:
-    """Meter reading tab: the integration's own card for all points of the account."""
-    card = {
-        "type": "custom:muj-cez-reading-card",
-        "entry_id": entry_id,
-        "grid_options": {"columns": "full"},
-    }
+def reading_tab(entry_id: str, ean: str) -> dict[str, Any]:
+    """Meter reading tab: the integration's own card fixed to one supply point."""
     return {
         "title": "Odečet",
-        "path": READING_PATH,
         "icon": "mdi:counter",
-        "type": "sections",
         "max_columns": 1,
-        "sections": [{"type": "grid", "cards": [card]}],
+        "max_width": READING_MAX_WIDTH,
+        "cards": [{"type": READING_CARD, "entry_id": entry_id, "ean": ean}],
     }
 
 
-def _is_ours(path: Any) -> bool:
+def _is_legacy(path: Any) -> bool:
+    """Tabs written by versions before 1.5 (one set per dashboard)."""
     return isinstance(path, str) and bool(
-        re.fullmatch(rf"({VIEW_PATH}|{PRICES_PATH}|{READING_PATH})(-\d+)?", path)
+        re.fullmatch(rf"({VIEW_PATH}|{PRICES_PATH}|{READING_PATH})(-\d{{1,3}})?", path)
     )
 
 
-async def async_write_dashboard(hass: HomeAssistant, url: str, views: list[dict[str, Any]]) -> None:
-    """Insert/replace the generated views in a storage dashboard, keep everything else."""
+def view_owner(view: Any) -> str | None:
+    """Config entry of a generated view (named in its tabs card)."""
+    cards = view.get("cards") if isinstance(view, dict) else None
+    card = cards[0] if isinstance(cards, list) and cards else None
+    if isinstance(card, dict) and card.get("type") == TABS_CARD:
+        return card.get("entry_id")
+    return None
+
+
+def _lock(hass: HomeAssistant) -> asyncio.Lock:
+    """One writer at a time: entries set up together share the dashboard."""
+    data = hass.data.setdefault(DOMAIN, {})
+    return data.setdefault("dashboard_lock", asyncio.Lock())
+
+
+async def async_write_dashboard(
+    hass: HomeAssistant, url: str, views: list[dict[str, Any]], entry_id: str
+) -> None:
+    """Insert/replace the views of the entry in a storage dashboard, keep everything else."""
     from homeassistant.components.lovelace.const import ConfigNotFound
 
     lovelace = _lovelace(hass)
@@ -324,20 +364,30 @@ async def async_write_dashboard(hass: HomeAssistant, url: str, views: list[dict[
     dash = lovelace.dashboards.get(None if url == DASHBOARD_DEFAULT else url)
     if dash is None or getattr(dash, "mode", None) != "storage":
         raise DashboardError(f"Dashboard {url} not found or not editable")
-    try:
-        config = dict(await dash.async_load(False))
-    except ConfigNotFound:
-        config = {"views": []}
-    if "strategy" in config:
-        raise DashboardError(f"Dashboard {url} is generated by a strategy")
-    existing = list(config.get("views") or [])
-    position = next((i for i, v in enumerate(existing) if _is_ours(v.get("path"))), len(existing))
-    kept = [v for v in existing if not _is_ours(v.get("path"))]
-    config["views"] = kept[:position] + views + kept[position:]
-    templates = dict(config.get("button_card_templates") or {})
-    templates.update(load_template()["templates"])
-    config["button_card_templates"] = templates
-    await dash.async_save(config)
+    async with _lock(hass):
+        try:
+            config = dict(await dash.async_load(False))
+        except ConfigNotFound:
+            config = {"views": []}
+        if "strategy" in config:
+            raise DashboardError(f"Dashboard {url} is generated by a strategy")
+
+        def ours(view: Any) -> bool:
+            return view_owner(view) == entry_id or _is_legacy(view.get("path"))
+
+        existing = list(config.get("views") or [])
+        position = next((i for i, v in enumerate(existing) if ours(v)), None)
+        if position is None:
+            # After the tabs of other entries (accounts), else at the end.
+            others = [i for i, v in enumerate(existing) if view_owner(v)]
+            position = others[-1] + 1 if others else len(existing)
+        kept_before = [v for v in existing[:position] if not ours(v)]
+        kept_after = [v for v in existing[position:] if not ours(v)]
+        config["views"] = kept_before + views + kept_after
+        templates = dict(config.get("button_card_templates") or {})
+        templates.update(load_template()["templates"])
+        config["button_card_templates"] = templates
+        await dash.async_save(config)
 
 
 async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
@@ -360,7 +410,7 @@ async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
     try:
         if url == DASHBOARD_NEW:
             url = await async_ensure_new_dashboard(hass)
-        await async_write_dashboard(hass, url, views)
+        await async_write_dashboard(hass, url, views, entry.entry_id)
     except DashboardError as err:
         _LOGGER.warning("Dashboard update failed: %s", err)
         ir.async_create_issue(
