@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 from collections.abc import Callable
 from datetime import date, datetime
@@ -48,6 +49,19 @@ from .profile import ProfileStore
 from .statistics import async_update_statistics, statistic_id
 
 _LOGGER = logging.getLogger(__name__)
+
+# Fields refreshed after a meter reading; an optional request that fails keeps the
+# previous value instead of emptying the sensors.
+READING_FIELDS = (
+    "simulation",
+    "months",
+    "sim_items",
+    "advance_plan",
+    "last_period",
+    "meter_reading",
+    "readings",
+    "advance_settings",
+)
 
 type MujCezConfigEntry = ConfigEntry[MujCezCoordinator]
 
@@ -333,6 +347,38 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
             comparison: dict[str, Any] = build_comparison(spd, daily, today)
             comparison["reference_sensor"] = sensor
             data.comparison[uid] = comparison
+
+    async def async_refresh_point(self, uid: str) -> None:
+        """After a meter reading: fetch only what the reading changes for one point
+        (readings, billing simulation, advances, billing periods) and update sensors."""
+        data = self.data
+        spd = data.supply_points.get(uid) if data else None
+        if data is None or spd is None or spd.supply_point.production:
+            return
+        fresh = dataclasses.replace(spd)
+        try:
+            await self.client.fetch_readings_and_billing(
+                fresh, data.documents, dt_util.now().date()
+            )
+        except CezError as err:
+            _LOGGER.warning("Refresh of %s after the reading failed: %s", spd.supply_point.ean, err)
+            return
+        for name in READING_FIELDS:
+            if getattr(fresh, name) is None:
+                setattr(fresh, name, getattr(spd, name))
+        if fresh.last_period is spd.last_period:
+            fresh.periods = spd.periods  # history request failed, keep the periods
+        # The full refresh may have replaced the data meanwhile.
+        current = self.data
+        if current is None or uid not in current.supply_points:
+            return
+        updated = dataclasses.replace(
+            current,
+            supply_points={**current.supply_points, uid: fresh},
+            comparison=dict(current.comparison),
+        )
+        await self._async_add_comparison(updated)
+        self.async_set_updated_data(updated)
 
     async def async_scheduled_refresh(self) -> None:
         """Refresh and schedule a retry on failure."""

@@ -1711,38 +1711,47 @@ class CezClient:
                 if place.get("uid") in (None, sp.uid):
                     place["uid"] = sp.uid
                     await self.update_grid_cache(sp, place, today)
-            spd.simulation, spd.months, spd.sim_items = await self._optional(
-                f"simulation {sp.ean}", self.get_simulation(sp)
-            ) or (None, None, None)
-            spd.advance_plan = await self._optional(
-                f"advance plan {sp.ean}", self.get_advance_plan(sp, today)
-            )
-            history = await self._optional(
-                f"consumption history {sp.ean}", self.get_consumption_periods(sp)
-            )
-            spd.last_period = history[-1] if history else None
-            spd.meter_reading, spd.readings = await self._optional(
-                f"meter readings {sp.ean}", self.get_meter_reading(sp, today)
-            ) or (None, None)
+            await self.fetch_readings_and_billing(spd, documents, today)
             spd.contract = await self._optional(
                 f"contract info {sp.ean}",
                 self.get_contract_info(
                     sp, spd.last_period.consumption_kwh if spd.last_period else None
                 ),
             )
-            spd.advance_settings = await self._optional(
-                f"advance settings {sp.ean}", self.get_advance_settings(sp)
-            )
             spd.billing = summarize_billing(documents, sp.agreement_id, today)
-            spd.periods = build_billing_periods(
-                history or [], documents, sp.agreement_id, spd.simulation, spd.advance_plan
-            )
             spd.outages = parse_outages(outages, sp.ean)
             result[sp.uid] = spd
         return CezData(
             supply_points=result,
             unread_messages=parse_unread_messages(messages),
             documents=documents,
+        )
+
+    async def fetch_readings_and_billing(
+        self, spd: SupplyPointData, documents: list[BillingDocument], today: date
+    ) -> None:
+        """Data of a consumption point a meter reading changes: readings, the portal's
+        billing simulation, advances and billing periods (also refreshed after sending
+        a reading)."""
+        sp = spd.supply_point
+        spd.simulation, spd.months, spd.sim_items = await self._optional(
+            f"simulation {sp.ean}", self.get_simulation(sp)
+        ) or (None, None, None)
+        spd.advance_plan = await self._optional(
+            f"advance plan {sp.ean}", self.get_advance_plan(sp, today)
+        )
+        history = await self._optional(
+            f"consumption history {sp.ean}", self.get_consumption_periods(sp)
+        )
+        spd.last_period = history[-1] if history else None
+        spd.meter_reading, spd.readings = await self._optional(
+            f"meter readings {sp.ean}", self.get_meter_reading(sp, today)
+        ) or (None, None)
+        spd.advance_settings = await self._optional(
+            f"advance settings {sp.ean}", self.get_advance_settings(sp)
+        )
+        spd.periods = build_billing_periods(
+            history or [], documents, sp.agreement_id, spd.simulation, spd.advance_plan
         )
 
     async def _fetch_production(

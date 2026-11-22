@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import date
+import dataclasses
+from datetime import date, timedelta
 from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 from pytest_homeassistant_custom_component.typing import WebSocketGenerator
 
-from custom_components.muj_cez import api, reading
+from custom_components.muj_cez import api, meter_reading, reading
 from custom_components.muj_cez.const import DOMAIN
 
 from .conftest import PASSWORD, USERNAME, load
@@ -245,6 +247,53 @@ async def test_websocket_submit(
     assert body["selfMeterReadingReason"] == {"entryId": "02"}
     assert body["selfMeterReadingHighTariff"]["meterReadingValue"] == 11700
     assert body["meterReadingDeviceNumber"] == "1000000001"
+
+
+async def test_submit_refreshes_point(
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    mock_client: AsyncMock,
+) -> None:
+    """After sending, only the data the reading changes are fetched again (no full
+    update); a failed optional request keeps the previous value."""
+    mock_client.get_register_readings.return_value = api.parse_register_readings(
+        load("meter_readings.json"), date(2026, 3, 1)
+    )
+    mock_client.submit_meter_reading.return_value = {"activityId": "A1"}
+    calls = []
+
+    async def fetch(spd: api.SupplyPointData, documents: Any, today: date) -> None:
+        calls.append(spd.supply_point.uid)
+        spd.meter_reading = dataclasses.replace(spd.meter_reading, value_ht=11700.0)
+        spd.simulation = None  # request failed
+
+    mock_client.fetch_readings_and_billing.side_effect = fetch
+    entry_id = await _setup(hass)
+    coordinator = hass.config_entries.async_get_entry(entry_id).runtime_data
+    (uid,) = coordinator.data.supply_points
+    simulation = coordinator.data.supply_points[uid].simulation
+    assert simulation is not None
+    sensor = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{uid}_meter_reading")
+    assert hass.states.get(sensor).state != "11700.0"
+    ws = await hass_ws_client(hass)
+    await ws.send_json({"id": 1, "type": f"{DOMAIN}/reading_form"})
+    point = (await ws.receive_json())["result"]["points"][0]
+    await ws.send_json(
+        {"id": 2, "type": f"{DOMAIN}/reading_submit", "entry_id": entry_id, "ean": point["ean"],
+         "reading_type": "diary", "date": dt_util.now().date().isoformat(), "vt": 11700}
+    )  # fmt: skip
+    assert (await ws.receive_json())["result"]["sent"] is True
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert calls == [uid]
+    assert hass.states.get(sensor).state == "11700.0"
+    assert coordinator.data.supply_points[uid].simulation is simulation
+    assert mock_client.fetch_all.await_count == 1  # setup only
+    # Once more later, the portal may recompute the simulation with a delay.
+    async_fire_time_changed(
+        hass, dt_util.utcnow() + timedelta(seconds=meter_reading.REFRESH_AGAIN_SECONDS + 1)
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert calls == [uid, uid]
 
 
 def test_offered_types_and_date_range() -> None:

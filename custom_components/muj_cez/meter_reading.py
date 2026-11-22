@@ -15,7 +15,8 @@ from datetime import date
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
 from . import reading
@@ -25,6 +26,8 @@ from .const import DOMAIN, docs_url
 _LOGGER = logging.getLogger(__name__)
 
 CACHE_SECONDS = 300
+# Second refresh of the point after a sent reading.
+REFRESH_AGAIN_SECONDS = 600
 
 
 class ReadingError(Exception):
@@ -220,6 +223,23 @@ async def async_check(
     return result, state
 
 
+def _schedule_refresh(hass: HomeAssistant, entry: Any, uid: str) -> None:
+    """Refresh the point now and once more later (the portal may recompute the billing
+    simulation with a delay)."""
+    coordinator = entry.runtime_data
+    entry.async_create_background_task(
+        hass, coordinator.async_refresh_point(uid), f"{DOMAIN}_reading_refresh"
+    )
+
+    @callback
+    def _later(_now: Any) -> None:
+        entry.async_create_background_task(
+            hass, coordinator.async_refresh_point(uid), f"{DOMAIN}_reading_refresh"
+        )
+
+    entry.async_on_unload(async_call_later(hass, REFRESH_AGAIN_SECONDS, _later))
+
+
 async def async_submit(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate again and send the reading to the portal."""
     entry, sp = _find(hass, data["entry_id"], data["ean"])
@@ -244,6 +264,7 @@ async def async_submit(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, A
         raise ReadingError("portal", str(err)) from err
     _LOGGER.info("Meter reading of %s sent, portal response: %s", sp.ean, response)
     _cache(hass).pop(f"{entry.entry_id}:{sp.uid}", None)
+    _schedule_refresh(hass, entry, sp.uid)
     response = response if isinstance(response, dict) else {}
     return {
         "sent": True,
