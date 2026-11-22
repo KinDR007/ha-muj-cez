@@ -26,6 +26,19 @@ faktury a ceníky odběrného místa.
 Diagnostické entity: EAN, číslo elektroměru, číslo smlouvy, zákaznické číslo, produkt,
 čas poslední aktualizace.
 
+## Plyn
+
+Plynové odběrné místo má stejné senzory vyúčtování, záloh, dokladů a období (spotřeba
+v kWh, jak je účtuje ČEZ). Místo stavu elektroměru má **Stav plynoměru** v m³ (typ plyn,
+lze použít v panelu Energie) s historií odečtů v atributu `readings` (stav, spotřeba
+v m³ od předchozího odečtu, po výměně plynoměru prázdná) a diagnostiku **Číslo plynoměru**.
+Jistič, HDO, aktuální cena, průběhová data, cenový rozpad a odečet z Home Assistantu
+u plynu nejsou; porovnání s referenčním senzorem HA se nepočítá (ten měří elektřinu).
+
+Verze před 1.6 vytvářely u plynu stav elektroměru v kWh a hlavní jistič 0 A. Tyto
+entity se po aktualizaci odstraní; jejich dlouhodobé statistiky lze smazat v
+**Vývojářské nástroje → Statistiky**.
+
 ## Průběhové měření a fotovoltaika
 
 Pokud portál pro odběrné místo eviduje průběhová data elektroměru, přibudou senzory
