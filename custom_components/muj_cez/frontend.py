@@ -6,6 +6,7 @@ The module is added with frontend.add_extra_js_url, so it works on any dashboard
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from pathlib import Path
 
@@ -22,6 +23,12 @@ URL_BASE = f"/{DOMAIN}_frontend"
 CARD_FILES = ("muj-cez-reading-card.js", "muj-cez-tabs.js")
 
 
+def _fingerprints(here: Path) -> dict[str, str]:
+    """Short content hash per card: a changed card gets a new URL even within one
+    integration version (dev builds), so browsers do not keep the old one."""
+    return {name: hashlib.sha1((here / name).read_bytes()).hexdigest()[:8] for name in CARD_FILES}
+
+
 async def async_register_frontend(hass: HomeAssistant, version: str) -> None:
     if "frontend" not in hass.config.components or getattr(hass, "http", None) is None:
         return  # no UI (tests, headless setups)
@@ -32,5 +39,6 @@ async def async_register_frontend(hass: HomeAssistant, version: str) -> None:
             for name in CARD_FILES
         ]
     )
+    hashes = await hass.async_add_executor_job(_fingerprints, here)
     for name in CARD_FILES:
-        add_extra_js_url(hass, f"{URL_BASE}/{name}?v={version}")
+        add_extra_js_url(hass, f"{URL_BASE}/{name}?v={version}-{hashes[name]}")
