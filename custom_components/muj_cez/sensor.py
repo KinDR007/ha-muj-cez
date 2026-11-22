@@ -13,7 +13,13 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfElectricCurrent, UnitOfEnergy
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfElectricCurrent,
+    UnitOfEnergy,
+    UnitOfVolume,
+)
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -37,6 +43,9 @@ KIND_CONSUMPTION = "consumption"
 KIND_PRODUCTION = "production"
 KIND_ANY = "any"
 
+ELECTRICITY = "electricity"
+GAS = "gas"
+
 
 @dataclass(frozen=True, kw_only=True)
 class MujCezSensorDescription(SensorEntityDescription):
@@ -47,6 +56,8 @@ class MujCezSensorDescription(SensorEntityDescription):
     # Which supply points get the entity, and whether its data exist at setup.
     kind: str = KIND_CONSUMPTION
     exists_fn: Callable[[MujCezCoordinator, SupplyPointData], bool] | None = None
+    # Only for points of this commodity (ELECTRICITY / GAS), None for both.
+    commodity: str | None = None
     # State depends on the time of day (HDO): re-evaluated at each switch and midnight.
     timed: bool = False
 
@@ -98,6 +109,7 @@ def _grid_energy(direction: str, period: str, prev: str) -> MujCezSensorDescript
         value_fn=_grid_total(direction, f"this_{period}"),
         cattrs_fn=attrs,
         exists_fn=_grid_exists(direction),
+        commodity=ELECTRICITY,
     )
 
 
@@ -199,6 +211,25 @@ def _info(
         value_fn=lambda _c, d: fn(d),
         **kw,
     )
+
+
+def _gas_readings(d: SupplyPointData) -> list[dict[str, Any]]:
+    """Meter readings with m³ since the previous one (none after a meter exchange)."""
+    result = []
+    prev = None
+    for r in d.readings or []:
+        same = prev is not None and (not prev.device or not r.device or prev.device == r.device)
+        delta = r.value - prev.value if same and prev is not None else None
+        result.append(
+            {
+                "date": r.reading_date,
+                "value": r.value,
+                "consumption": round(delta, 2) if delta is not None and delta >= 0 else None,
+                "reading_type": r.reading_type,
+            }
+        )
+        prev = r
+    return result
 
 
 def _doc_attrs(doc: BillingDocument | None) -> dict[str, Any]:
@@ -342,6 +373,7 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
         "meter_reading",
         lambda d: d.meter_reading and d.meter_reading.value_ht,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        commodity=ELECTRICITY,
         attrs_fn=lambda d: (
             {
                 "reading_date": d.meter_reading.reading_date,
@@ -358,9 +390,32 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
         lambda d: d.meter_reading and d.meter_reading.value_lt,
         state_class=SensorStateClass.TOTAL_INCREASING,
         exists_fn=lambda _c, d: bool(d.meter_reading and d.meter_reading.value_lt),
+        commodity=ELECTRICITY,
         attrs_fn=lambda d: (
             {"reading_date": d.meter_reading.reading_date} if d.meter_reading else {}
         ),
+    ),
+    # Gas meter register in m³ (consumption and costs are in kWh, converted by the portal).
+    MujCezSensorDescription(
+        key="gas_meter_reading",
+        translation_key="gas_meter_reading",
+        device_class=SensorDeviceClass.GAS,
+        native_unit_of_measurement=UnitOfVolume.CUBIC_METERS,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=0,
+        value_fn=lambda _c, d: d.meter_reading and d.meter_reading.value_ht,
+        attrs_fn=lambda d: {
+            **(
+                {
+                    "reading_date": d.meter_reading.reading_date,
+                    "reading_type": d.meter_reading.reading_type,
+                }
+                if d.meter_reading
+                else {}
+            ),
+            "readings": _gas_readings(d),
+        },
+        commodity=GAS,
     ),
     # Contract and connection
     MujCezSensorDescription(
@@ -387,6 +442,7 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
         suggested_display_precision=0,
         value_fn=lambda _c, d: d.contract and d.contract.circuit_breaker,
         attrs_fn=lambda d: {"phase": d.contract.phase} if d.contract else {},
+        commodity=ELECTRICITY,
     ),
     _date("contract_end", lambda d: d.contract and d.contract.contract_end),
     _date("price_change_date", lambda d: d.contract and d.contract.price_change_date),
@@ -419,7 +475,16 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
     ),
     # Identification
     _info("ean", lambda d: d.supply_point.ean, kind=KIND_ANY),
-    _info("meter_number", lambda d: d.meter_reading and d.meter_reading.device),
+    _info(
+        "meter_number",
+        lambda d: d.meter_reading and d.meter_reading.device,
+        commodity=ELECTRICITY,
+    ),
+    _info(
+        "gas_meter_number",
+        lambda d: d.meter_reading and d.meter_reading.device,
+        commodity=GAS,
+    ),
     _info("contract_number", lambda d: strip_zeros(d.supply_point.agreement_id), kind=KIND_ANY),
     _info("customer_number", lambda d: d.simulation and d.simulation.customer_number),
     _info(
@@ -465,6 +530,7 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
             k: v for k, v in (grid_info(c, d) or {}).items() if k not in ("uid", "summary")
         },
         exists_fn=lambda c, d: grid_info(c, d) is not None,
+        commodity=ELECTRICITY,
     ),
     MujCezSensorDescription(
         key="spot_price_yesterday",
@@ -477,6 +543,7 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
             **((grid_info(c, d) or {}).get("spot_overview") or {}),
         },
         exists_fn=lambda c, d: grid_info(c, d) is not None,
+        commodity=ELECTRICITY,
     ),
     # Production point: payouts for energy fed into the grid
     _money(
@@ -524,6 +591,7 @@ HDO_SENSORS: tuple[MujCezSensorDescription, ...] = (
         cattrs_fn=_hdo_attrs,
         exists_fn=lambda c, d: bool(c.data and d.supply_point.ean in c.data.hdo),
         timed=True,
+        commodity=ELECTRICITY,
     ),
     MujCezSensorDescription(
         key="hdo_next_switch",
@@ -532,6 +600,7 @@ HDO_SENSORS: tuple[MujCezSensorDescription, ...] = (
         value_fn=lambda c, d: (_hdo(c, d) or {}).get("next_switch"),
         exists_fn=lambda c, d: bool(c.data and d.supply_point.ean in c.data.hdo),
         timed=True,
+        commodity=ELECTRICITY,
     ),
     MujCezSensorDescription(
         key="current_price",
@@ -542,6 +611,7 @@ HDO_SENSORS: tuple[MujCezSensorDescription, ...] = (
         cattrs_fn=_price_attrs,
         exists_fn=lambda _c, d: bool(d.simulation and d.simulation.unit_prices),
         timed=True,
+        commodity=ELECTRICITY,
     ),
 )
 SENSORS = SENSORS + HDO_SENSORS
@@ -554,10 +624,16 @@ def _as_date(value: str | None) -> date | None:
         return None
 
 
+def _commodity(d: SupplyPointData) -> str:
+    return GAS if d.supply_point.gas else ELECTRICITY
+
+
 def _wanted(c: MujCezCoordinator, d: SupplyPointData, desc: MujCezSensorDescription) -> bool:
     if desc.kind == KIND_CONSUMPTION and d.supply_point.production:
         return False
     if desc.kind == KIND_PRODUCTION and not d.supply_point.production:
+        return False
+    if desc.commodity not in (None, _commodity(d)):
         return False
     return desc.exists_fn is None or desc.exists_fn(c, d)
 
@@ -586,12 +662,15 @@ async def async_setup_entry(
 
 def _remove_foreign_entities(hass: HomeAssistant, coordinator: MujCezCoordinator) -> None:
     """Remove entities that do not belong to the supply point type (e.g. consumption
-    sensors created for a production point by older versions)."""
+    sensors created for a production point, or the kWh meter reading and circuit breaker
+    of a gas point, by older versions)."""
     registry = er.async_get(hass)
     for uid, spd in coordinator.data.supply_points.items():
-        if not spd.supply_point.production:
-            continue
-        keys = [d.key for d in SENSORS if d.kind == KIND_CONSUMPTION] + ["consumption_comparison"]
+        if spd.supply_point.production:
+            keys = [d.key for d in SENSORS if d.kind == KIND_CONSUMPTION]
+            keys.append("consumption_comparison")
+        else:
+            keys = [d.key for d in SENSORS if d.commodity not in (None, _commodity(spd))]
         for key in keys:
             entity_id = registry.async_get_entity_id("sensor", DOMAIN, f"{uid}_{key}")
             if entity_id:

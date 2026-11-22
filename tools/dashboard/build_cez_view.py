@@ -218,6 +218,74 @@ contract = {
     ],
 }
 
+# Gas point (export only): meter in m³, no circuit breaker / HDO / reading comparison.
+GAS_ROWS_TAIL = (
+    "+row('spotreba_za_minule_obdobi','Minulé období',num('spotreba_za_minule_obdobi')+' kWh · '+num('naklady_za_minule_obdobi')+' Kč')"
+    "+row('planovane_odstavky','Plánované odstávky',st('planovane_odstavky')?.state??'–')"
+    f"+row('{A_MESSAGES}','Nepřečtené zprávy',st('{A_MESSAGES}')?.state??'–')"
+    "+row('ean','EAN',st('ean')?.state||'–')"
+    "+row('cislo_plynomeru','Číslo plynoměru',st('cislo_plynomeru')?.state||'–')"
+    "+row('cislo_smlouvy','Číslo smlouvy',st('cislo_smlouvy')?.state||'–')"
+    "+row('zakaznicke_cislo','Zákaznické číslo',st('zakaznicke_cislo')?.state||'–')"
+    "+row('posledni_aktualizace','Aktualizováno',(()=>{const v=st('posledni_aktualizace')?.state;"
+    "if(!v||v==='unknown')return '–';const d=new Date(v);return d.toLocaleString('cs-CZ',{dateStyle:'short',timeStyle:'short'})})());"
+)
+
+contract_gas = {
+    "type": "grid",
+    "cards": [
+        heading("Smlouva a odběrné místo", "mdi:file-sign"),
+        stack(
+            head(
+                P + "stav_plynomeru",
+                "mdi:meter-gas",
+                "Stav plynoměru",
+                "return 'odečet '+dt(at('stav_plynomeru','reading_date'));",
+                "return u(num('stav_plynomeru'),'m³');",
+            ),
+            details(
+                "return row('produkt','Produkt',st('produkt')?.state||'–')"
+                "+row('distribucni_sazba','Distribuční sazba',st('distribucni_sazba')?.state||'–')"
+                "+row('konec_smlouvy','Konec smlouvy',dt(st('konec_smlouvy')?.state))"
+                "+row('datum_zmeny_ceny','Změna ceny',dt(st('datum_zmeny_ceny')?.state))"
+                + GAS_ROWS_TAIL
+            ),
+        ),
+    ],
+}
+
+gas_readings = {
+    "type": "grid",
+    "cards": [
+        heading("Odečty plynoměru", "mdi:meter-gas"),
+        stack(
+            head(
+                P + "stav_plynomeru",
+                "mdi:fire",
+                "Spotřeba mezi odečty",
+                "const rs=at('stav_plynomeru','readings')||[];const r=rs[rs.length-1];"
+                "const p=rs[rs.length-2];return r&&p&&r.consumption!=null?dt(p.date)+' – '+dt(r.date):'';",
+                "const rs=at('stav_plynomeru','readings')||[];const r=rs[rs.length-1];"
+                "return u(r&&r.consumption!=null?f(r.consumption):'–','m³');",
+            ),
+            details(
+                "const rs=(at('stav_plynomeru','readings')||[]).slice().reverse().slice(0,12);"
+                "const th=(t,r)=>`<th style='text-align:${r?'right':'left'};font-weight:400;color:var(--secondary-text-color);padding:7px 0 7px 12px'>${t}</th>`;"
+                "const td=(t,r)=>`<td style='text-align:${r?'right':'left'};padding:7px 0 7px 12px;border-top:1px solid var(--divider-color);white-space:nowrap'>${t}</td>`;"
+                "const sub=(t)=>`<div style='font-size:11px;color:var(--secondary-text-color)'>${t}</div>`;"
+                "const all=at('stav_plynomeru','readings')||[];"
+                "const body=rs.map(r=>{const first=all.indexOf(r)===0;"
+                "const c=r.consumption!=null?f(r.consumption)+' m³':(first?'–':sub('nový plynoměr'));"
+                "return '<tr>'+td(dt(r.date)+sub(r.reading_type||''))+td(f(r.value)+' m³',1)+td(c,1)+'</tr>'}).join('');"
+                "return `<div style='overflow-x:auto'><table style='width:100%;border-collapse:collapse;font-size:13px'>"
+                "<tr>${th('Odečet')}${th('Stav',1)}${th('Spotřeba',1)}</tr>${body}</table></div>`"
+                "+`<div style='font-size:12px;color:var(--secondary-text-color);padding:6px 0;white-space:normal'>"
+                "Plynoměr měří m³, portál účtuje kWh (přepočet podle spalného tepla).</div>`;"
+            ),
+        ),
+    ],
+}
+
 HDO_JS = (
     "const H=st('tarif_hdo');const HA2=H?H.attributes:{};const LOWT=H?.state==='low';"
     "const NTC='var(--success-color,#43a047)';const VTC='#8e8e93';"
@@ -1210,7 +1278,11 @@ def _tag(section: dict, *requires: str) -> dict:
 SECTIONS = [
     billing,
     advances,
-    contract,
+    *(
+        [_tag(contract, "electricity"), _tag(contract_gas, "gas"), _tag(gas_readings, "gas")]
+        if EXPORT
+        else [contract]
+    ),
     *([_tag(hdo, "hdo")] if EXPORT else ([hdo] if HDO_ON else [])),
     *grid_sections(),
     *([profile_section()] if G else []),
@@ -1218,7 +1290,7 @@ SECTIONS = [
     monthly,
     *([_tag(yoy_meter(), "grid"), _tag(yoy, "no_grid")] if EXPORT else [yoy_meter() if G else yoy]),
     totals,
-    check,
+    _tag(check, "electricity") if EXPORT else check,
     periods,
     documents,
 ]

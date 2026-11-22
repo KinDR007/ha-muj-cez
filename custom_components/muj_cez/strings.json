@@ -187,6 +187,12 @@
       "ean": {
         "name": "EAN"
       },
+      "gas_meter_reading": {
+        "name": "Gas meter reading"
+      },
+      "gas_meter_number": {
+        "name": "Gas meter number"
+      },
       "meter_number": {
         "name": "Meter number"
       },

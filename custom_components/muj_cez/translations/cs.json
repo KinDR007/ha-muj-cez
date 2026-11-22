@@ -187,6 +187,12 @@
       "ean": {
         "name": "EAN"
       },
+      "gas_meter_reading": {
+        "name": "Stav plynoměru"
+      },
+      "gas_meter_number": {
+        "name": "Číslo plynoměru"
+      },
       "meter_number": {
         "name": "Číslo elektroměru"
       },

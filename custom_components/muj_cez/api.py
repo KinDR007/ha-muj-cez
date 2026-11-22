@@ -86,6 +86,11 @@ class SupplyPoint:
     # Raw supply point code as used in API paths (may carry a suffix, e.g. "  SV").
     code: str = ""
 
+    @property
+    def gas(self) -> bool:
+        """Gas supply point (commodity P1): meter in m³, no HDO, smart meter or reading form."""
+        return self.commodity.startswith(("P", "G"))
+
 
 @dataclass
 class InvoiceSimulation:
@@ -1700,14 +1705,17 @@ class CezClient:
         messages = await self._optional("messages", self._get("/dashboard/messages/summary"))
 
         result: dict[str, SupplyPointData] = {}
+        gas = {sp.uid for sp in supply_points if sp.gas}
         for sp in supply_points:
             spd = SupplyPointData(supply_point=sp)
             if sp.production:
                 await self._fetch_production(spd, documents, outages, today)
                 result[sp.uid] = spd
                 continue
-            if grid_cache is not None and sp.continuous_measurement and sp.place_id:
+            if grid_cache is not None and sp.continuous_measurement and sp.place_id and not sp.gas:
                 place = grid_cache.setdefault(sp.place_id, {})
+                if place.get("uid") in gas:  # claimed by a gas point before 1.6
+                    place.clear()
                 if place.get("uid") in (None, sp.uid):
                     place["uid"] = sp.uid
                     await self.update_grid_cache(sp, place, today)

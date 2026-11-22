@@ -70,6 +70,12 @@
       "ean": {
         "default": "mdi:barcode"
       },
+      "gas_meter_reading": {
+        "default": "mdi:meter-gas"
+      },
+      "gas_meter_number": {
+        "default": "mdi:counter"
+      },
       "meter_number": {
         "default": "mdi:counter"
       },

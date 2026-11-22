@@ -223,7 +223,8 @@ def point_title(sp: Any) -> str:
     """Street and number with the end of the EAN (as on the meter reading card)."""
     ident = (sp.ean or sp.uid)[-7:]
     street = (sp.name or "").split(",")[0].strip()  # without the town
-    return f"⚡ {street} · {ident}" if street else f"⚡ {ident}"
+    mark = "🔥" if sp.gas else "⚡"
+    return f"{mark} {street} · {ident}" if street else f"{mark} {ident}"
 
 
 def build_views(
@@ -278,6 +279,8 @@ def build_views(
         production = has("v", "last_payout")
         hdo = has("c", "hdo_tariff")
         flags = {
+            "electricity": not sp.gas,
+            "gas": sp.gas,
             "grid": grid,
             "production": production,
             "no_grid": not grid,
@@ -302,7 +305,8 @@ def build_views(
                 "sections": sections,
             }
         ]
-        if prices and (sub := template.get("subview")):
+        # Gas: no price breakdown (invoices are parsed for electricity) and no reading form.
+        if prices and not sp.gas and (sub := template.get("subview")):
             text = MARKER.sub(resolve, json.dumps(sub["sections"], ensure_ascii=False))
             price_sections = json.loads(text)
             if button := unique("button", f"{sp.uid}_refresh_invoices"):
@@ -315,7 +319,7 @@ def build_views(
                     "sections": price_sections,
                 }
             )
-        if reading:
+        if reading and not sp.gas:
             tabs.append(reading_tab(entry_id, sp.ean))
         path = point_path(sp)
         card = {"type": TABS_CARD, "id": path, "entry_id": entry_id, "tabs": tabs}

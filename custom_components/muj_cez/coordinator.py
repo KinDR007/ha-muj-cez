@@ -316,7 +316,7 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         eans = [
             spd.supply_point.ean
             for spd in data.supply_points.values()
-            if not spd.supply_point.production and spd.supply_point.ean
+            if not spd.supply_point.production and not spd.supply_point.gas and spd.supply_point.ean
         ]
         stale = self._hdo_fetched is None or dt_util.utcnow() - self._hdo_fetched > HDO_MAX_AGE
         if eans and (force or stale):
@@ -378,8 +378,10 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
             except Exception:  # recorder unavailable or statistics error
                 _LOGGER.exception("Reading statistics of %s failed", sensor)
         for uid, spd in data.supply_points.items():
-            comparison: dict[str, Any] = build_comparison(spd, daily, today)
-            comparison["reference_sensor"] = sensor
+            # The reference sensor measures electricity: gas points get portal values only.
+            gas = spd.supply_point.gas
+            comparison: dict[str, Any] = build_comparison(spd, None if gas else daily, today)
+            comparison["reference_sensor"] = None if gas else sensor
             data.comparison[uid] = comparison
 
     async def async_refresh_point(self, uid: str) -> None:

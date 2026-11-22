@@ -127,9 +127,8 @@ async def test_new_dashboard_without_pv(
     assert "muj_cez_head" in text and "vrm_head" not in text
     assert {"muj_cez_head", "muj_cez_details"} <= set(config["button_card_templates"])
     template = dashboard.load_template()
-    expected = [
-        s for s in template["sections"] if not s["requires"] or s["requires"] == ["no_grid"]
-    ]
+    present = {"no_grid", "no_hdo", "electricity"}
+    expected = [s for s in template["sections"] if set(s["requires"]) <= present]
     assert len(tabs["Přehled"]["sections"]) == len(expected)
     assert "Přetoky do sítě" not in text and "Výkup přetoků" not in text
     assert "muj_cez/profile" not in text
