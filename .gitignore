@@ -22,3 +22,6 @@ TODO.md
 docs/analyza-proveditelnosti.md
 docs/analyza-statistiky-instalaci.md
 .memory/
+
+# Diagnostics downloaded from Home Assistant
+config_entry-*.json
