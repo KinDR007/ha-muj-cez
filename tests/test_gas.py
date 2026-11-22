@@ -16,6 +16,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
+from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 import custom_components.muj_cez as integration
@@ -139,7 +140,8 @@ async def test_gas_sensors(
         assert _entity(hass, UID, key) is not None, key
     for key in ("gas_meter_reading", "gas_meter_number"):
         assert _entity(hass, UID, key) is None, key
-    assert _entity(hass, GAS_UID, "refresh_invoices", "button") is None
+    # Invoices of both points are parsed (gas by invoice_gas).
+    assert _entity(hass, GAS_UID, "refresh_invoices", "button") is not None
     assert _entity(hass, UID, "refresh_invoices", "button") is not None
 
 
@@ -200,7 +202,8 @@ async def test_gas_dashboard_tab(
     gas = views[path]
     assert gas["title"].startswith("🔥 ") and gas["title"].endswith(" · 0000009")
     tabs = _tabs(gas)
-    assert list(tabs) == ["Přehled"]
+    assert list(tabs) == ["Přehled", "Ceny", "Odečet"]
+    assert tabs["Odečet"]["cards"][0]["ean"] == GAS_EAN
     text = json.dumps(tabs["Přehled"], ensure_ascii=False)
     ids = _assert_entities_exist(hass, text)
     assert _entity(hass, GAS_UID, "gas_meter_reading") in ids
@@ -213,3 +216,63 @@ async def test_gas_dashboard_tab(
     power_text = json.dumps(_tabs(power[0])["Přehled"], ensure_ascii=False)
     assert "Kontrola měření" in power_text and "Odečty plynoměru" not in power_text
     assert "Odečet" in _tabs(power[0])
+
+
+async def test_gas_reading_form_and_submit(
+    hass: HomeAssistant, hass_ws_client: Any, mock_client: AsyncMock
+) -> None:
+    """Gas meter reading: m³, no tariffs, usual consumption from a year of readings."""
+    today = dt_util.now().date()
+    last = today - timedelta(days=40)
+    gas_registers = {
+        "vt": [
+            (last - timedelta(days=364), 2703.0),
+            (last - timedelta(days=22), 2852.0),  # summer: 0.36 m³/day only
+            (last, 2860.0),
+        ]
+    }
+
+    async def registers(sp: api.SupplyPoint, _today: date) -> Any:
+        if sp.gas:
+            return gas_registers, "90000001"
+        return {"vt": [(today - timedelta(days=60), 11598.0)]}, "1000000001"
+
+    mock_client.fetch_all.return_value = gas_data()
+    mock_client.get_register_readings.side_effect = registers
+    # The portal gives no usual consumption for gas.
+    mock_client.get_reading_consumption.return_value = {
+        "lastConsVT": 0.0, "lastConsNT": 0.0, "LastBillPeriod": 363, "Limits": []
+    }  # fmt: skip
+    mock_client.submit_meter_reading.return_value = {"activityId": "A2"}
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=USERNAME, data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    ws = await hass_ws_client(hass)
+    await ws.send_json({"id": 1, "type": f"{DOMAIN}/reading_form", "entry_id": entry.entry_id})
+    points = {p["ean"]: p for p in (await ws.receive_json())["result"]["points"]}
+    gas = points[GAS_EAN]
+    assert gas["gas"] is True and gas["unit"] == "m³" and not gas["dual_tariff"]
+    assert gas["previous"] == {"date": last.isoformat(), "vt": 2860.0}
+    assert points[next(e for e in points if e != GAS_EAN)]["unit"] == "kWh"
+
+    base = {
+        "entry_id": entry.entry_id,
+        "ean": GAS_EAN,
+        "reading_type": "diary",
+        "date": today.isoformat(),
+    }
+    # 40 days x (157 m³ / 364 days) x 1.5 = 25.9 m³: 2880 is fine, 2890 unusually high.
+    await ws.send_json({"id": 2, "type": f"{DOMAIN}/reading_check", **base, "vt": "2880"})
+    check = (await ws.receive_json())["result"]
+    assert check["ok"] and not check["warnings"]
+    await ws.send_json({"id": 3, "type": f"{DOMAIN}/reading_check", **base, "vt": "2890"})
+    assert (await ws.receive_json())["result"]["warnings"][0]["code"] == "high"
+
+    await ws.send_json({"id": 4, "type": f"{DOMAIN}/reading_submit", **base, "vt": "2880"})
+    assert (await ws.receive_json())["result"]["sent"] is True
+    body = mock_client.submit_meter_reading.await_args.args[0]
+    assert body["meterReadingDeviceNumber"] == "90000001"
+    assert body["selfMeterReadingHighTariff"]["meterReadingValue"] == 2880

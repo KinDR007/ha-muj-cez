@@ -1,7 +1,7 @@
 # Odečet elektroměru
 
 Vnitřní záložka **Odečet** (ikona počítadla) u odběrného místa slouží k zadání samoodečtu
-elektroměru přímo z Home Assistantu, stejně jako na portálu Můj ČEZ. Hodnoty se
+elektroměru nebo plynoměru přímo z Home Assistantu, stejně jako na portálu Můj ČEZ. Hodnoty se
 kontrolují už při psaní podle stejných pravidel jako na portálu, takže se včas ukáže
 překlep nebo přehozená čísla.
 
@@ -63,3 +63,11 @@ označí jako neobvyklé nebo je distributor zamítne, karta to oznámí; zamít
 je potřeba zadat znovu na portálu s fotografií displeje.
 
 Odeslat odečet mohou jen administrátoři Home Assistantu.
+
+## Plyn
+
+U plynového odběrného místa karta nabízí **Stav plynoměru** v celých m³ (číslice před
+desetinnou čárkou na počítadle) a typy odečtu, které portál pro plyn povolí. Obvyklá
+spotřeba pro upozornění „nezvykle vysoká“ se počítá z odečtů za poslední zúčtovací rok,
+protože portál ji u plynu neuvádí; v topné sezóně se proto upozornění může objevit i
+u správné hodnoty, odeslání nebrání.

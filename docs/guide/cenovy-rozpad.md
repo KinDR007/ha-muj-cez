@@ -1,7 +1,7 @@
 # Cenový rozpad
 
 Vnitřní záložka **Ceny** (ikona bankovky) u odběrného místa ukazuje, kolik stojí
-jednotlivé položky vyúčtování elektřiny po měsících, kvartálech a letech, s DPH i bez.
+jednotlivé položky vyúčtování elektřiny a plynu po měsících, kvartálech a letech, s DPH i bez.
 Zapíná se volbou **Cenový rozpad** v nastavení integrace (u nových instalací je vypnutá).
 Ikona **obnovit** v záhlaví po potvrzení hned stáhne nové faktury a ceníky místa; jinak se
 hledají podle [periody aktualizace faktur](nastaveni.md#aktualizace-faktur).
@@ -75,3 +75,11 @@ Doklad, který se nepodařilo zpracovat, se zkusí znovu po týdnu.
 - **Nový cenový rok**: než přijde faktura s novými cenami, použije se ceník produktu
   z portálu (sloupec vaší distribuční sazby a jističe), případně v kombinaci s poslední
   fakturou (starý produkt s novými distribučními cenami).
+
+## Plyn
+
+Faktury za plyn čte vlastní parser (portál je dává jen v PDF). Obchodní část tvoří
+spotřeba (Kč/MWh), stálá platba a daň z plynu (domácnosti jsou osvobozené, uvádí se
+s nulou), distribuční část distribuce (Kč/MWh), stálá platba za distribuci a činnost
+OTE. Běžné období se rozdělí podle cen poslední faktury; ceník plynu se zatím nečte,
+takže měsíce nového cenového roku bez faktury zůstanou jako souhrn ze simulace.

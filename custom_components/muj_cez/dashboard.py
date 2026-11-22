@@ -305,8 +305,7 @@ def build_views(
                 "sections": sections,
             }
         ]
-        # Gas: no price breakdown (invoices are parsed for electricity) and no reading form.
-        if prices and not sp.gas and (sub := template.get("subview")):
+        if prices and (sub := template.get("subview")):
             text = MARKER.sub(resolve, json.dumps(sub["sections"], ensure_ascii=False))
             price_sections = json.loads(text)
             if button := unique("button", f"{sp.uid}_refresh_invoices"):
@@ -319,7 +318,7 @@ def build_views(
                     "sections": price_sections,
                 }
             )
-        if reading and not sp.gas:
+        if reading:
             tabs.append(reading_tab(entry_id, sp.ean))
         path = point_path(sp)
         card = {"type": TABS_CARD, "id": path, "entry_id": entry_id, "tabs": tabs}

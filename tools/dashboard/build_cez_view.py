@@ -1165,7 +1165,7 @@ RJS = (
     "const SP=RP&&RP.length?RP[SI]:null;"
     "const val=(x)=>VAT?x.a+x.v:x.a;const tot=(p)=>Object.values(p.it).reduce((s0,x)=>s0+val(x),0);"
     "const GRP={supplier:['Obchodní část (dodavatel)','#3b82f6'],distribution:['Distribuční část (regulované ceny)','#f4b400'],"
-    "tax:['Daň z elektřiny','#a855f7'],simulation:['Souhrn ze simulace (bez rozpadu)','#8e8e93'],other:['Ostatní','#8e8e93']};"
+    "tax:['Daně','#a855f7'],simulation:['Souhrn ze simulace (bez rozpadu)','#8e8e93'],other:['Ostatní','#8e8e93']};"
     "const GORD=['supplier','distribution','tax','simulation','other'];"
 )
 

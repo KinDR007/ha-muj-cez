@@ -32,8 +32,9 @@ Plynové odběrné místo má stejné senzory vyúčtování, záloh, dokladů a
 v kWh, jak je účtuje ČEZ). Místo stavu elektroměru má **Stav plynoměru** v m³ (typ plyn,
 lze použít v panelu Energie) s historií odečtů v atributu `readings` (stav, spotřeba
 v m³ od předchozího odečtu, po výměně plynoměru prázdná) a diagnostiku **Číslo plynoměru**.
-Jistič, HDO, aktuální cena, průběhová data, cenový rozpad a odečet z Home Assistantu
-u plynu nejsou; porovnání s referenčním senzorem HA se nepočítá (ten měří elektřinu).
+Jistič, HDO, aktuální cena a průběhová data u plynu nejsou; porovnání s referenčním
+senzorem HA se nepočítá (ten měří elektřinu). Cenový rozpad a odečet fungují jako u
+elektřiny (viz [Cenový rozpad](cenovy-rozpad.md#plyn) a [Odečet](odecet.md#plyn)).
 
 Verze před 1.6 vytvářely u plynu stav elektroměru v kWh a hlavní jistič 0 A. Tyto
 entity se po aktualizaci odstraní; jejich dlouhodobé statistiky lze smazat v

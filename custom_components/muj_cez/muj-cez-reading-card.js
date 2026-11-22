@@ -2,18 +2,21 @@
 // Served by the integration, validation and sending are done by the backend
 // (websocket muj_cez/reading_form, muj_cez/reading_check, muj_cez/reading_submit).
 
-const VERSION = "6";
+const VERSION = "7";
 
 const STRINGS = {
   cs: {
     title: "Odečet elektroměru",
+    title_gas: "Odečet plynoměru",
     help: "Nápověda",
     point: "Odběrné místo",
     type: "Typ odečtu",
     date: "Stav ke dni",
     device: "Číslo elektroměru",
+    device_gas: "Číslo plynoměru",
     previous: "Poslední stav",
     vt: "Vysoký tarif (T1)",
+    gas: "Stav plynoměru",
     nt: "Nízký tarif (T2)",
     note: "Poznámka pro vás",
     submit: "Zkontrolovat a odeslat",
@@ -21,17 +24,18 @@ const STRINGS = {
     back: "Zpět",
     sent: "Odečet byl odeslán.",
     loading: "Načítám…",
-    none: "Žádné odběrné místo elektřiny.",
+    none: "Žádné odběrné místo elektřiny ani plynu.",
     hint: "Počkejte, až bude na displeji aktivní T1. Opište číslice před desetinnou čárkou.",
     hint_dual: "Počkejte, až bude na displeji aktivní T1, pak T2. Opište číslice před desetinnou čárkou.",
-    delta: "+{kwh} kWh za {days} d ({per_day} kWh/den)",
+    hint_gas: "Opište celé m³ z počítadla plynoměru (číslice před desetinnou čárkou).",
+    delta: "+{kwh} {unit} za {days} d ({per_day} {unit}/den)",
     summary: "Zkontrolujte údaje před odesláním",
     distributor: "Tento odečet se předá distributorovi.",
     errors: {
       required: "Povinný údaj",
-      integer: "Zadejte celé číslo kWh",
+      integer: "Zadejte celé číslo {unit}",
       negative: "Hodnota nesmí být záporná",
-      lower: "Hodnota je nižší než předchozí stav ze dne {date} ({value} kWh)",
+      lower: "Hodnota je nižší než předchozí stav ze dne {date} ({value} {unit})",
       high: "Hodnota je nezvykle vysoká",
       date_future: "Datum nesmí být v budoucnosti",
       date_before: "Datum je dřív než poslední odečet ({date})",
@@ -44,7 +48,7 @@ const STRINGS = {
       type_unavailable: "Tento typ odečtu teď u odběrného místa nejde zadat",
     },
     remaining: "Zbývá kontrolních odečtů letos: {n}",
-    implausible: "Portál hodnoty označil za neobvyklé (např. po výměně elektroměru).",
+    implausible: "Portál hodnoty označil za neobvyklé (např. po výměně měřidla).",
     attachment: "Distributor odečet zamítl. Pokud jsou hodnoty správné, zadejte ho znovu na portálu s fotografií displeje.",
     types: {
       control: ["Kontrolní odečet pro distributora", "Odečet předáme distributorovi a bude zohledněn ve vyúčtování energií."],
@@ -55,13 +59,16 @@ const STRINGS = {
   },
   en: {
     title: "Meter reading",
+    title_gas: "Gas meter reading",
     help: "Help",
     point: "Supply point",
     type: "Reading type",
     date: "Reading date",
     device: "Meter number",
+    device_gas: "Gas meter number",
     previous: "Last reading",
     vt: "High tariff (T1)",
+    gas: "Gas meter reading",
     nt: "Low tariff (T2)",
     note: "Your note",
     submit: "Check and send",
@@ -69,17 +76,18 @@ const STRINGS = {
     back: "Back",
     sent: "The reading was sent.",
     loading: "Loading…",
-    none: "No electricity supply point.",
+    none: "No electricity or gas supply point.",
     hint: "Wait until T1 is shown on the display. Enter the digits before the decimal point.",
     hint_dual: "Wait until T1, then T2 is shown on the display. Enter the digits before the decimal point.",
-    delta: "+{kwh} kWh in {days} d ({per_day} kWh/day)",
+    hint_gas: "Enter the whole m³ of the gas meter counter (digits before the decimal point).",
+    delta: "+{kwh} {unit} in {days} d ({per_day} {unit}/day)",
     summary: "Check the reading before sending",
     distributor: "This reading is passed to the distributor.",
     errors: {
       required: "Required",
-      integer: "Enter whole kWh",
+      integer: "Enter a whole number of {unit}",
       negative: "The value cannot be negative",
-      lower: "Lower than the previous reading of {date} ({value} kWh)",
+      lower: "Lower than the previous reading of {date} ({value} {unit})",
       high: "The value is unusually high",
       date_future: "The date cannot be in the future",
       date_before: "The date is before the last reading ({date})",
@@ -210,7 +218,11 @@ class MujCezReadingCard extends HTMLElement {
     for (const k of ["date", "min", "max"]) if (params[k]) params[k] = fmtDate(params[k], this._lang);
     if (params.value !== undefined) params.value = fmtNum(params.value, this._lang);
     for (const [k, v] of Object.entries(params)) text = text.replace(`{${k}}`, v);
-    return text;
+    return text.replace("{unit}", this._unit);
+  }
+
+  get _unit() {
+    return this._current?.unit || "kWh";
   }
 
   _renderIssues() {
@@ -231,6 +243,7 @@ class MujCezReadingCard extends HTMLElement {
       if (delta && !errs.length) {
         let text = this._t.delta;
         for (const [k, v] of Object.entries(delta)) text = text.replace(`{${k}}`, fmtNum(v, this._lang));
+        text = text.replaceAll("{unit}", this._unit);
         html += `<div class="info">${esc(text)}</div>`;
       }
       box.innerHTML = html;
@@ -264,7 +277,7 @@ class MujCezReadingCard extends HTMLElement {
       : "";
     root.innerHTML = `<style>${CSS}</style>
       <ha-card>
-        <div class="head"><span>${esc(this._config.title || t.title)}</span>${help}</div>
+        <div class="head"><span>${esc(this._config.title || (this._current?.gas ? t.title_gas : t.title))}</span>${help}</div>
         <div class="body">${body}</div>
       </ha-card>`;
     this._bind();
@@ -288,13 +301,14 @@ class MujCezReadingCard extends HTMLElement {
       .map((k) => `<option value="${k}" ${k === f.type ? "selected" : ""}>${esc(t.types[k]?.[0] || k)}</option>`)
       .join("");
     const prev = p.previous || {};
+    const unit = this._unit;
     const prevText = prev.date
-      ? `${fmtDate(prev.date, this._lang)} · VT ${fmtNum(prev.vt, this._lang)} kWh` +
-        (p.dual_tariff ? ` · NT ${fmtNum(prev.nt, this._lang)} kWh` : "")
+      ? `${fmtDate(prev.date, this._lang)} · ${p.gas ? "" : "VT "}${fmtNum(prev.vt, this._lang)} ${unit}` +
+        (p.dual_tariff ? ` · NT ${fmtNum(prev.nt, this._lang)} ${unit}` : "")
       : "–";
     const reg = (key) => `
-      <label class="field" id="field-${key}"><span class="lbl">${t[key]} *</span>
-        <div class="unit"><input id="${key}" inputmode="numeric" autocomplete="off" value="${esc(f[key])}"><span>kWh</span></div>
+      <label class="field" id="field-${key}"><span class="lbl">${p.gas ? t.gas : t[key]} *</span>
+        <div class="unit"><input id="${key}" inputmode="numeric" autocomplete="off" value="${esc(f[key])}"><span>${unit}</span></div>
         <div class="issues" id="issues-${key}"></div></label>`;
     return `
       ${pointSel}
@@ -307,12 +321,12 @@ class MujCezReadingCard extends HTMLElement {
         <input id="date" type="date" max="${this._data.today}" value="${esc(f.date)}">
         <div class="issues" id="issues-date"></div></label>
       <div class="row">
-        <div class="field"><span class="lbl">${t.device}</span><div class="ro">${esc(p.device || "–")}</div></div>
+        <div class="field"><span class="lbl">${p.gas ? t.device_gas : t.device}</span><div class="ro">${esc(p.device || "–")}</div></div>
         <div class="field"><span class="lbl">${t.previous}</span><div class="ro">${esc(prevText)}</div></div>
       </div>
       ${reg("vt")}
       ${p.dual_tariff ? reg("nt") : ""}
-      <div class="hint">ⓘ ${p.dual_tariff ? t.hint_dual : t.hint}</div>
+      <div class="hint">ⓘ ${p.gas ? t.hint_gas : p.dual_tariff ? t.hint_dual : t.hint}</div>
       <label class="field" id="field-note"><span class="lbl">${t.note}</span>
         <input id="note" maxlength="${this._data.note_max}" value="${esc(f.note)}">
         <div class="muted small" id="note-count">${f.note.length}/${this._data.note_max}</div>
@@ -328,8 +342,10 @@ class MujCezReadingCard extends HTMLElement {
     const r = this._result || {};
     const line = (key) => {
       const d = r.delta?.[key];
-      const extra = d ? ` (+${fmtNum(d.kwh, this._lang)} kWh)` : "";
-      return `<tr><td>${t[key]}</td><td>${esc(fmtNum(f[key], this._lang))} kWh${extra}</td></tr>`;
+      const unit = this._unit;
+      const extra = d ? ` (+${fmtNum(d.kwh, this._lang)} ${unit})` : "";
+      const label = p.gas ? t.gas : t[key];
+      return `<tr><td>${label}</td><td>${esc(fmtNum(f[key], this._lang))} ${unit}${extra}</td></tr>`;
     };
     const toDistributor = (this._data.distributor_types || []).includes(f.type);
     const warns = (r.warnings || []).map((i) => `<div class="warn">⚠ ${t[i.field] || ""}: ${esc(this._msg(i))}</div>`);

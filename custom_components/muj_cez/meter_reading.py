@@ -1,6 +1,6 @@
 """Meter reading form backend (card muj-cez-reading-card, action submit_meter_reading).
 
-The form lists the electricity consumption points of the loaded accounts (each account
+The form lists the electricity and gas consumption points of the loaded accounts (each account
 is a config entry with its own client). The previous readings come fresh from the
 portal when the form is opened (cached briefly), so a reading entered on the web a
 minute ago is taken into account.
@@ -28,6 +28,9 @@ _LOGGER = logging.getLogger(__name__)
 CACHE_SECONDS = 300
 # Second refresh of the point after a sent reading.
 REFRESH_AGAIN_SECONDS = 600
+# Gas: the portal gives no usual consumption; average over the last billing year
+# (summer readings alone would make every heating season reading "unusually high").
+GAS_USAGE_DAYS = 450
 
 
 class ReadingError(Exception):
@@ -68,9 +71,11 @@ class PointState:
         }
 
     def usage(self, today: date) -> dict[str, float | None]:
-        """kWh per day: last billing period as the portal uses it, else from the readings."""
+        """kWh (gas m³) per day: last billing period as the portal uses it, else from the
+        readings."""
+        days = GAS_USAGE_DAYS if self.sp.gas else 365
         return {
-            reg: self.portal_usage.get(reg) or reading.daily_usage(points, today)
+            reg: self.portal_usage.get(reg) or reading.daily_usage(points, today, days)
             for reg, points in self.registers.items()
         }
 
@@ -95,7 +100,8 @@ def _points(entry: Any) -> list[SupplyPoint]:
     return [
         spd.supply_point
         for spd in (data.supply_points.values() if data else [])
-        if not spd.supply_point.production and spd.supply_point.commodity.startswith("E")
+        if not spd.supply_point.production
+        and (spd.supply_point.commodity.startswith("E") or spd.supply_point.gas)
     ]
 
 
@@ -153,6 +159,8 @@ async def async_form(hass: HomeAssistant, entry_id: str | None = None) -> dict[s
                     "ean": sp.ean,
                     "label": f"{sp.name} · {sp.ean[-7:]}" if sp.name else sp.ean,
                     "device": state.device,
+                    "gas": sp.gas,
+                    "unit": "m³" if sp.gas else "kWh",
                     "dual_tariff": state.dual_tariff,
                     "remaining_control": state.remaining.get(reading.REASONS["control"]),
                     "types": state.types or list(reading.TYPES),

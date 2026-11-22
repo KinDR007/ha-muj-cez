@@ -20,9 +20,10 @@ Odečet) nahradí.
 
 Sekce se přizpůsobí tomu, co účet a Home Assistant mají: s průběhovým měřením (typicky
 fotovoltaika) přibudou elektroměr, výkup, přetoky a spotové ceny, s HDO tarif a cena.
-Plynové odběrné místo má záložku s plamenem (**🔥 Dlouhá 12 · 1234567**) jen s Přehledem:
-vyúčtování, zálohy, smlouvu se stavem plynoměru, odečty plynoměru (stav a spotřeba v m³
-mezi odečty, výměna plynoměru), spotřebu po měsících, zúčtovací období a doklady.
+Plynové odběrné místo má záložku s plamenem (**🔥 Dlouhá 12 · 1234567**) se stejnými
+vnitřními záložkami. Přehled ukazuje vyúčtování, zálohy, smlouvu se stavem plynoměru,
+odečty plynoměru (stav a spotřeba v m³ mezi odečty, výměna plynoměru), spotřebu po
+měsících, zúčtovací období a doklady.
 Grafy mají popisky po najetí myší nebo dotyku, řádky otevírají detail entity. Snímky níže
 jsou z odběrného místa s fotovoltaikou a dvoutarifem.
 
