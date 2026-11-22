@@ -20,4 +20,5 @@ node_modules/
 # Local notes, not published
 TODO.md
 docs/analyza-proveditelnosti.md
+docs/analyza-statistiky-instalaci.md
 .memory/
