@@ -141,6 +141,11 @@
       "chart_unit": {
         "default": "mdi:swap-horizontal"
       }
+    },
+    "button": {
+      "refresh_invoices": {
+        "default": "mdi:refresh"
+      }
     }
   },
   "services": {

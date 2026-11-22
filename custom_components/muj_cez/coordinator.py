@@ -25,6 +25,7 @@ from .api import CezAuthError, CezClient, CezData, CezError
 from .compare import DailyEnergy, build_comparison
 from .const import (
     CONF_HDO,
+    CONF_INVOICE_PERIODS,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_SPOT_PRICE_SENSOR,
@@ -137,6 +138,10 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
         self._profile_task: asyncio.Task[None] | None = None
         self.invoices = InvoiceStore(hass, entry.entry_id)
         self._invoice_task: asyncio.Task[None] | None = None
+        # Reload of a running HA (or a new entry): check invoices of all points now.
+        self._force_invoices = hass.is_running
+        # Per consumption point uid: when its invoices were last checked (price card).
+        self.invoices_updated: dict[str, str] = {}
 
     async def _async_update_data(self) -> CezData:
         if self._grid_cache is None:
@@ -167,13 +172,42 @@ class MujCezCoordinator(DataUpdateCoordinator[CezData]):
             self.hass, self._async_run_invoices(data), f"{DOMAIN}_invoices"
         )
 
-    async def _async_run_invoices(self, data: CezData) -> None:
+    async def _async_run_invoices(self, data: CezData, only: str | None = None) -> None:
+        today = dt_util.now().date()
         try:
-            added = await self.invoices.async_update(self.client, data, dt_util.now().date())
+            force = self._force_invoices and only is None
+            self._force_invoices = False
+            checked: list[str] = []
+            added = 0
+            for uid in list(data.supply_points) if force else [only]:
+                added += await self.invoices.async_update(
+                    self.client,
+                    data,
+                    today,
+                    self.config_entry.options.get(CONF_INVOICE_PERIODS),
+                    uid,
+                )
+                checked += self.invoices.checked_now
             if added:
                 _LOGGER.debug("Stored %s new invoices", added)
         except Exception:  # never break the integration because of the dashboard data
             _LOGGER.exception("Storing invoices failed")
+            return
+        if checked:
+            now = dt_util.utcnow().isoformat()
+            self.invoices_updated.update(dict.fromkeys(checked, now))
+            self.async_update_listeners()
+
+    async def async_refresh_invoices(self, uid: str) -> None:
+        """Manual refresh (button): download new invoices of one point now."""
+        if self.data is None or not price_breakdown_enabled(self.config_entry.options):
+            return
+        if self._invoice_task and not self._invoice_task.done():
+            await self._invoice_task
+        self._invoice_task = self.config_entry.async_create_background_task(
+            self.hass, self._async_run_invoices(self.data, uid), f"{DOMAIN}_invoices"
+        )
+        await self._invoice_task
 
     def _schedule_profiles(self, data: CezData) -> None:
         """Store 15 min values in the background (the first run fills the history)."""

@@ -303,12 +303,15 @@ def build_views(
         ]
         if prices and (sub := template.get("subview")):
             text = MARKER.sub(resolve, json.dumps(sub["sections"], ensure_ascii=False))
+            price_sections = json.loads(text)
+            if button := unique("button", f"{sp.uid}_refresh_invoices"):
+                _add_refresh_badge(price_sections, button)
             tabs.append(
                 {
                     "title": "Ceny",
                     "icon": sub["view"]["icon"],
                     "max_columns": sub["view"].get("max_columns", 2),
-                    "sections": json.loads(text),
+                    "sections": price_sections,
                 }
             )
         if reading:
@@ -317,6 +320,33 @@ def build_views(
         card = {"type": TABS_CARD, "id": path, "entry_id": entry_id, "tabs": tabs}
         views.append({"title": point_title(sp), "path": path, "type": "panel", "cards": [card]})
     return views
+
+
+def _add_refresh_badge(sections: list[dict[str, Any]], button: str) -> None:
+    """Refresh icon in the heading of the price breakdown, asks before downloading."""
+    heading = next(
+        (c for sec in sections for c in sec.get("cards", []) if c.get("type") == "heading"),
+        None,
+    )
+    if heading is None:
+        return
+    heading.setdefault("badges", []).append(
+        {
+            "type": "entity",
+            "entity": button,
+            "icon": "mdi:refresh",
+            "show_state": False,
+            "show_icon": True,
+            "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {"entity_id": button},
+                "confirmation": {
+                    "text": "Opravdu znovu načíst faktury a ceníky tohoto odběrného místa?"
+                },
+            },
+        }
+    )
 
 
 def reading_tab(entry_id: str, ean: str) -> dict[str, Any]:

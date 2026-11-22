@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import date
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -74,7 +75,10 @@ async def test_store_downloads_once(hass: HomeAssistant, hass_storage: dict[str,
         client.get_invoice_pdf.reset_mock()
         assert await store.async_update(client, sample_data(), date(2026, 3, 2)) == 0
         assert not client.get_invoice_csv.called and not client.get_invoice_pdf.called
-        await store.async_update(client, sample_data(), date(2026, 3, 9))
+        data = sample_data()
+        await store.async_update(
+            client, data, date(2026, 3, 9), only=next(iter(data.supply_points))
+        )
         assert [
             c.args[0]["billingReceivablesAndPayablesAccountDocumentNumber"]
             for c in client.get_invoice_pdf.call_args_list
@@ -250,3 +254,79 @@ async def test_pypdf_installed_on_demand(hass: HomeAssistant) -> None:
         assert await store.async_update(client, sample_data(), date(2026, 3, 1)) == 0
         assert not text.called  # no parsing without pypdf; marked failed, retried later
         assert (await store._load())["failed"] == {"A2": "2026-03-01"}
+
+
+def test_invoice_schedule() -> None:
+    sim = sample_data().supply_points
+    simulation = next(iter(sim.values())).simulation
+    assert pricing.suggested_period(simulation) == "yearly"
+    monthly = dataclasses.replace(
+        simulation, period_from=date(2026, 11, 1), period_to=date(2026, 11, 30)
+    )
+    assert pricing.suggested_period(monthly) == "monthly"
+    assert pricing.suggested_period(None) == "monthly"
+    due = pricing.invoice_due
+    day = date(2026, 6, 10)
+    assert due("yearly", None, day)
+    assert not due("weekly", day, day)
+    assert due("weekly", date(2026, 6, 3), day) and not due("weekly", date(2026, 6, 4), day)
+    assert not due("yearly", date(2026, 6, 9), day)
+    # Billing period started on 1 June: daily until the settlement is stored.
+    assert due("yearly", date(2026, 6, 9), day, date(2026, 6, 1))
+    assert not due("yearly", date(2026, 6, 9), day, date(2026, 6, 1), settled=True)
+    assert not due("yearly", date(2026, 6, 9), date(2026, 7, 10), date(2026, 6, 1))
+
+
+async def test_store_checks_by_period(hass: HomeAssistant) -> None:
+    store = pricing.InvoiceStore(hass, "e6")
+    client = _client()
+    data = sample_data()  # yearly billing period from 2026-02-18, A1 issued 2026-02-19
+    uid = next(iter(data.supply_points))
+    client.get_invoice_pdf.side_effect = None
+    client.get_invoice_pdf.return_value = None
+    client.get_price_lists.return_value = []
+    with patch.object(pricing, "REQUEST_PAUSE", 0):
+        await store.async_update(client, data, date(2026, 3, 1))
+        assert client.get_invoice_rows.call_count == 1
+        # Settlement stored, yearly period: no requests the next days.
+        await store.async_update(client, data, date(2026, 3, 2))
+        await store.async_update(client, data, date(2026, 3, 7))
+        assert client.get_invoice_rows.call_count == 1
+        # The user chose weekly.
+        await store.async_update(client, data, date(2026, 3, 8), {uid: "weekly"})
+        assert client.get_invoice_rows.call_count == 2
+        assert client.get_price_lists.call_count == 2
+        # Manual refresh of the point.
+        await store.async_update(client, data, date(2026, 3, 8), only=uid)
+        assert client.get_invoice_rows.call_count == 3
+        await store.async_update(client, data, date(2026, 3, 8), only="other")
+        assert client.get_invoice_rows.call_count == 3
+
+
+async def test_refresh_button(hass: HomeAssistant, mock_client: AsyncMock) -> None:
+    """The button downloads invoices of its point now; the price card reloads."""
+    from homeassistant.helpers import entity_registry as er
+
+    mock_client.get_invoice_rows.return_value = []
+    mock_client.get_price_lists.return_value = []
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=USERNAME,
+        data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
+    )
+    entry.add_to_hass(hass)
+    with patch.object(pricing, "REQUEST_PAUSE", 0):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+        registry = er.async_get(hass)
+        button = registry.async_get_entity_id("button", DOMAIN, f"{UID}_refresh_invoices")
+        sensor = registry.async_get_entity_id("sensor", DOMAIN, f"{UID}_billing_periods")
+        assert button and sensor
+        # A new entry (HA running) checks every point once.
+        assert mock_client.get_invoice_rows.call_count == 1
+        before = hass.states.get(sensor).attributes["invoices_updated"]
+        assert before
+        await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+        await hass.async_block_till_done(wait_background_tasks=True)
+    assert mock_client.get_invoice_rows.call_count == 2
+    assert hass.states.get(sensor).attributes["invoices_updated"] > before

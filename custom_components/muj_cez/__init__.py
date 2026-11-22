@@ -31,7 +31,7 @@ from .websocket import async_setup_websocket
 DASHBOARD_WAIT_SECONDS = 30
 # Pause after the entities appear so all platforms finish adding theirs.
 DASHBOARD_SETTLE = 1.0
-PLATFORMS = [Platform.CALENDAR, Platform.SELECT, Platform.SENSOR]
+PLATFORMS = [Platform.BUTTON, Platform.CALENDAR, Platform.SELECT, Platform.SENSOR]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 

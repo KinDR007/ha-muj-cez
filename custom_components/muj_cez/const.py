@@ -31,6 +31,12 @@ CONF_PRICE_BREAKDOWN = "price_breakdown"
 PYPDF_REQUIREMENT = "pypdf==5.1.0"
 
 
+# Invoice download period per consumption point {uid: period}, only periods the user
+# chose; other points follow their billing period (see pricing.suggested_period).
+CONF_INVOICE_PERIODS = "invoice_periods"
+INVOICE_PERIOD_DAYS = {"weekly": 7, "monthly": 30, "quarterly": 91, "yearly": 365}
+
+
 def price_breakdown_enabled(options: Mapping[str, Any]) -> bool:
     return bool(options.get(CONF_PRICE_BREAKDOWN, True))
 

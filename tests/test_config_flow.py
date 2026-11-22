@@ -9,11 +9,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.muj_cez import api
 from custom_components.muj_cez.api import CezAuthError, CezConnectionError
 from custom_components.muj_cez.const import (
     CONF_DASHBOARD,
     CONF_HDO,
     CONF_INSTALL_CARDS,
+    CONF_INVOICE_PERIODS,
     CONF_PRICE_BREAKDOWN,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
@@ -25,7 +27,7 @@ from custom_components.muj_cez.const import (
 )
 from custom_components.muj_cez.dashboard import grid_sensors_from_energy
 
-from .conftest import PASSWORD, USERNAME
+from .conftest import PASSWORD, USERNAME, load
 
 
 async def test_user_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None:
@@ -179,3 +181,81 @@ def test_grid_sensors_from_energy() -> None:
     external = {"energy_sources": [{"type": "grid", "stat_energy_from": "muj_cez:grid_import_1"}]}
     assert grid_sensors_from_energy(external) == (None, None)
     assert grid_sensors_from_energy(None) == (None, None)
+
+
+def _fields(result: dict) -> dict[str, object]:
+    return {
+        str(k): (k.description or {}).get("suggested_value") for k in result["data_schema"].schema
+    }
+
+
+async def test_user_flow_invoice_periods(hass: HomeAssistant, mock_client: AsyncMock) -> None:
+    """Price breakdown on: period per point, prefilled from the billing period."""
+    mock_client.get_simulation.return_value = (
+        api.parse_simulation(load("simulation.json")),
+        [],
+        [],
+    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_UPDATE_PERIOD: "daily",
+            CONF_UPDATE_TIME: "00:00:00",
+            CONF_DASHBOARD: DASHBOARD_OFF,
+            CONF_PRICE_BREAKDOWN: True,
+        },
+    )
+    assert result["step_id"] == "invoices"
+    sp = mock_client.get_supply_points.return_value[0]
+    label = f"{sp.name} · {sp.ean[-7:]}"
+    assert _fields(result) == {label: "yearly"}  # yearly billing period
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {label: "monthly"})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["options"][CONF_INVOICE_PERIODS] == {sp.uid: "monthly"}
+
+
+async def test_options_flow_invoice_periods(hass: HomeAssistant, mock_client: AsyncMock) -> None:
+    """The period the user chose is shown and kept; the suggested one is not stored."""
+    uid = next(iter(mock_client.fetch_all.return_value.supply_points))
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=USERNAME,
+        data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
+        options={CONF_PRICE_BREAKDOWN: True, CONF_INVOICE_PERIODS: {uid: "weekly"}},
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_UPDATE_PERIOD: "daily", CONF_PRICE_BREAKDOWN: True}
+    )
+    assert result["step_id"] == "invoices"
+    ((label, value),) = _fields(result).items()
+    assert value == "weekly"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {label: "quarterly"}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_INVOICE_PERIODS] == {uid: "quarterly"}
+    # Back to the suggested period: follows the billing again.
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_UPDATE_PERIOD: "daily", CONF_PRICE_BREAKDOWN: True}
+    )
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {label: "yearly"})
+    assert entry.options[CONF_INVOICE_PERIODS] == {}
+    # Price breakdown off: no step, the periods stay for later.
+    entry_options = dict(entry.options, **{CONF_INVOICE_PERIODS: {uid: "weekly"}})
+    hass.config_entries.async_update_entry(entry, options=entry_options)
+    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_UPDATE_PERIOD: "daily", CONF_PRICE_BREAKDOWN: False}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_INVOICE_PERIODS] == {uid: "weekly"}

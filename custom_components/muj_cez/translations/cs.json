@@ -48,6 +48,10 @@
           "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá.",
           "price_breakdown": "Stáhne vyúčtování (datový soubor CSV nebo PDF) a ceníky produktu a přidá do dashboardu záložku „Cenový rozpad“: kolik stojí jednotlivé položky po měsících, čtvrtletích a letech (obchodní část, distribuce, daně, výkup přetoků). Vypnuto: nic z toho se nestahuje a záložka se nevytvoří; vypnutím se stažené faktury smažou."
         }
+      },
+      "invoices": {
+        "title": "Aktualizace faktur",
+        "description": "Jak často kontrolovat nové faktury a ceníky jednotlivých odběrných míst pro cenový rozpad. Předvyplněno podle délky zúčtovacího období; po skončení období se vyúčtování hledá denně, dokud nepřijde (nejvýš 30 dní). Hodnota, kterou změníte, se už nepřepíše. Faktury místa lze načíst hned tlačítkem *Aktualizovat faktury* v jeho záložce *Ceny*. Podrobnosti v [příručce]({docs_url})."
       }
     },
     "error": {
@@ -88,6 +92,10 @@
           "price_breakdown": "Stáhne vyúčtování (datový soubor CSV nebo PDF) a ceníky produktu a přidá do dashboardu záložku „Cenový rozpad“: kolik stojí jednotlivé položky po měsících, čtvrtletích a letech (obchodní část, distribuce, daně, výkup přetoků). Vypnuto: nic z toho se nestahuje a záložka se nevytvoří; vypnutím se stažené faktury smažou."
         },
         "description": "Popis všech voleb: [příručka]({docs_url})."
+      },
+      "invoices": {
+        "title": "Aktualizace faktur",
+        "description": "Jak často kontrolovat nové faktury a ceníky jednotlivých odběrných míst pro cenový rozpad. Předvyplněno podle délky zúčtovacího období; po skončení období se vyúčtování hledá denně, dokud nepřijde (nejvýš 30 dní). Hodnota, kterou změníte, se už nepřepíše. Faktury místa lze načíst hned tlačítkem *Aktualizovat faktury* v jeho záložce *Ceny*. Podrobnosti v [příručce]({docs_url})."
       }
     }
   },
@@ -97,6 +105,14 @@
         "daily": "Denně",
         "weekly": "Týdně",
         "monthly": "Měsíčně"
+      }
+    },
+    "invoice_period": {
+      "options": {
+        "weekly": "Týdně",
+        "monthly": "Měsíčně",
+        "quarterly": "Čtvrtletně",
+        "yearly": "Ročně"
       }
     }
   },
@@ -245,6 +261,11 @@
           "kwh": "kWh",
           "czk": "Kč"
         }
+      }
+    },
+    "button": {
+      "refresh_invoices": {
+        "name": "Aktualizovat faktury"
       }
     }
   },

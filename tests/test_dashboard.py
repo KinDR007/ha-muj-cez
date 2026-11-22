@@ -111,6 +111,12 @@ async def test_new_dashboard_without_pv(
     ]
     prices = tabs["Ceny"]
     assert prices["icon"] == "mdi:cash-multiple"
+    # Refresh icon in the heading presses the invoice button after a confirmation.
+    button = er.async_get(hass).async_get_entity_id("button", DOMAIN, f"{sp.uid}_refresh_invoices")
+    (badge,) = prices["sections"][0]["cards"][0]["badges"]
+    assert badge["entity"] == button and badge["icon"] == "mdi:refresh"
+    assert badge["tap_action"]["perform_action"] == "button.press"
+    assert badge["tap_action"]["confirmation"]["text"]
     prices_text = json.dumps(prices, ensure_ascii=False)
     assert "muj_cez/prices" in prices_text and "mujcez_" not in prices_text
     _assert_entities_exist(hass, prices_text)

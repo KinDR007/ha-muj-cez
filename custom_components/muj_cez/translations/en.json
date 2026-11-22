@@ -48,6 +48,10 @@
           "hdo": "Loads the low/high tariff switching times (HDO) from the ČEZ Distribuce portal with the same credentials. Adds the current tariff, next switch and current price per kWh. Skipped silently when the portal has no HDO for the supply point.",
           "price_breakdown": "Downloads the settlements (CSV data file or PDF) and product price lists of the account and adds the \"Cenový rozpad\" dashboard tab: what each item costs per month, quarter and year (supplier part, distribution, taxes, PV payout). Off: nothing of this is downloaded and the tab is not created; turning it off deletes the downloaded invoices."
         }
+      },
+      "invoices": {
+        "title": "Invoice updates",
+        "description": "How often to check new invoices and price lists of each supply point for the price breakdown. Prefilled by the length of its billing period; after a billing period ends the settlement is checked daily until it arrives (up to 30 days). A period you change is kept. Invoices of a point can be loaded at once with the button *Refresh invoices* in its *Prices* tab. More in the [guide]({docs_url})."
       }
     },
     "error": {
@@ -88,6 +92,10 @@
           "price_breakdown": "Downloads the settlements (CSV data file or PDF) and product price lists of the account and adds the \"Cenový rozpad\" dashboard tab: what each item costs per month, quarter and year (supplier part, distribution, taxes, PV payout). Off: nothing of this is downloaded and the tab is not created; turning it off deletes the downloaded invoices."
         },
         "description": "All options explained (Czech): [guide]({docs_url})."
+      },
+      "invoices": {
+        "title": "Invoice updates",
+        "description": "How often to check new invoices and price lists of each supply point for the price breakdown. Prefilled by the length of its billing period; after a billing period ends the settlement is checked daily until it arrives (up to 30 days). A period you change is kept. Invoices of a point can be loaded at once with the button *Refresh invoices* in its *Prices* tab. More in the [guide]({docs_url})."
       }
     }
   },
@@ -97,6 +105,14 @@
         "daily": "Daily",
         "weekly": "Weekly",
         "monthly": "Monthly"
+      }
+    },
+    "invoice_period": {
+      "options": {
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "yearly": "Yearly"
       }
     }
   },
@@ -245,6 +261,11 @@
           "kwh": "kWh",
           "czk": "CZK"
         }
+      }
+    },
+    "button": {
+      "refresh_invoices": {
+        "name": "Refresh invoices"
       }
     }
   },

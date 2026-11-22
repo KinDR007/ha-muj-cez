@@ -24,11 +24,12 @@ from homeassistant.helpers.selector import (
     TimeSelector,
 )
 
-from .api import CezAuthError, CezClient, CezError
+from .api import CezAuthError, CezClient, CezError, InvoiceSimulation, SupplyPoint
 from .const import (
     CONF_DASHBOARD,
     CONF_HDO,
     CONF_INSTALL_CARDS,
+    CONF_INVOICE_PERIODS,
     CONF_PARTNER,
     CONF_PRICE_BREAKDOWN,
     CONF_REFERENCE_EXPORT_SENSOR,
@@ -41,12 +42,14 @@ from .const import (
     DEFAULT_UPDATE_PERIOD,
     DEFAULT_UPDATE_TIME,
     DOMAIN,
+    INVOICE_PERIOD_DAYS,
     UPDATE_PERIODS,
     docs_url,
     price_breakdown_enabled,
 )
 from .coordinator import MujCezConfigEntry
 from .dashboard import async_dashboard_choices, async_energy_grid_sensors, suggested_options
+from .pricing import suggested_period
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -128,6 +131,45 @@ async def settings_form(
     return schema, suggested
 
 
+type InvoicePoint = tuple[SupplyPoint, InvoiceSimulation | None]
+
+
+def invoice_form(
+    points: list[InvoicePoint], current: Mapping[str, str] | None
+) -> tuple[vol.Schema, dict[str, Any], dict[str, tuple[str, str]]]:
+    """Invoice check period per consumption point: schema, suggested values and
+    {field: (uid, period suggested by the billing period)}. A period the user chose
+    (current) is shown instead of the suggested one."""
+    fields: dict[str, tuple[str, str]] = {}
+    schema: dict[Any, Any] = {}
+    values: dict[str, Any] = {}
+    selector = SelectSelector(
+        SelectSelectorConfig(
+            options=list(INVOICE_PERIOD_DAYS),
+            mode=SelectSelectorMode.DROPDOWN,
+            translation_key="invoice_period",
+        )
+    )
+    for sp, simulation in points:
+        label = f"{sp.name} · {sp.ean[-7:]}" if sp.name else sp.ean
+        auto = suggested_period(simulation)
+        fields[label] = (sp.uid, auto)
+        schema[vol.Required(label, default=auto)] = selector
+        values[label] = (current or {}).get(sp.uid) or auto
+    return vol.Schema(schema), values, fields
+
+
+def invoice_periods(
+    user_input: Mapping[str, Any], fields: Mapping[str, tuple[str, str]]
+) -> dict[str, str]:
+    """Periods the user changed from the suggested ones (others follow the billing)."""
+    return {
+        uid: user_input[label]
+        for label, (uid, auto) in fields.items()
+        if user_input.get(label) and user_input[label] != auto
+    }
+
+
 async def _validate(
     hass: HomeAssistant, username: str, password: str, partner: str | None = None
 ) -> tuple[dict[str, str], CezClient]:
@@ -144,6 +186,26 @@ async def _validate(
         _LOGGER.exception("Unexpected error during validation")
         return {"base": "unknown"}, client
     return {}, client
+
+
+async def _invoice_points(client: CezClient) -> list[InvoicePoint]:
+    """Consumption points with their billing simulation (one request per point)."""
+    points: list[InvoicePoint] = []
+    try:
+        supply_points = await client.get_supply_points()
+    except CezError as err:
+        _LOGGER.debug("Supply points for the invoice step: %s", err)
+        return points
+    for sp in supply_points:
+        if sp.production or not sp.agreement_id or not sp.commodity.startswith("E"):
+            continue
+        try:
+            simulation = (await client.get_simulation(sp))[0]
+        except CezError as err:
+            _LOGGER.debug("Simulation of %s: %s", sp.ean, err)
+            simulation = None
+        points.append((sp, simulation))
+    return points
 
 
 async def _accounts(client: CezClient) -> tuple[dict[str, str], str | None]:
@@ -175,6 +237,9 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
     _data: dict[str, Any]
     _accounts: dict[str, str]
     _default: str | None
+    _client: CezClient
+    _options: dict[str, Any]
+    _fields: dict[str, tuple[str, str]]
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
@@ -182,6 +247,7 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
             username = user_input[CONF_USERNAME].strip()
             errors, client = await _validate(self.hass, username, user_input[CONF_PASSWORD])
             if not errors:
+                self._client = client
                 self._data = {CONF_USERNAME: username, CONF_PASSWORD: user_input[CONF_PASSWORD]}
                 self._accounts, self._default = await _accounts(client)
                 if self._accounts:
@@ -210,10 +276,11 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
             uid = username.lower() if partner == self._default else f"{username.lower()}_{partner}"
             await self.async_set_unique_id(uid)
             self._abort_if_unique_id_configured()
-            errors, _client = await _validate(
+            errors, client = await _validate(
                 self.hass, username, self._data[CONF_PASSWORD], partner
             )
             if not errors:
+                self._client = client
                 self._data[CONF_PARTNER] = partner
                 return await self.async_step_settings()
         options = [{"value": p, "label": label} for p, label in self._accounts.items()]
@@ -231,16 +298,39 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Update schedule, reference sensors and dashboard (prefilled from Energy)."""
         if user_input is not None:
-            title = self._data[CONF_USERNAME]
-            if self._data.get(CONF_PARTNER):
-                title = f"{title} ({self._data[CONF_PARTNER]})"
-            return self.async_create_entry(title=title, data=self._data, options=user_input)
+            self._options = user_input
+            if price_breakdown_enabled(user_input):
+                return await self.async_step_invoices()
+            return self._create()
         schema, suggested = await settings_form(self.hass, None)
         return self.async_show_form(
             step_id="settings",
             data_schema=self.add_suggested_values_to_schema(schema, suggested),
             description_placeholders={"docs_url": docs_url("nastaveni")},
         )
+
+    async def async_step_invoices(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Invoice check period per consumption point, prefilled from its billing period."""
+        if user_input is not None:
+            self._options[CONF_INVOICE_PERIODS] = invoice_periods(user_input, self._fields)
+            return self._create()
+        points = await _invoice_points(self._client)
+        if not points:
+            return self._create()
+        schema, values, self._fields = invoice_form(points, None)
+        return self.async_show_form(
+            step_id="invoices",
+            data_schema=self.add_suggested_values_to_schema(schema, values),
+            description_placeholders={"docs_url": docs_url("nastaveni")},
+        )
+
+    def _create(self) -> ConfigFlowResult:
+        title = self._data[CONF_USERNAME]
+        if self._data.get(CONF_PARTNER):
+            title = f"{title} ({self._data[CONF_PARTNER]})"
+        return self.async_create_entry(title=title, data=self._data, options=self._options)
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
         return await self.async_step_reauth_confirm()
@@ -275,12 +365,50 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class MujCezOptionsFlow(OptionsFlowWithReload):
+    _options: dict[str, Any]
+    _fields: dict[str, tuple[str, str]]
+
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            self._options = dict(user_input)
+            current = self.config_entry.options.get(CONF_INVOICE_PERIODS)
+            if current:
+                self._options[CONF_INVOICE_PERIODS] = current
+            if price_breakdown_enabled(user_input) and self._points():
+                return await self.async_step_invoices()
+            return self.async_create_entry(data=self._options)
         schema, suggested = await settings_form(self.hass, self.config_entry.options)
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(schema, suggested),
+            description_placeholders={"docs_url": docs_url("nastaveni")},
+        )
+
+    def _points(self) -> list[InvoicePoint]:
+        coordinator = getattr(self.config_entry, "runtime_data", None)
+        data = coordinator.data if coordinator else None
+        if data is None:
+            return []
+        return [
+            (spd.supply_point, spd.simulation)
+            for spd in data.supply_points.values()
+            if not spd.supply_point.production
+            and spd.supply_point.agreement_id
+            and spd.supply_point.commodity.startswith("E")
+        ]
+
+    async def async_step_invoices(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Invoice check period per consumption point; a changed one is kept."""
+        if user_input is not None:
+            self._options[CONF_INVOICE_PERIODS] = invoice_periods(user_input, self._fields)
+            return self.async_create_entry(data=self._options)
+        schema, values, self._fields = invoice_form(
+            self._points(), self.config_entry.options.get(CONF_INVOICE_PERIODS)
+        )
+        return self.async_show_form(
+            step_id="invoices",
+            data_schema=self.add_suggested_values_to_schema(schema, values),
             description_placeholders={"docs_url": docs_url("nastaveni")},
         )

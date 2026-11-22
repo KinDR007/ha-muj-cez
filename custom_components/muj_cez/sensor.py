@@ -16,7 +16,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfElectricCurrent, UnitOfEnergy
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.event import async_track_point_in_time
 from homeassistant.helpers.typing import StateType
@@ -24,10 +24,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .api import BillingDocument, CezData, SupplyPointData, strip_zeros
-from .const import DOMAIN, MANUFACTURER, PORTAL_URL
+from .const import DOMAIN
 from .coordinator import MujCezConfigEntry, MujCezCoordinator
 from .distribuce import HIGH, LOW, hdo_state
-from .entity import account_device_info
+from .entity import account_device_info, supply_point_device_info
 
 PARALLEL_UPDATES = 0
 CURRENCY = "CZK"
@@ -414,6 +414,8 @@ SENSORS: tuple[MujCezSensorDescription, ...] = (
             None if d.periods is None else sum(1 for p in d.periods if not p.predicted)
         ),
         attrs_fn=lambda d: {"periods": [p.as_dict() for p in d.periods or []]},
+        # Changes when invoices were checked: the price breakdown card loads again.
+        cattrs_fn=lambda c, d: {"invoices_updated": c.invoices_updated.get(d.supply_point.uid)},
     ),
     # Identification
     _info("ean", lambda d: d.supply_point.ean, kind=KIND_ANY),
@@ -608,15 +610,7 @@ class MujCezSensor(CoordinatorEntity[MujCezCoordinator], SensorEntity):
         self._uid = uid
         sp = coordinator.data.supply_points[uid].supply_point
         self._attr_unique_id = f"{uid}_{description.key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, uid)},
-            name=f"ČEZ {sp.name}",
-            manufacturer=MANUFACTURER,
-            model=sp.product or None,
-            serial_number=sp.ean,
-            entry_type=DeviceEntryType.SERVICE,
-            configuration_url=PORTAL_URL,
-        )
+        self._attr_device_info = supply_point_device_info(sp)
 
     @property
     def _data(self) -> SupplyPointData | None:
