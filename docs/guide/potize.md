@@ -24,8 +24,11 @@ přihlásíte na muj.cez.cz; portál může být dočasně nedostupný.
 
 ## Karta se nezobrazuje nebo hlásí „Chyba nastavení“
 
-Po aktualizaci integrace obnovte stránku prohlížeče (případně vymažte mezipaměť aplikace
-Home Assistant v mobilu), aby se načetly nové karty.
+Prohlížeč načítá karty integrace jen při načtení stránky. Po přidání integrace, vytvoření
+dashboardu nebo instalaci karet (button-card, stack-in-card, mini-graph-card) proto
+obnovte stránku prohlížeče (F5); integrace na to upozorní v oznámeních (zvoneček) a ve
+zprávě po dokončení průvodce. Po aktualizaci integrace platí totéž (v mobilní aplikaci
+případně vymažte mezipaměť aplikace Home Assistant).
 
 ## Cenový rozpad je prázdný nebo neúplný
 

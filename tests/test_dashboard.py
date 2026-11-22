@@ -7,8 +7,9 @@ import dataclasses
 import json
 import re
 from datetime import datetime
+from types import MappingProxyType
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -326,3 +327,32 @@ async def test_entries_share_dashboard(hass: HomeAssistant) -> None:
     await dashboard.async_write_dashboard(hass, "cez-shared", [_view("a", "cez-3333")], "a")
     paths = [v["path"] for v in (await load(False))["views"]]
     assert paths == ["home", "cez-3333", "cez-2222"]
+
+
+async def test_reload_notification(
+    hass: HomeAssistant, mock_client: AsyncMock, freezer: FrozenDateTimeFactory
+) -> None:
+    """New tabs (or newly installed cards) load only with the next page load: notify once."""
+    from homeassistant.components import persistent_notification
+
+    def notifications() -> dict[str, Any]:
+        return persistent_notification._async_get_or_create_notifications(hass)
+
+    with patch.object(dashboard, "async_missing_cards", AsyncMock(return_value=[])):
+        entry = await _setup(hass, freezer, DASHBOARD_NEW)
+        note = notifications()[dashboard.RELOAD_NOTIFICATION]
+        assert "F5" in note["message"] and "(/muj-cez)" in note["message"]
+        persistent_notification.async_dismiss(hass, dashboard.RELOAD_NOTIFICATION)
+        await dashboard.async_update_dashboard(hass, entry)  # tabs exist already
+        assert dashboard.RELOAD_NOTIFICATION not in notifications()
+    # Cards installed now: a reload is needed again (without reloading the entry).
+    object.__setattr__(
+        entry, "options", MappingProxyType({**entry.options, CONF_INSTALL_CARDS: True})
+    )
+    missing = AsyncMock(side_effect=[["button-card"], []])
+    with (
+        patch.object(dashboard, "async_missing_cards", missing),
+        patch.object(dashboard, "async_install_cards", AsyncMock()),
+    ):
+        await dashboard.async_update_dashboard(hass, entry)
+    assert dashboard.RELOAD_NOTIFICATION in notifications()

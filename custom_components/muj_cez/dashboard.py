@@ -388,8 +388,9 @@ def _lock(hass: HomeAssistant) -> asyncio.Lock:
 
 async def async_write_dashboard(
     hass: HomeAssistant, url: str, views: list[dict[str, Any]], entry_id: str
-) -> None:
-    """Insert/replace the views of the entry in a storage dashboard, keep everything else."""
+) -> bool:
+    """Insert/replace the views of the entry in a storage dashboard, keep everything else.
+    Returns True when the entry had no tabs there before."""
     from homeassistant.components.lovelace.const import ConfigNotFound
 
     lovelace = _lovelace(hass)
@@ -410,6 +411,7 @@ async def async_write_dashboard(
             return view_owner(view) == entry_id or _is_legacy(view.get("path"))
 
         existing = list(config.get("views") or [])
+        added = not any(view_owner(v) == entry_id for v in existing)
         position = next((i for i, v in enumerate(existing) if ours(v)), None)
         if position is None:
             # After the tabs of other entries (accounts), else at the end.
@@ -422,6 +424,34 @@ async def async_write_dashboard(
         templates.update(load_template()["templates"])
         config["button_card_templates"] = templates
         await dash.async_save(config)
+    return added
+
+
+RELOAD_NOTIFICATION = f"{DOMAIN}_dashboard_ready"
+_RELOAD_TEXT = {
+    "cs": (
+        "Dashboard Můj ČEZ je připravený",
+        "Obnovte stránku prohlížeče (F5), aby se načetly karty integrace. Do té doby se "
+        "v záložkách ČEZ může zobrazovat „Chyba nastavení“.\n\n[Otevřít dashboard](/{url})",
+    ),
+    "en": (
+        "Můj ČEZ dashboard is ready",
+        "Reload the browser page (F5) to load the integration's cards. Until then the ČEZ "
+        "tabs may show “Configuration error”.\n\n[Open the dashboard](/{url})",
+    ),
+}
+
+
+def notify_reload(hass: HomeAssistant, url: str) -> None:
+    """Cards registered after the browser page was loaded load only with the next page
+    load: ask for a reload after a new dashboard tab or newly installed cards."""
+    from homeassistant.components import persistent_notification
+
+    title, text = _RELOAD_TEXT["cs" if hass.config.language == "cs" else "en"]
+    path = "lovelace" if url == DASHBOARD_DEFAULT else url
+    persistent_notification.async_create(
+        hass, text.format(url=path), title, notification_id=RELOAD_NOTIFICATION
+    )
 
 
 async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
@@ -445,7 +475,7 @@ async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
     try:
         if url == DASHBOARD_NEW:
             url = await async_ensure_new_dashboard(hass)
-        await async_write_dashboard(hass, url, views, entry.entry_id)
+        added = await async_write_dashboard(hass, url, views, entry.entry_id)
     except DashboardError as err:
         _LOGGER.warning("Dashboard update failed: %s", err)
         ir.async_create_issue(
@@ -461,9 +491,13 @@ async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
         return None
     ir.async_delete_issue(hass, DOMAIN, ISSUE_FAILED)
     missing = await async_missing_cards(hass)
+    installed = False
     if missing and entry.options.get(CONF_INSTALL_CARDS, True):
         await async_install_cards(hass, missing)
-        missing = await async_missing_cards(hass)
+        before, missing = missing, await async_missing_cards(hass)
+        installed = len(missing) < len(before)
+    if (added or installed) and not missing:
+        notify_reload(hass, url)
     if missing:
         ir.async_create_issue(
             hass,

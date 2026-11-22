@@ -330,7 +330,14 @@ class MujCezConfigFlow(ConfigFlow, domain=DOMAIN):
         title = self._data[CONF_USERNAME]
         if self._data.get(CONF_PARTNER):
             title = f"{title} ({self._data[CONF_PARTNER]})"
-        return self.async_create_entry(title=title, data=self._data, options=self._options)
+        # A new dashboard needs a page reload to load the integration's cards.
+        dashboard = self._options.get(CONF_DASHBOARD) not in (None, "", DASHBOARD_OFF)
+        return self.async_create_entry(
+            title=title,
+            data=self._data,
+            options=self._options,
+            description="dashboard" if dashboard else None,
+        )
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
         return await self.async_step_reauth_confirm()

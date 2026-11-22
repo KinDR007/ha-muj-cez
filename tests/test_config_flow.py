@@ -65,6 +65,30 @@ async def test_user_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None:
     assert result["options"][CONF_PRICE_BREAKDOWN] is False
     assert result["data"] == {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
     assert result["result"].unique_id == USERNAME
+    assert result["description"] is None  # no dashboard: nothing to reload
+
+
+async def test_user_flow_with_dashboard_asks_for_reload(
+    hass: HomeAssistant, mock_client: AsyncMock
+) -> None:
+    """The cards of a new dashboard load with the next page load: the success says so."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD}
+    )
+    with patch("custom_components.muj_cez.async_update_dashboard", AsyncMock()):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_UPDATE_PERIOD: "daily",
+                CONF_UPDATE_TIME: "00:00:00",
+                CONF_DASHBOARD: DASHBOARD_NEW,
+                CONF_INSTALL_CARDS: False,
+            },
+        )
+        await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["description"] == "dashboard"
 
 
 @pytest.mark.parametrize(

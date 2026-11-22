@@ -63,6 +63,9 @@
     "abort": {
       "already_configured": "Tento účet je již nastaven.",
       "reauth_successful": "Přihlášení bylo obnoveno."
+    },
+    "create_entry": {
+      "dashboard": "Dashboard ČEZ se právě vytváří a instalují se karty. Za chvíli obnovte stránku prohlížeče (F5), jinak se v záložkách ČEZ zobrazí „Chyba nastavení“."
     }
   },
   "options": {

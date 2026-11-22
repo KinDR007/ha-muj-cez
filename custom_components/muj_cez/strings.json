@@ -63,6 +63,9 @@
     "abort": {
       "already_configured": "This account is already configured.",
       "reauth_successful": "Re-authentication was successful."
+    },
+    "create_entry": {
+      "dashboard": "The ČEZ dashboard is being created and the cards are being installed. In a moment, reload the browser page (F5), otherwise the ČEZ tabs show “Configuration error”."
     }
   },
   "options": {
