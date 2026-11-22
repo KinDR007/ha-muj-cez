@@ -222,7 +222,8 @@ def point_path(sp: Any) -> str:
 def point_title(sp: Any) -> str:
     """Street and number with the end of the EAN (as on the meter reading card)."""
     ident = (sp.ean or sp.uid)[-7:]
-    return f"⚡ {sp.name} · {ident}" if sp.name else f"⚡ {ident}"
+    street = (sp.name or "").split(",")[0].strip()  # without the town
+    return f"⚡ {street} · {ident}" if street else f"⚡ {ident}"
 
 
 def build_views(
@@ -429,6 +430,7 @@ async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
     if coordinator.data is None:
         return None
     today, tomorrow = detect_spot_sensors(hass)
+    await hass.async_add_executor_job(_template_text)  # read the file outside the loop
     views = build_views(
         hass,
         entry.entry_id,

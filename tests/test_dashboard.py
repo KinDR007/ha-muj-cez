@@ -282,7 +282,9 @@ async def test_second_point_own_tab(
     spd = next(iter(coordinator.data.supply_points.values()))
     other = dataclasses.replace(
         spd,
-        supply_point=dataclasses.replace(spd.supply_point, ean="859182400500000007", name="Jiná 2"),
+        supply_point=dataclasses.replace(
+            spd.supply_point, ean="859182400500000007", name="Jiná 2, Valašské Meziříčí"
+        ),
     )
     data = dataclasses.replace(coordinator.data, supply_points={"a": spd, "b": other})
     views = dashboard.build_views(hass, coordinator.config_entry.entry_id, data, prices=False)
