@@ -81,5 +81,6 @@ Doklad, který se nepodařilo zpracovat, se zkusí znovu po týdnu.
 Faktury za plyn čte vlastní parser (portál je dává jen v PDF). Obchodní část tvoří
 spotřeba (Kč/MWh), stálá platba a daň z plynu (domácnosti jsou osvobozené, uvádí se
 s nulou), distribuční část distribuce (Kč/MWh), stálá platba za distribuci a činnost
-OTE. Běžné období se rozdělí podle cen poslední faktury; ceník plynu se zatím nečte,
-takže měsíce nového cenového roku bez faktury zůstanou jako souhrn ze simulace.
+OTE. Běžné období se rozdělí podle cen poslední faktury, nový cenový rok podle ceníku
+plynu (pásmo podle roční spotřeby minulého období; odběr nad 63 MWh s cenou za kapacitu
+se nerozkládá a zůstane jako souhrn ze simulace).

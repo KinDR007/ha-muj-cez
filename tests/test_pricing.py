@@ -367,8 +367,8 @@ async def test_gas_invoices_use_gas_parser(
     assert saved["X1"]["agreement"] == gas_agreement
     assert saved["A2"]["invoice"]["source"] == "pdf"
     assert "distribution_fixed" not in {i["kind"] for i in saved["A2"]["invoice"]["items"]}
-    # The gas invoice is not tried as a CSV, price lists only for electricity.
+    # The gas invoice is not tried as a CSV; price lists of both points.
     assert all(
         c.args[0]["agreementIdIsu"] != gas_agreement for c in client.get_invoice_csv.call_args_list
     )
-    assert [c.args[0].gas for c in client.get_price_lists.call_args_list] == [False]
+    assert [c.args[0].gas for c in client.get_price_lists.call_args_list] == [False, True]

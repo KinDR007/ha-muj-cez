@@ -33,6 +33,7 @@ from homeassistant.requirements import async_process_requirements
 from . import invoice as inv
 from . import invoice_gas as inv_gas
 from . import pricelist as pl
+from . import pricelist_gas as pl_gas
 from .api import CezClient, CezData, CezError, InvoiceSimulation, SupplyPoint
 from .const import DOMAIN, INVOICE_PERIOD_DAYS, PYPDF_REQUIREMENT, STORAGE_VERSION
 
@@ -202,8 +203,7 @@ class InvoiceStore:
         added = await self._update_invoices(client, agreements, today, gas)
         for spd in due:
             sp = spd.supply_point
-            # Price lists: electricity tables only (gas price lists are not parsed yet).
-            if sp.place_id and not sp.gas:
+            if sp.place_id:
                 try:
                     await self._update_pricelists(client, sp, today)
                 except CezError as err:
@@ -214,7 +214,8 @@ class InvoiceStore:
         return added
 
     async def _update_pricelists(self, client: CezClient, sp: SupplyPoint, today: date) -> None:
-        """Download new product price lists (PDF tables) of a consumption point."""
+        """Download new product price lists (PDF tables) of a consumption point; gas price
+        lists by pricelist_gas, electricity ones by pricelist."""
         docs = await client.get_price_lists(sp)
         async with self._lock:
             store = await self._load()
@@ -229,7 +230,7 @@ class InvoiceStore:
                 parsed = None
                 if data and await self._pdf_ready():
                     fragments = await self.hass.async_add_executor_job(pdf_fragments, data)
-                    parsed = pl.parse(fragments)
+                    parsed = (pl_gas if sp.gas else pl).parse(fragments)
                 if parsed is None:
                     store["failed"][f"cen:{key}"] = today.isoformat()
                 else:
@@ -248,7 +249,15 @@ class InvoiceStore:
         return [
             pl.PriceList.from_dict(item["pricelist"])
             for item in store["pricelists"].values()
-            if item.get("ean") == ean
+            if item.get("ean") == ean and item["pricelist"].get("commodity") != "gas"
+        ]
+
+    async def async_gas_pricelists(self, ean: str) -> list[pl_gas.GasPriceList]:
+        store = await self._load()
+        return [
+            pl_gas.GasPriceList.from_dict(item["pricelist"])
+            for item in store["pricelists"].values()
+            if item.get("ean") == ean and item["pricelist"].get("commodity") == "gas"
         ]
 
     async def _update_invoices(
