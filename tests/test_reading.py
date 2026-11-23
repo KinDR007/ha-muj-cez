@@ -255,16 +255,21 @@ async def test_submit_refreshes_point(
     mock_client: AsyncMock,
 ) -> None:
     """After sending, only the data the reading changes are fetched again (no full
-    update); a failed optional request keeps the previous value."""
+    update) after 1, 5, 15 and 30 minutes until the portal lists the reading; a failed
+    optional request keeps the previous value."""
     mock_client.get_register_readings.return_value = api.parse_register_readings(
         load("meter_readings.json"), date(2026, 3, 1)
     )
     mock_client.submit_meter_reading.return_value = {"activityId": "A1"}
+    today = dt_util.now().date()
     calls = []
 
-    async def fetch(spd: api.SupplyPointData, documents: Any, today: date) -> None:
+    async def fetch(spd: api.SupplyPointData, documents: Any, day: date) -> None:
         calls.append(spd.supply_point.uid)
-        spd.meter_reading = dataclasses.replace(spd.meter_reading, value_ht=11700.0)
+        if len(calls) >= 2:  # the portal lists the reading only at the second check
+            spd.meter_reading = dataclasses.replace(
+                spd.meter_reading, reading_date=today, value_ht=11700.0
+            )
         spd.simulation = None  # request failed
 
     mock_client.fetch_readings_and_billing.side_effect = fetch
@@ -274,7 +279,53 @@ async def test_submit_refreshes_point(
     simulation = coordinator.data.supply_points[uid].simulation
     assert simulation is not None
     sensor = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{uid}_meter_reading")
-    assert hass.states.get(sensor).state != "11700.0"
+    old_state = hass.states.get(sensor).state
+    assert old_state != "11700.0"
+    ws = await hass_ws_client(hass)
+    await ws.send_json({"id": 1, "type": f"{DOMAIN}/reading_form"})
+    point = (await ws.receive_json())["result"]["points"][0]
+    await ws.send_json(
+        {"id": 2, "type": f"{DOMAIN}/reading_submit", "entry_id": entry_id, "ean": point["ean"],
+         "reading_type": "diary", "date": today.isoformat(), "vt": 11700}
+    )  # fmt: skip
+    assert (await ws.receive_json())["result"]["sent"] is True
+    start = dt_util.utcnow()
+
+    async def after(seconds: int) -> None:
+        async_fire_time_changed(hass, start + timedelta(seconds=seconds + 1))
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert calls == []
+    await after(meter_reading.REFRESH_DELAYS[0])  # 1 min: not listed yet
+    assert calls == [uid]
+    assert hass.states.get(sensor).state == old_state
+    assert coordinator.data.supply_points[uid].simulation is simulation
+    await after(meter_reading.REFRESH_DELAYS[1])  # 5 min: listed
+    assert calls == [uid, uid]
+    assert hass.states.get(sensor).state == "11700.0"
+    await after(meter_reading.REFRESH_DELAYS[-1])  # no checks after the reading is listed
+    assert calls == [uid, uid]
+    assert mock_client.fetch_all.await_count == 1  # setup only
+
+
+async def test_submit_checks_stop_after_last_delay(
+    hass: HomeAssistant,
+    hass_ws_client: WebSocketGenerator,
+    mock_client: AsyncMock,
+) -> None:
+    """A reading the portal never lists is checked four times, then no more."""
+    mock_client.get_register_readings.return_value = api.parse_register_readings(
+        load("meter_readings.json"), date(2026, 3, 1)
+    )
+    mock_client.submit_meter_reading.return_value = {"activityId": "A1"}
+    calls = []
+
+    async def fetch(spd: api.SupplyPointData, documents: Any, day: date) -> None:
+        calls.append(spd.supply_point.uid)
+
+    mock_client.fetch_readings_and_billing.side_effect = fetch
+    entry_id = await _setup(hass)
     ws = await hass_ws_client(hass)
     await ws.send_json({"id": 1, "type": f"{DOMAIN}/reading_form"})
     point = (await ws.receive_json())["result"]["points"][0]
@@ -283,17 +334,11 @@ async def test_submit_refreshes_point(
          "reading_type": "diary", "date": dt_util.now().date().isoformat(), "vt": 11700}
     )  # fmt: skip
     assert (await ws.receive_json())["result"]["sent"] is True
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert calls == [uid]
-    assert hass.states.get(sensor).state == "11700.0"
-    assert coordinator.data.supply_points[uid].simulation is simulation
-    assert mock_client.fetch_all.await_count == 1  # setup only
-    # Once more later, the portal may recompute the simulation with a delay.
-    async_fire_time_changed(
-        hass, dt_util.utcnow() + timedelta(seconds=meter_reading.REFRESH_AGAIN_SECONDS + 1)
-    )
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert calls == [uid, uid]
+    start = dt_util.utcnow()
+    for seconds in (*meter_reading.REFRESH_DELAYS, 3600):
+        async_fire_time_changed(hass, start + timedelta(seconds=seconds + 1))
+        await hass.async_block_till_done(wait_background_tasks=True)
+    assert len(calls) == len(meter_reading.REFRESH_DELAYS) == 4
 
 
 def test_offered_types_and_date_range() -> None:

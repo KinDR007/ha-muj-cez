@@ -55,10 +55,11 @@ Po kliknutí na **Zkontrolovat a odeslat** se zobrazí souhrn se spotřebou od p
 stavu. Teprve **Odeslat odečet** pošle odečet na portál, **Zpět** vrátí formulář.
 U typů, které se předávají distributorovi, je v souhrnu upozornění.
 
-Po odeslání karta potvrdí výsledek a načte nový poslední stav. Integrace hned na pozadí
-načte odečty, simulaci vyúčtování a zálohy tohoto odběrného místa, takže senzory (stav
-elektroměru VT a NT, predikce vyúčtování) se aktualizují bez restartu; za 10 minut ještě
-jednou, protože portál simulaci přepočítá se zpožděním. Pokud portál hodnoty
+Po odeslání karta potvrdí výsledek a načte nový poslední stav. Portál odečet zařadí mezi
+odečty elektroměru až po několika minutách, integrace proto na pozadí po 1, 5, 15 a 30
+minutách znovu načte odečty, simulaci vyúčtování a zálohy tohoto odběrného místa. Jakmile
+se nový odečet objeví, další kontroly se přeskočí. Senzory (stav elektroměru VT a NT,
+predikce vyúčtování) se aktualizují bez restartu. Pokud portál hodnoty
 označí jako neobvyklé nebo je distributor zamítne, karta to oznámí; zamítnutý odečet
 je potřeba zadat znovu na portálu s fotografií displeje.
 

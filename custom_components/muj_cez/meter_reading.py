@@ -26,8 +26,9 @@ from .const import DOMAIN, docs_url
 _LOGGER = logging.getLogger(__name__)
 
 CACHE_SECONDS = 300
-# Second refresh of the point after a sent reading.
-REFRESH_AGAIN_SECONDS = 600
+# Checks of the point after a sent reading: the portal lists the reading among the meter
+# readings (the source of the meter sensors) a few minutes later. Stops once it is there.
+REFRESH_DELAYS = (60, 300, 900, 1800)
 # Gas: the portal gives no usual consumption; average over the last billing year
 # (summer readings alone would make every heating season reading "unusually high").
 GAS_USAGE_DAYS = 450
@@ -231,21 +232,37 @@ async def async_check(
     return result, state
 
 
-def _schedule_refresh(hass: HomeAssistant, entry: Any, uid: str) -> None:
-    """Refresh the point now and once more later (the portal may recompute the billing
-    simulation with a delay)."""
+def _schedule_refresh(hass: HomeAssistant, entry: Any, uid: str, day: date) -> None:
+    """Refresh the point after `REFRESH_DELAYS` until the portal lists the sent reading
+    (also picks up the billing simulation the portal recomputes with a delay)."""
     coordinator = entry.runtime_data
-    entry.async_create_background_task(
-        hass, coordinator.async_refresh_point(uid), f"{DOMAIN}_reading_refresh"
-    )
+    pending: list[Any] = []
+
+    def _listed() -> bool:
+        spd = coordinator.data.supply_points.get(uid) if coordinator.data else None
+        mr = spd.meter_reading if spd else None
+        return bool(mr and mr.reading_date and mr.reading_date >= day)
+
+    async def _check() -> None:
+        await coordinator.async_refresh_point(uid)
+        if not _listed():
+            _LOGGER.debug("Reading of %s not listed by the portal yet", uid)
+            return
+        _LOGGER.debug("Reading of %s listed by the portal, no further checks", uid)
+        _cancel()
 
     @callback
     def _later(_now: Any) -> None:
-        entry.async_create_background_task(
-            hass, coordinator.async_refresh_point(uid), f"{DOMAIN}_reading_refresh"
-        )
+        pending.pop(0)
+        entry.async_create_background_task(hass, _check(), f"{DOMAIN}_reading_refresh")
 
-    entry.async_on_unload(async_call_later(hass, REFRESH_AGAIN_SECONDS, _later))
+    @callback
+    def _cancel() -> None:
+        while pending:
+            pending.pop()()
+
+    pending.extend(async_call_later(hass, delay, _later) for delay in REFRESH_DELAYS)
+    entry.async_on_unload(_cancel)
 
 
 async def async_submit(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
@@ -255,11 +272,12 @@ async def async_submit(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, A
     result, state = await async_check(hass, data)
     if not result.ok:
         raise ReadingError("invalid", ", ".join(f"{i.field}: {i.code}" for i in result.errors))
+    request_day = _parse_day(data.get("date")) or dt_util.now().date()
     request = reading.build_request(
         sp.ean,
         state.device,
         data.get("reading_type") or "diary",
-        _parse_day(data.get("date")) or dt_util.now().date(),
+        request_day,
         reading.parse_value(data.get("vt")) or 0,
         reading.parse_value(data.get("nt")) if state.dual_tariff else None,
         data.get("note") or "",
@@ -272,7 +290,7 @@ async def async_submit(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, A
         raise ReadingError("portal", str(err)) from err
     _LOGGER.info("Meter reading of %s sent, portal response: %s", sp.ean, response)
     _cache(hass).pop(f"{entry.entry_id}:{sp.uid}", None)
-    _schedule_refresh(hass, entry, sp.uid)
+    _schedule_refresh(hass, entry, sp.uid, request_day)
     response = response if isinstance(response, dict) else {}
     return {
         "sent": True,
