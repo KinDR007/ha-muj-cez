@@ -45,12 +45,10 @@ ceny podle integrace cz_energy_spot_prices.
   změny. Další zákaznický účet (instance integrace) může zvolit stejný dashboard, záložky
   se navzájem nepřepíšou. Popis v kapitolách [Dashboard ČEZ](dashboard-cez.md),
   [Cenový rozpad](cenovy-rozpad.md) a [Odečet elektroměru](odecet.md).
-- **Nainstalovat chybějící karty** (výchozí zapnuto): dashboard potřebuje karty
-  **button-card**, **stack-in-card** a **mini-graph-card**. Chybějící integrace nainstaluje
-  přes Market (HA od 2026.11) nebo HACS, které je pak samy aktualizují; bez nich stáhne
-  poslední vydání z GitHubu. Když je volba vypnutá nebo instalace selže, objeví se
-  v **Nastavení → Opravy** oznámení s tlačítkem **Opravit**. Kartu **Odečet** dodává
-  integrace sama, nic dalšího nepotřebuje.
+- Dashboard potřebuje karty **button-card**, **stack-in-card** a **mini-graph-card**,
+  které si nainstalujete sami (viz [Instalace](instalace.md#karty-pro-dashboard)). Když
+  některá chybí, objeví se v **Nastavení → Opravy** oznámení s jejich seznamem. Kartu
+  **Odečet** dodává integrace sama, nic dalšího nepotřebuje.
 
 ## Další data
 
@@ -60,7 +58,7 @@ ceny podle integrace cz_energy_spot_prices.
 - **Cenový rozpad** (u nových instalací vypnuto): stáhne vyúčtování (datový soubor CSV
   nebo PDF) a ceníky produktu a přidá záložku **Cenový rozpad**. Vypnutý: nic z toho se
   nestahuje, záložka se nevytvoří a vypnutím se stažené faktury smažou. Knihovnu `pypdf`
-  pro PDF faktury Home Assistant doinstaluje až při zapnutí.
+  pro PDF faktury nainstaluje Home Assistant spolu s integrací.
 
 ## Aktualizace faktur
 

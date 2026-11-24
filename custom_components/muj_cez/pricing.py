@@ -26,16 +26,14 @@ from datetime import date, timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import Store
-from homeassistant.requirements import async_process_requirements
 
 from . import invoice as inv
 from . import invoice_gas as inv_gas
 from . import pricelist as pl
 from . import pricelist_gas as pl_gas
 from .api import CezClient, CezData, CezError, InvoiceSimulation, SupplyPoint
-from .const import DOMAIN, INVOICE_PERIOD_DAYS, PYPDF_REQUIREMENT, STORAGE_VERSION
+from .const import DOMAIN, INVOICE_PERIOD_DAYS, STORAGE_VERSION
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -123,17 +121,6 @@ class InvoiceStore:
         """Delete the stored invoices and price lists."""
         await self._store.async_remove()
         self._data = None
-
-    async def _pdf_ready(self) -> bool:
-        """Install pypdf on first use (only needed for the price breakdown)."""
-        try:
-            await async_process_requirements(
-                self.hass, DOMAIN, [PYPDF_REQUIREMENT], is_built_in=False
-            )
-        except HomeAssistantError as err:
-            _LOGGER.warning("Cannot install %s for PDF invoices: %s", PYPDF_REQUIREMENT, err)
-            return False
-        return True
 
     async def _load(self) -> dict[str, Any]:
         if self._data is None:
@@ -228,7 +215,7 @@ class InvoiceStore:
                     continue
                 data = await client.get_document_pdf(doc["guid"])
                 parsed = None
-                if data and await self._pdf_ready():
+                if data:
                     fragments = await self.hass.async_add_executor_job(pdf_fragments, data)
                     parsed = (pl_gas if sp.gas else pl).parse(fragments)
                 if parsed is None:
@@ -311,7 +298,7 @@ class InvoiceStore:
         """Parsed settlement: gas invoices by invoice_gas (PDF only), electricity by invoice."""
         if gas:
             data = await client.get_invoice_pdf(row)
-            if not data or not await self._pdf_ready():
+            if not data:
                 return None
             text = await self.hass.async_add_executor_job(pdf_text, data)
             return inv_gas.parse_pdf_text(number, text)
@@ -322,7 +309,7 @@ class InvoiceStore:
                 if parsed.items:
                     return parsed
         data = await client.get_invoice_pdf(row)
-        if not data or not await self._pdf_ready():
+        if not data:
             return None
         text = await self.hass.async_add_executor_job(pdf_text, data)
         if inv.is_payout_text(text):

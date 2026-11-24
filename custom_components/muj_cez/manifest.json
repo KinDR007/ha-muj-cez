@@ -6,8 +6,7 @@
     "frontend",
     "http",
     "lovelace",
-    "recorder",
-    "repairs"
+    "recorder"
   ],
   "codeowners": [
     "@KinDR007"
@@ -20,6 +19,8 @@
   "loggers": [
     "custom_components.muj_cez"
   ],
-  "requirements": [],
+  "requirements": [
+    "pypdf==5.1.0"
+  ],
   "version": "1.6.4"
 }

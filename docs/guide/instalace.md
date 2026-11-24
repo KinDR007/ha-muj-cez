@@ -18,6 +18,18 @@ rozbít změna portálu na straně ČEZ.
 Nové verze pak HACS nabídne sám v **Nastavení → Aktualizace**. Po aktualizaci obnovte
 stránku prohlížeče, aby se načetly nové karty dashboardu.
 
+## Karty pro dashboard
+
+Dashboard ČEZ používá tři karty z výchozího katalogu HACS. Nainstalujte je přes HACS (nebo
+Market v HA od 2026.11): vyhledejte a stáhněte
+
+- [button-card](https://github.com/custom-cards/button-card),
+- [stack-in-card](https://github.com/custom-cards/stack-in-card),
+- [mini-graph-card](https://github.com/kalkih/mini-graph-card),
+
+a obnovte stránku prohlížeče. Pokud některá chybí, integrace to oznámí v **Nastavení →
+Opravy**. Bez dashboardu nejsou potřeba.
+
 ## Ruční instalace
 
 1. Na GitHubu stáhněte repozitář (**Code → Download ZIP**) a rozbalte ho.

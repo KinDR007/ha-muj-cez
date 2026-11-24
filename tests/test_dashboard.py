@@ -7,7 +7,6 @@ import dataclasses
 import json
 import re
 from datetime import datetime
-from types import MappingProxyType
 from typing import Any
 from unittest.mock import AsyncMock, patch
 from zoneinfo import ZoneInfo
@@ -16,17 +15,17 @@ import pytest
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
+from homeassistant.exceptions import Unauthorized
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, MockUser
 
 import custom_components.muj_cez as integration
 from custom_components.muj_cez import dashboard
 from custom_components.muj_cez.const import (
     CONF_DASHBOARD,
-    CONF_INSTALL_CARDS,
     DASHBOARD_NEW,
     DOMAIN,
 )
@@ -57,7 +56,6 @@ async def _setup(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
     target: str,
-    install: bool = False,
     now: datetime = datetime(2026, 11, 16, 12, 0, tzinfo=TZ),
 ) -> MockConfigEntry:
     await hass.config.async_set_time_zone("Europe/Prague")
@@ -67,7 +65,7 @@ async def _setup(
         domain=DOMAIN,
         unique_id=USERNAME,
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
-        options={CONF_DASHBOARD: target, CONF_INSTALL_CARDS: install},
+        options={CONF_DASHBOARD: target},
     )
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
@@ -136,6 +134,7 @@ async def test_new_dashboard_without_pv(
     # Custom cards are not installed in the test instance.
     issue = ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_CARDS)
     assert issue and "button-card" in issue.translation_placeholders["cards"]
+    assert not issue.is_fixable  # the user installs the cards
 
 
 async def test_pv_dashboard_into_existing(
@@ -200,13 +199,21 @@ async def test_strategy_dashboard_refused(
 
 
 async def test_update_dashboard_service(
-    hass: HomeAssistant, mock_client: AsyncMock, freezer: FrozenDateTimeFactory
+    hass: HomeAssistant,
+    mock_client: AsyncMock,
+    freezer: FrozenDateTimeFactory,
+    hass_read_only_user: MockUser,
 ) -> None:
     await _setup(hass, freezer, DASHBOARD_NEW)
     response = await hass.services.async_call(
         DOMAIN, "update_dashboard", {}, blocking=True, return_response=True
     )
     assert response == {"dashboards": ["muj-cez"]}
+    user = hass_read_only_user
+    with pytest.raises(Unauthorized):  # rewrites dashboards: admins only
+        await hass.services.async_call(
+            DOMAIN, "update_dashboard", {}, blocking=True, context=Context(user_id=user.id)
+        )
 
 
 async def test_hdo_section(
@@ -332,7 +339,7 @@ async def test_entries_share_dashboard(hass: HomeAssistant) -> None:
 async def test_reload_notification(
     hass: HomeAssistant, mock_client: AsyncMock, freezer: FrozenDateTimeFactory
 ) -> None:
-    """New tabs (or newly installed cards) load only with the next page load: notify once."""
+    """New tabs load only with the next page load: notify once."""
     from homeassistant.components import persistent_notification
 
     def notifications() -> dict[str, Any]:
@@ -345,14 +352,3 @@ async def test_reload_notification(
         persistent_notification.async_dismiss(hass, dashboard.RELOAD_NOTIFICATION)
         await dashboard.async_update_dashboard(hass, entry)  # tabs exist already
         assert dashboard.RELOAD_NOTIFICATION not in notifications()
-    # Cards installed now: a reload is needed again (without reloading the entry).
-    object.__setattr__(
-        entry, "options", MappingProxyType({**entry.options, CONF_INSTALL_CARDS: True})
-    )
-    missing = AsyncMock(side_effect=[["button-card"], []])
-    with (
-        patch.object(dashboard, "async_missing_cards", missing),
-        patch.object(dashboard, "async_install_cards", AsyncMock()),
-    ):
-        await dashboard.async_update_dashboard(hass, entry)
-    assert dashboard.RELOAD_NOTIFICATION in notifications()

@@ -14,7 +14,6 @@ from custom_components.muj_cez.api import CezAuthError, CezConnectionError
 from custom_components.muj_cez.const import (
     CONF_DASHBOARD,
     CONF_HDO,
-    CONF_INSTALL_CARDS,
     CONF_INVOICE_PERIODS,
     CONF_PRICE_BREAKDOWN,
     CONF_REFERENCE_EXPORT_SENSOR,
@@ -85,7 +84,6 @@ async def test_user_flow_with_dashboard_asks_for_reload(
                 CONF_UPDATE_PERIOD: "daily",
                 CONF_UPDATE_TIME: "00:00:00",
                 CONF_DASHBOARD: DASHBOARD_NEW,
-                CONF_INSTALL_CARDS: False,
             },
         )
         await hass.async_block_till_done()
@@ -180,7 +178,6 @@ async def test_options_flow(hass: HomeAssistant, mock_client: AsyncMock) -> None
         CONF_UPDATE_PERIOD: "weekly",
         CONF_UPDATE_TIME: "03:15:00",
         CONF_DASHBOARD: DASHBOARD_OFF,
-        CONF_INSTALL_CARDS: True,
         CONF_HDO: True,
         CONF_PRICE_BREAKDOWN: False,
     }

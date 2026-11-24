@@ -13,8 +13,8 @@ Views are written into a storage dashboard chosen in the options; other views ar
 A view belongs to the config entry named in its tabs card, so several entries (customer
 accounts) share one dashboard without overwriting each other. Tabs of older versions
 (cez, cez-2, cez-ceny, cez-odecet) are replaced. The views use custom cards (button-card,
-stack-in-card, mini-graph-card); missing ones are installed with the user's consent
-(option, or the repair issue's fix button), see cards.py.
+stack-in-card, mini-graph-card) the user installs; missing ones are listed in a repair
+issue, see cards.py.
 """
 
 from __future__ import annotations
@@ -33,10 +33,9 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 
 from .api import CezData
-from .cards import async_install_cards, async_missing_cards
+from .cards import async_missing_cards
 from .const import (
     CONF_DASHBOARD,
-    CONF_INSTALL_CARDS,
     CONF_REFERENCE_EXPORT_SENSOR,
     CONF_REFERENCE_SENSOR,
     CONF_SPOT_PRICE_SENSOR,
@@ -444,7 +443,7 @@ _RELOAD_TEXT = {
 
 def notify_reload(hass: HomeAssistant, url: str) -> None:
     """Cards registered after the browser page was loaded load only with the next page
-    load: ask for a reload after a new dashboard tab or newly installed cards."""
+    load: ask for a reload after a new dashboard tab."""
     from homeassistant.components import persistent_notification
 
     title, text = _RELOAD_TEXT["cs" if hass.config.language == "cs" else "en"]
@@ -491,19 +490,14 @@ async def async_update_dashboard(hass: HomeAssistant, entry: Any) -> str | None:
         return None
     ir.async_delete_issue(hass, DOMAIN, ISSUE_FAILED)
     missing = await async_missing_cards(hass)
-    installed = False
-    if missing and entry.options.get(CONF_INSTALL_CARDS, True):
-        await async_install_cards(hass, missing)
-        before, missing = missing, await async_missing_cards(hass)
-        installed = len(missing) < len(before)
-    if (added or installed) and not missing:
+    if added and not missing:
         notify_reload(hass, url)
     if missing:
         ir.async_create_issue(
             hass,
             DOMAIN,
             ISSUE_CARDS,
-            is_fixable=True,
+            is_fixable=False,
             severity=ir.IssueSeverity.WARNING,
             translation_key=ISSUE_CARDS,
             translation_placeholders={"cards": ", ".join(missing)},

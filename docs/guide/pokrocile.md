@@ -91,9 +91,9 @@ stálých plateb / kWh).
 
 Dashboard se generuje z entit tohoto Home Assistantu (funguje i s přejmenovanými entitami
 a jiným jazykem) a integrace přidává nebo nahrazuje jen své záložky (`cez`, `cez-ceny`,
-`cez-odecet`). Potřebné karty (button-card, stack-in-card, mini-graph-card) instaluje přes
-Marketplace nebo HACS jejich vlastním příkazem, takže je dál aktualizují; jinak stáhne
-poslední vydání z GitHubu do `/config/www/muj_cez/cards/` a zaregistruje zdroj Lovelace.
+`cez-odecet`). Potřebné karty (button-card, stack-in-card, mini-graph-card) instaluje uživatel přes
+HACS nebo Market; integrace jen kontroluje, že mají zdroj Lovelace, a chybějící hlásí
+v Opravách.
 
 Karta odečtu `custom:muj-cez-reading-card` je součástí integrace (volby `entry_id`, `ean`,
 `title`).

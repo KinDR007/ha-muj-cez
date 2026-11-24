@@ -33,7 +33,6 @@
           "reference_export_sensor": "Referenční senzor exportu do sítě v HA",
           "spot_price_sensor": "Senzor spotové ceny v HA",
           "dashboard": "Dashboard",
-          "install_cards": "Nainstalovat chybějící karty",
           "hdo": "HDO z ČEZ Distribuce",
           "price_breakdown": "Cenový rozpad"
         },
@@ -44,7 +43,6 @@
           "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ.",
           "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
           "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní).",
-          "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu.",
           "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá.",
           "price_breakdown": "Stáhne vyúčtování (datový soubor CSV nebo PDF) a ceníky produktu a přidá do dashboardu záložku „Cenový rozpad“: kolik stojí jednotlivé položky po měsících, čtvrtletích a letech (obchodní část, distribuce, daně, výkup přetoků). Vypnuto: nic z toho se nestahuje a záložka se nevytvoří; vypnutím se stažené faktury smažou."
         }
@@ -79,7 +77,6 @@
           "reference_export_sensor": "Referenční senzor exportu do sítě v HA",
           "spot_price_sensor": "Senzor spotové ceny v HA",
           "dashboard": "Dashboard",
-          "install_cards": "Nainstalovat chybějící karty",
           "hdo": "HDO z ČEZ Distribuce",
           "price_breakdown": "Cenový rozpad"
         },
@@ -90,7 +87,6 @@
           "reference_export_sensor": "Energetický senzor exportu do sítě (kWh, s dlouhodobými statistikami). Porovná se s přetoky naměřenými elektroměrem ČEZ.",
           "spot_price_sensor": "Volitelné. Senzor aktuální spotové ceny (Kč/kWh nebo Kč/MWh, s dlouhodobými statistikami), např. z integrace cz_energy_spot_prices. Doplní ceny pro ocenění přetoků tam, kde je portál ČEZ nemá (od října 2025).",
           "dashboard": "Kam přidat záložku ČEZ s grafy (vytvoří se podle entit v tomto HA, s FVE i bez ní).",
-          "install_cards": "Chybějící karty pro dashboard nainstaluje přes Market / HACS (pokud jsou v HA), jinak stáhne poslední vydání z GitHubu.",
           "hdo": "Načte časy spínání nízkého a vysokého tarifu (HDO) z portálu ČEZ Distribuce se stejnými přihlašovacími údaji. Přidá aktuální tarif, příští přepnutí a aktuální cenu za kWh. Pokud portál pro odběrné místo HDO nemá, nic se nepřidá.",
           "price_breakdown": "Stáhne vyúčtování (datový soubor CSV nebo PDF) a ceníky produktu a přidá do dashboardu záložku „Cenový rozpad“: kolik stojí jednotlivé položky po měsících, čtvrtletích a letech (obchodní část, distribuce, daně, výkup přetoků). Vypnuto: nic z toho se nestahuje a záložka se nevytvoří; vypnutím se stažené faktury smažou."
         },
@@ -329,17 +325,7 @@
   "issues": {
     "dashboard_missing_cards": {
       "title": "Dashboard Můj ČEZ potřebuje karty",
-      "fix_flow": {
-        "step": {
-          "confirm": {
-            "title": "Nainstalovat karty",
-            "description": "Záložce ČEZ chybí tyto karty: {cards}. Integrace je nainstaluje přes Market / HACS, jinak z GitHubu. Po instalaci obnovte stránku prohlížeče."
-          }
-        },
-        "abort": {
-          "install_failed": "Instalace se nezdařila: {error}"
-        }
-      }
+      "description": "Záložky ČEZ potřebují tyto karty: {cards}. Nainstalujte je přes HACS (Frontend) nebo Market a obnovte stránku prohlížeče (F5)."
     },
     "dashboard_failed": {
       "title": "Dashboard Můj ČEZ se nepodařilo vytvořit",

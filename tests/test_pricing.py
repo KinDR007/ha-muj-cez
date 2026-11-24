@@ -229,31 +229,13 @@ async def test_disabled_price_breakdown(
     assert [t["title"] for t in view["cards"][0]["tabs"]] == ["Přehled", "Odečet"]
 
 
-async def test_pypdf_installed_on_demand(hass: HomeAssistant) -> None:
-    from homeassistant.exceptions import HomeAssistantError
+def test_pypdf_is_a_manifest_requirement() -> None:
+    """Home Assistant installs pypdf with the integration (no runtime install)."""
+    import json
+    from pathlib import Path
 
-    store = pricing.InvoiceStore(hass, "e5")
-    client = _client()
-    client.get_invoice_rows.return_value = [_row("A2")]
-    with (
-        patch.object(pricing, "REQUEST_PAUSE", 0),
-        patch.object(pricing, "async_process_requirements", AsyncMock()) as req,
-        patch.object(pricing, "pdf_text", return_value="x"),
-    ):
-        await store.async_update(client, sample_data(), date(2026, 3, 1))
-        assert req.call_args.args[1:] == (DOMAIN, [pricing.PYPDF_REQUIREMENT])
-        assert req.call_args.kwargs == {"is_built_in": False}
-    store = pricing.InvoiceStore(hass, "e6")
-    with (
-        patch.object(pricing, "REQUEST_PAUSE", 0),
-        patch.object(
-            pricing, "async_process_requirements", AsyncMock(side_effect=HomeAssistantError("no"))
-        ),
-        patch.object(pricing, "pdf_text") as text,
-    ):
-        assert await store.async_update(client, sample_data(), date(2026, 3, 1)) == 0
-        assert not text.called  # no parsing without pypdf; marked failed, retried later
-        assert (await store._load())["failed"] == {"A2": "2026-03-01"}
+    manifest = json.loads((Path(pricing.__file__).parent / "manifest.json").read_text())
+    assert manifest["requirements"] == ["pypdf==5.1.0"]
 
 
 def test_invoice_schedule() -> None:

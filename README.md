@@ -54,6 +54,8 @@ Osobní údaje na snímcích (adresa, EAN, čísla smluv a elektroměru) jsou sm
 1. HACS → menu ⋮ → **Vlastní repozitáře** → `https://github.com/KinDR007/ha-muj-cez`, typ
    **Integrace**.
 2. Vyhledejte **Můj ČEZ** → **Stáhnout** a restartujte Home Assistant.
+3. Pro dashboard stáhněte v HACS také karty **button-card**, **stack-in-card**
+   a **mini-graph-card** ([podrobnosti](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/instalace.md#karty-pro-dashboard)).
 
 **Ručně:** složku `custom_components/muj_cez` zkopírujte do `/config/custom_components/`
 a restartujte Home Assistant.
@@ -70,7 +72,7 @@ Při přidání i později přes ozubené kolo u účtu:
 
 - perioda a čas aktualizace (denně, týdně, měsíčně),
 - referenční senzory odběru a přetoků v HA pro porovnání, senzor spotové ceny,
-- dashboard (nový „ČEZ“ nebo existující) a instalace potřebných karet,
+- dashboard (nový „ČEZ“ nebo existující),
 - HDO z ČEZ Distribuce, cenový rozpad.
 
 Popis všech voleb: [Nastavení](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/nastaveni.md).

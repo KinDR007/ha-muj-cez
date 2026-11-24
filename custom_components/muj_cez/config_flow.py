@@ -35,7 +35,6 @@ from .api import (
 from .const import (
     CONF_DASHBOARD,
     CONF_HDO,
-    CONF_INSTALL_CARDS,
     CONF_INVOICE_PERIODS,
     CONF_PARTNER,
     CONF_PRICE_BREAKDOWN,
@@ -121,7 +120,6 @@ async def settings_form(
             vol.Optional(CONF_DASHBOARD, default=DASHBOARD_OFF): SelectSelector(
                 SelectSelectorConfig(options=dashboards, mode=SelectSelectorMode.DROPDOWN)
             ),
-            vol.Optional(CONF_INSTALL_CARDS, default=True): BooleanSelector(),
             vol.Optional(CONF_HDO, default=True): BooleanSelector(),
             vol.Optional(CONF_PRICE_BREAKDOWN, default=False): BooleanSelector(),
         }

@@ -21,14 +21,12 @@ CONF_REFERENCE_SENSOR = "reference_sensor"
 CONF_REFERENCE_EXPORT_SENSOR = "reference_export_sensor"
 CONF_SPOT_PRICE_SENSOR = "spot_price_sensor"
 CONF_DASHBOARD = "dashboard"
-CONF_INSTALL_CARDS = "install_cards"
 # HDO switching times from the ČEZ Distribuce portal (same credentials).
 CONF_PARTNER = "partner"
 CONF_HDO = "hdo"
 # Price breakdown (invoices, price lists, own dashboard tab). Off for new entries; entries
 # created before the option existed keep it on (option missing = on).
 CONF_PRICE_BREAKDOWN = "price_breakdown"
-PYPDF_REQUIREMENT = "pypdf==5.1.0"
 
 
 # Invoice download period per consumption point {uid: period}, only periods the user

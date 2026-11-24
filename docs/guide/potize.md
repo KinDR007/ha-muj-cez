@@ -3,8 +3,8 @@
 ## Oznámení v Nastavení → Opravy
 
 - **Dashboard Můj ČEZ potřebuje karty**: záložce ČEZ chybí některá z karet button-card,
-  stack-in-card nebo mini-graph-card. Tlačítko **Opravit** je nainstaluje přes Market nebo
-  HACS, jinak z GitHubu. Po instalaci obnovte stránku prohlížeče.
+  stack-in-card nebo mini-graph-card. Nainstalujte je přes HACS nebo Market (viz
+  [Instalace](instalace.md#karty-pro-dashboard)) a obnovte stránku prohlížeče.
 - **Dashboard Můj ČEZ se nepodařilo vytvořit**: zvolený dashboard nejde upravit (například
   je v režimu YAML nebo ho generuje strategie). Vyberte v [nastavení](nastaveni.md) jiný
   dashboard nebo **Nový dashboard „ČEZ“**.

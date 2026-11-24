@@ -23,7 +23,6 @@ import custom_components.muj_cez as integration
 from custom_components.muj_cez import api, dashboard
 from custom_components.muj_cez.const import (
     CONF_DASHBOARD,
-    CONF_INSTALL_CARDS,
     CONF_REFERENCE_SENSOR,
     DASHBOARD_NEW,
     DOMAIN,
@@ -100,7 +99,7 @@ async def _setup(
         domain=DOMAIN,
         unique_id=USERNAME,
         data={CONF_USERNAME: USERNAME, CONF_PASSWORD: PASSWORD},
-        options={CONF_DASHBOARD: DASHBOARD_NEW, CONF_INSTALL_CARDS: False, **(options or {})},
+        options={CONF_DASHBOARD: DASHBOARD_NEW, **(options or {})},
     )
     entry.add_to_hass(hass)
     if before:
