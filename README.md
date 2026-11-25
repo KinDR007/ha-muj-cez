@@ -1,7 +1,7 @@
 # Můj ČEZ pro Home Assistant
 
 [![Release](https://img.shields.io/github/v/release/KinDR007/ha-muj-cez)](https://github.com/KinDR007/ha-muj-cez/releases)
-[![HACS](https://img.shields.io/badge/HACS-Custom-41BDF5)](https://hacs.xyz)
+[![HACS](https://img.shields.io/badge/HACS-Default-41BDF5)](https://hacs.xyz)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal)](https://paypal.me/KinDR007)
 
 **EN:** Home Assistant integration for the Můj ČEZ customer portal ([muj.cez.cz](https://muj.cez.cz)):
@@ -51,9 +51,11 @@ Osobní údaje na snímcích (adresa, EAN, čísla smluv a elektroměru) jsou sm
 
 **HACS** (doporučeno)
 
-1. HACS → menu ⋮ → **Vlastní repozitáře** → `https://github.com/KinDR007/ha-muj-cez`, typ
-   **Integrace**.
-2. Vyhledejte **Můj ČEZ** → **Stáhnout** a restartujte Home Assistant.
+Integrace je ve výchozím katalogu HACS.
+
+1. [![Otevřít v HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=KinDR007&repository=ha-muj-cez&category=integration)
+   nebo v HACS (případně v Marketu) vyhledejte **Můj ČEZ**.
+2. **Stáhnout** a restartujte Home Assistant.
 3. Pro dashboard stáhněte v HACS také karty **button-card**, **stack-in-card**
    a **mini-graph-card** ([podrobnosti](https://github.com/KinDR007/ha-muj-cez/blob/main/docs/guide/instalace.md#karty-pro-dashboard)).
 

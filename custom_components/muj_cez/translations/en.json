@@ -63,7 +63,7 @@
       "reauth_successful": "Re-authentication was successful."
     },
     "create_entry": {
-      "dashboard": "The ČEZ dashboard is being created and the cards are being installed. In a moment, reload the browser page (F5), otherwise the ČEZ tabs show “Configuration error”."
+      "dashboard": "The ČEZ dashboard is being created. It needs the button-card, stack-in-card and mini-graph-card cards: install the missing ones via HACS (Settings → Repairs lists them), then reload the browser page (F5), otherwise the ČEZ tabs show “Configuration error”."
     }
   },
   "options": {

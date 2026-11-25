@@ -10,10 +10,15 @@ rozbít změna portálu na straně ČEZ.
 
 ## Instalace přes HACS (doporučeno)
 
-1. HACS → menu ⋮ vpravo nahoře → **Vlastní repozitáře**.
-2. Repozitář `https://github.com/KinDR007/ha-muj-cez`, typ **Integrace** → **Přidat**.
-3. Vyhledejte **Můj ČEZ** → **Stáhnout**.
-4. Restartujte Home Assistant.
+Integrace je ve výchozím katalogu HACS, vlastní repozitář přidávat nemusíte.
+
+1. Otevřete HACS (v Home Assistantu od 2026.11 případně **Market**) a vyhledejte **Můj ČEZ**.
+   Rychleji přes odkaz:
+   [![Otevřít v HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=KinDR007&repository=ha-muj-cez&category=integration)
+2. **Stáhnout**.
+3. Restartujte Home Assistant.
+
+Kdo integraci dřív přidal jako vlastní repozitář, nemusí nic měnit.
 
 Nové verze pak HACS nabídne sám v **Nastavení → Aktualizace**. Po aktualizaci obnovte
 stránku prohlížeče, aby se načetly nové karty dashboardu.
